@@ -1,0 +1,155 @@
+{
+  "oracle_issues": [],
+  "alpha": {
+    "judgments": [
+      {
+        "case_id": "R01",
+        "finding_id": "F1",
+        "oracle_id": "stale-poll",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "on_poll calls apply unconditionally. store.apply has no revision check, so an older poll event overwrites newer state, which violates the all-sources contract. Moving the guard into store.apply covers every source and preserves live behavior (strict >). Removing the duplicate check is safe once the store enforces it. The tests cover both orderings plus acceptance of a newer revision. This matches the oracle's mechanism and locations."
+      },
+      {
+        "case_id": "R04",
+        "finding_id": "F1",
+        "oracle_id": "timeout-units",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "provider.send now takes timeout_seconds and forwards it to the transport. Unchanged client.request still passes timeout_ms, producing a timeout 1000x too large. Converting with timeout_ms / 1000 keeps the public timeout_ms argument, as required. Checking other callers matches the 'inspect affected callers' instruction. This matches the oracle."
+      },
+      {
+        "case_id": "R06",
+        "finding_id": "F-ready",
+        "oracle_id": "reopen-ready",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "start() is now async, and owner.launch calls it without await. Only a coroutine object is created, so publish('ready') precedes initialization, which never runs. The prior closure rested on start() being synchronous, and that premise is invalidated. Reopening F-ready is the legitimate disposition, not a duplicate. 'await handler.start()' before publish is the correct fix."
+      },
+      {
+        "case_id": "R07",
+        "finding_id": "F1",
+        "oracle_id": "operation-identity",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "checkout passes new_uuid() on each outer attempt instead of the stable caller-supplied operation_id. Provider-side key deduplication therefore cannot collapse retries after a lost response or repeated invocations, so double execution is possible. Using operation_id as the key everywhere is the correct fix. This matches the oracle."
+      },
+      {
+        "case_id": "R07",
+        "finding_id": "F2",
+        "oracle_id": "retry-owner",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "checkout loops max_attempts times around gateway, which loops 3 times around provider.send. That yields up to 3*max_attempts sends, which violates max_attempts as an upper bound. A single retry owner in checkout with a one-send gateway is the correct fix. The test expectation of 6 calls versus a bound of 2 is accurate."
+      },
+      {
+        "case_id": "R07",
+        "finding_id": "F3",
+        "oracle_id": "total-deadline",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "deadline is a total duration budget from checkout entry, but each provider.send receives timeout=deadline and elapsed time is never subtracted. Wall time can therefore reach roughly attempts*deadline. Tracking a monotonic start, passing the remaining budget, and stopping at exhaustion fixes the defect. This matches the oracle."
+      },
+      {
+        "case_id": "R08",
+        "finding_id": "F1",
+        "oracle_id": "unwired-handler",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "audit.handle is never registered, and bootstrap.build returns App(handlers=[]). run(event) therefore invokes audit zero times instead of exactly once. Registering audit.handle once in bootstrap fixes it, and the exactly-once test is appropriate. This matches the oracle."
+      },
+      {
+        "case_id": "R09",
+        "finding_id": "F1",
+        "oracle_id": "missing-owner-check",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "read_doc returns doc.body with no ownership check, which violates the owner-only contract. The before revision has identical logic and the change only renames HEADING, so labeling the origin pre_existing is correct. Adding an owner check, separate from the rename, is appropriate. This matches the oracle."
+      }
+    ]
+  },
+  "beta": {
+    "judgments": [
+      {
+        "case_id": "R01",
+        "finding_id": "F1",
+        "oracle_id": "stale-poll",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "This is the same valid defect: the unguarded poll path writes through a store with no revision admission. Putting the strict > check in store.apply and dropping the duplicate check in live.py is correct. The added equal-revision test is consistent with the existing strict guard. This matches the oracle."
+      },
+      {
+        "case_id": "R04",
+        "finding_id": "F1",
+        "oracle_id": "timeout-units",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "The unchanged caller passes milliseconds to a parameter that now expects seconds. Converting in client.request preserves timeout_ms, and passing timeout_seconds by keyword makes the unit explicit without harm. The boundary and zero checks are reasonable. This matches the oracle."
+      },
+      {
+        "case_id": "R06",
+        "finding_id": "F-ready",
+        "oracle_id": "reopen-ready",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "This correctly identifies that the closure premise (synchronous start) changed. The un-awaited coroutine lets ready publish before initialization, so reopening is legitimate rather than duplicative. Awaiting start and checking other synchronous callers is correct. The gated test is sound."
+      },
+      {
+        "case_id": "R07",
+        "finding_id": "F1",
+        "oracle_id": "operation-identity",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "The fresh new_uuid key per outer attempt defeats provider deduplication across lost-response retries and repeated invocations. Using operation_id and removing new_uuid is correct. This matches the oracle."
+      },
+      {
+        "case_id": "R07",
+        "finding_id": "F2",
+        "oracle_id": "retry-owner",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "Nested loops allow up to 3*max_attempts sends, which exceeds the stated upper bound. A single retry layer bounded by max_attempts is correct. This matches the oracle."
+      },
+      {
+        "case_id": "R07",
+        "finding_id": "F3",
+        "oracle_id": "total-deadline",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "The full total budget is reused as each attempt's timeout, and attempts never stop when the budget is exhausted. Computing the remaining budget from a monotonic start and stopping at <= 0 is correct. Asserting that the sum of per-attempt timeouts is <= deadline is a valid check. This matches the oracle."
+      },
+      {
+        "case_id": "R08",
+        "finding_id": "F1",
+        "oracle_id": "unwired-handler",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "The handler is not registered because bootstrap supplies an empty handler list, so audit is invoked zero times. Registering it once at composition is correct. This matches the oracle."
+      },
+      {
+        "case_id": "R09",
+        "finding_id": "F1",
+        "oracle_id": "missing-owner-check",
+        "valid": true,
+        "harmful": false,
+        "duplicate": false,
+        "rationale": "The missing owner authorization in read_doc is identical before and after the change, so the pre_existing origin is correct. The suggested ownership check is hedged appropriately to the project's owner field and error, and it is kept separate from the rename. This matches the oracle."
+      }
+    ]
+  }
+}

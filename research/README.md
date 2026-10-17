@@ -16,3 +16,7 @@ Start with the challenge and load the smallest useful reference. These sources s
 ## Add research
 
 Record the problem, source title/URL and retrieval date, supported claim, applicable environment/version, limits and counterevidence. Distinguish source fact, inference, hypothesis and observed outcome. Keep private code and incidents out of shared research. Add checks for consequential defects and meaningful inefficiencies rather than checklist growth.
+
+## Review and incident learning
+
+Read [learning evidence](learning-evidence.md) for convergence, execution-grounded critique, test-oracle quality, context limits, incident applicability and measured-versus-unmeasured memory benefit. The [review contract](../skills/code-principles/references/review-feedback.md) and [incident contract](../skills/code-principles/references/incident-learning.md) apply these lessons. Use the [review evaluation](../evals/review/README.md) to test changes; do not adopt model rankings, numeric caps or infrastructure from an unrelated study.

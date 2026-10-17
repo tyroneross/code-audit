@@ -15,3 +15,7 @@ python3 evals/timeout-retry/verify.py evals/timeout-retry/repaired-example /tmp/
 ```
 
 This single synthetic case exposes mechanism and instruction failures; it cannot establish overall defect recall, production latency or superiority over another prompt format. The model's reported private checks are independently rerun by the host. Other earlier comparisons remain in the original workspace and are not represented as new combined-plugin trials.
+
+## Review judgment and feedback
+
+The [focused-review evaluation](review/README.md) adds seeded defects and clean controls, changed dependency contracts, repeated/reopened findings, repair-harm adjudication and origin classification. It evaluates saved review outputs separately from executable repair correctness.

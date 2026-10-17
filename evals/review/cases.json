@@ -1,0 +1,136 @@
+{
+  "version": 2,
+  "cases": [
+    {
+      "id": "R01",
+      "request": "Review this change adding polling fallback. All event sources must reject older per-job revisions.",
+      "sources": {
+        "store.py": "def apply(state, event):\n    state[event.job] = event\n",
+        "live.py": "def on_live(store, event):\n    old = store.get(event.job)\n    if old is None or event.revision > old.revision:\n        apply(store, event)\n",
+        "poll.py": "def on_poll(store, event):\n    apply(store, event)\n"
+      },
+      "changed_paths": [
+        "poll.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R02",
+      "request": "Review retry progress. Contract: a strictly newer attempt may reset progress and return done to running; reject older attempts or non-increasing sequence in the same attempt.",
+      "sources": {
+        "jobs.py": "def accept(old, new):\n    if old and (new.attempt < old.attempt or\n                (new.attempt == old.attempt and new.seq <= old.seq)):\n        return old\n    return new\n"
+      },
+      "changed_paths": [
+        "jobs.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R03",
+      "request": "Review catalog preparation. Contract: first duplicate SKU wins, unknown SKUs return None, catalog is fresh per operation; no catalog mutation.",
+      "sources": {
+        "catalog.py": "def quote(catalog, requested):\n    index = {}\n    for row in catalog:\n        index.setdefault(row.sku, row)\n    return [index.get(sku) for sku in requested]\n"
+      },
+      "changed_paths": [
+        "catalog.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R04",
+      "request": "Re-review this follow-up. The provider now requires timeout seconds. Initial review was clean. Preserve the public timeout_ms argument. Inspect affected callers.",
+      "before": {
+        "provider.py": "def send(payload, timeout_ms): ...\n",
+        "client.py": "def request(payload, timeout_ms):\n    return provider.send(payload, timeout_ms)\n"
+      },
+      "sources": {
+        "provider.py": "def send(payload, timeout_seconds):\n    return transport.send(payload, timeout=timeout_seconds)\n",
+        "client.py": "def request(payload, timeout_ms):\n    return provider.send(payload, timeout_ms)\n"
+      },
+      "changed_paths": [
+        "provider.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R05",
+      "request": "Re-review after the confirmed preview fix. Contract: preview never removes files; apply may remove selected files. No dependent contracts changed.",
+      "sources": {
+        "clean.py": "def clean(paths, apply=False):\n    if not apply:\n        return list(paths)\n    for path in paths:\n        path.unlink()\n    return list(paths)\n"
+      },
+      "changed_paths": [
+        "clean.py"
+      ],
+      "prior_findings": [
+        {
+          "id": "F-preview",
+          "cause": "Preview deleted files",
+          "disposition": "fixed_verified",
+          "evidence": "Current non-apply branch returns before unlink; preview regression passed."
+        }
+      ]
+    },
+    {
+      "id": "R06",
+      "request": "Re-review after Handler.start changed from synchronous completion to async completion. Required behavior: publish ready only after initialization completes. Reopen an old finding if its closure premise changed.",
+      "before": {
+        "handler.py": "def start():\n    initialize()\n"
+      },
+      "sources": {
+        "handler.py": "async def start():\n    await initialize()\n",
+        "owner.py": "async def launch(handler, publish):\n    handler.start()\n    publish(\"ready\")\n"
+      },
+      "changed_paths": [
+        "handler.py"
+      ],
+      "prior_findings": [
+        {
+          "id": "F-ready",
+          "cause": "Ready published before initialization",
+          "disposition": "closed_with_reason",
+          "evidence": "At prior revision, start() was synchronous and returned only after initialization."
+        }
+      ]
+    },
+    {
+      "id": "R07",
+      "request": "Review lost-response retries. Each logical checkout has a caller-supplied operation_id stable across invocations. Provider deduplicates on key. Total deadline includes all attempts; supplied max_attempts is an upper bound. Provider.send performs one attempt. Here deadline is a total duration budget in seconds measured from checkout entry, not an absolute timestamp.",
+      "sources": {
+        "checkout.py": "def checkout(provider, payload, operation_id, deadline, max_attempts):\n    for _ in range(max_attempts):\n        try:\n            return gateway(provider, payload, new_uuid(), deadline)\n        except TimeoutError:\n            pass\n    raise TimeoutError()\n",
+        "gateway.py": "def gateway(provider, payload, key, deadline):\n    for _ in range(3):\n        try:\n            return provider.send(payload, key=key, timeout=deadline)\n        except TimeoutError:\n            pass\n    raise TimeoutError()\n"
+      },
+      "changed_paths": [
+        "checkout.py",
+        "gateway.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R08",
+      "request": "Review adding the audit handler. Required behavior: application.run(event) invokes the audit handler exactly once.",
+      "sources": {
+        "audit.py": "def handle(event):\n    audit_store.append(event)\n",
+        "app.py": "class App:\n    def __init__(self, handlers): self.handlers = handlers\n    def run(self, event):\n        for handler in self.handlers: handler(event)\n",
+        "bootstrap.py": "from app import App\ndef build():\n    return App(handlers=[])\n"
+      },
+      "changed_paths": [
+        "audit.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R09",
+      "request": "Review the full supplied source and classify finding origin relative to the shown change. Contract: only owner may read a document. The current change renames the heading; access logic is unchanged.",
+      "before": {
+        "page.py": "HEADING = \"Docs\"\ndef read_doc(actor, doc):\n    return doc.body\n"
+      },
+      "sources": {
+        "page.py": "HEADING = \"Documents\"\ndef read_doc(actor, doc):\n    return doc.body\n"
+      },
+      "changed_paths": [
+        "page.py"
+      ],
+      "prior_findings": []
+    }
+  ]
+}

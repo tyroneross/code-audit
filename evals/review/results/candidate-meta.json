@@ -1,0 +1,23 @@
+{
+  "exit_code": 0,
+  "elapsed_seconds": 31.6,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 2,
+      "outputTokens": 3329,
+      "cacheReadInputTokens": 1568,
+      "cacheCreationInputTokens": 15767,
+      "webSearchRequests": 0,
+      "costUSD": 0.19303759999999998,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 864,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "timeout_seconds": 300,
+  "case_version": 2,
+  "timeout_basis": "Previous bounded matched runs took 32-41 seconds; retain the same conservative 300-second cap."
+}

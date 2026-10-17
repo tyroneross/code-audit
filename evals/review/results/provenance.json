@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-17",
+  "base_revision": "6ed134eafa9735415530b19fea0e27881b81bdbe",
+  "case_version": 2,
+  "isolation": "Fresh safe-mode CLI contexts; tools disabled; no session persistence; same JSON output contract; oracles withheld from reviewers.",
+  "adjudication": "Fresh Opus 5.5 context; candidate alpha and baseline beta labels concealed guidance identity; host also inspected source fit. Same model family is not independent external corroboration.",
+  "guidance_difference": "Baseline entry/focused/memory guidance vs updated equivalents plus routed review-feedback and incident-learning references. This compares bundles, not isolated format or individual rules.",
+  "limits": [
+    "One run per arm on nine explicit synthetic cases.",
+    "Frozen packets identify tested selected guidance. Three subsequent routing clarifications and deep-debug instructions are source-reviewed rather than attributed model-behavior measurements; comparison.md lists the exact deltas.",
+    "No actual repair execution, population accuracy, production latency, human-effort or memory-benefit estimate."
+  ],
+  "sha256": {
+    "evals/review/cases.json": "f8df6f68236842d533872fc11cbe1d69ad84023e2614d132bc3a959d1f328914",
+    "evals/review/private/oracles.json": "ea2f824d732bde35c351e64ae5321492295d5c827e4c2f72e01f33f4b4da3367",
+    "evals/review/results/oracle-review.json": "d211841fcac30c713d0dcaff849f4b2f204736a46432c2ffb9195c7911487bac",
+    "evals/review/results/baseline-adjudication.json": "fbc71efbf14b8c9c4cefaa434682e589100010be299ef14dc17bdb4ca2fcbbf4",
+    "evals/review/results/comparison.md": "4b574efdd0079c550801e732ccae322541d2b8dc336b68c759e567ed87474f96",
+    "evals/review/results/adjudicator-raw.json": "5e3f34f39295d5336cf03c59bf9d4b88147802bbb11b593fa4ac33f7f738c6e8",
+    "evals/review/results/candidate-review.json": "91e311181bd406a5fc8fedd729d05d557f8505e8575268bc2f10d33930c155fc",
+    "evals/review/results/adjudicator-prompt.txt": "d7d3b3beaef51778b76c98c8cf5d7241ebca48914e49df22214b3c475cab7425",
+    "evals/review/results/baseline-review.json": "4b776a6af00c7de455a370e5c3334fbabd15e032affb5af992ef2f99d0ffaf2c",
+    "evals/review/results/review-prompt.txt": "16c75250a9b3ad443b4039006bbe9d578ec652e66fe10c276311ea4395cd9ce1",
+    "evals/review/results/candidate-meta.json": "dbe9718ca9a4a75ffd5f78fbde367897e2553f82647b3906ad2e7d6b39f1b839",
+    "evals/review/results/candidate-guidance.txt": "655bce32cf0232b7d7ba0b53c75d2cec0f5bbded953e03de2f6b11a08d62cabb",
+    "evals/review/results/baseline-meta.json": "d15907d1078fae6f329cbe1a065ad1faf21857c1544244164d25cc73e31ab0b9",
+    "evals/review/results/baseline-guidance.txt": "b9d28e83b7f67e396e394651afd5c5297b973719e00919df88b8aad669ae9e31",
+    "evals/review/results/adjudication-normalization.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "evals/review/results/candidate-score.json": "20e932be5a6709442f3953aff13ad75ef60b9278b71cdf51f9f93857fe0ad794",
+    "evals/review/results/adjudicator-meta.json": "90fb155d0d4748e5a9b29648bd3997b7dd57a9fdc300afba92251ba506e83393",
+    "evals/review/results/baseline-score.json": "9fd2adff545ff2b5e2566478b5c716eb9072098b7741d9a2f93f6a1993c4dfe2",
+    "evals/review/results/candidate-adjudication.json": "39957a013efaa50a994238c4d9496b0913c53e8b497b25eab88838d41e0a72fe"
+  },
+  "oracle_version": 2
+}

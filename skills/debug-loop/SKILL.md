@@ -1,6 +1,6 @@
 ---
 name: debug-loop
-description: Use for deep iterative debugging when memory lookup returns LIKELY_MATCH/WEAK_SIGNAL/NO_MATCH, a fix didn't hold, or the user asks for root cause analysis. Not for known fixes or trivial issues.
+description: Use for nontrivial, uncertain, recurrent or disputed root causes, a repair that did not hold, or an explicit deep investigation. Memory labels inform investigation but do not determine depth.
 user-invocable: false
 ---
 
@@ -16,7 +16,7 @@ Before entering the loop, assess whether it's warranted. Choose depth from the a
 
 - **Skip the deep loop** for `KNOWN_FIX` only after validating causal fit and current contracts; adapt and verify
 - **Skip the loop** for trivial issues: typos, missing imports, obvious config errors where the cause is immediately clear
-- **Enter the loop** when: verdict is `LIKELY_MATCH`, `WEAK_SIGNAL`, or `NO_MATCH`, the user asks for deep investigation, the initial diagnosis feels superficial, or a previous fix attempt didn't hold
+- **Enter the loop** for a nontrivial or disputed cause, a previous repair that did not hold, an unexplained cross-component failure, or an explicit deep-investigation request. A weak or absent memory match is one input, not an automatic trigger.
 
 ## Efficiency
 
@@ -150,8 +150,9 @@ Every item in the report gets one marker:
 
 ### After Reporting
 
-- **Store the incident when authorized and available** via the debugger `store` MCP tool for future retrieval
-- **Record the outcome when authorized and available** via the debugger `outcome` MCP tool
+- **Before any memory write**, follow [debugging-memory storage preconditions](../debugging-memory/SKILL.md): confirm task authorization and inspect `status` for the actual server working directory and configured memory path. They must match the authorized project or an explicitly selected shared corpus; otherwise keep a task report and disclose the storage gap.
+- **Store the incident only after those checks pass** via the existing debugger `store` fields and narrative for future retrieval
+- **Record an outcome only after those checks pass and a retrieved repair was actually attempted**, using `worked`, `failed` or `modified`. Keep uncertain results in the incident narrative or task report; do not invent an outcome enum.
 - **Write state only when task-authorized** to `.claude-code-debugger/debug-loop/scorecard.md`
 
 ## Iteration Rules
@@ -165,13 +166,15 @@ When any criterion fails or the critique is CHALLENGED, iterate:
 5. **Re-verify failed and affected checks** — rerun previously passing checks whose evidence the new change can invalidate. Retain unrelated passing evidence only when its source and assumptions remain applicable.
 6. **Re-score and re-critique**
 
+Use [review feedback](../code-principles/references/review-feedback.md) to reconcile repeated critique findings, changed closure premises and affected caller contracts. One justified budget covers nested review and repair; the five-iteration maximum below still applies. Record failed hypotheses and evidence in [incident lessons](../code-principles/references/incident-learning.md) when authorized.
+
 ### Convergence Detection
 
 Load `references/convergence-rules.md` for detailed rules and escalation templates.
 
 Summary:
-- **Same hypothesis fails 2x** → escalate to user ("I've tried this approach twice — the hypothesis may be wrong or there's a constraint I'm not seeing")
-- **Fix A breaks criterion B (oscillation)** → flag as coupled issue, present both sides, ask user
+- **Same hypothesis fails 2x** → reject or revise it and seek discriminating evidence; ask only for genuinely missing context or a consequential user decision
+- **Fix A breaks criterion B (oscillation)** → inspect shared ownership or conflicting requirements; continue an authorized adequate repair, asking only if requirements cannot be resolved
 - **3+ criteria fail after a fix** → systemic issue, stop loop and reassess the approach entirely
 - **New regression detected** → fix is causing side effects, reconsider the approach
 - **Hard stop at 5 iterations** → report what's known and what isn't. Never silently loop beyond 5

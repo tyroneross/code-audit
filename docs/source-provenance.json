@@ -1662,8 +1662,8 @@
       "path": "skills/audit/references/reviewer-role.md",
       "source": "code-principles-audit",
       "source_sha256": "d01b89ac25741a035fa66e18575241ef1b5c89ce0f9b980cc9f45dc0809f6dc0",
-      "current_sha256": "d01b89ac25741a035fa66e18575241ef1b5c89ce0f9b980cc9f45dc0809f6dc0",
-      "modified_from_import": false
+      "current_sha256": "f6d44da799dccbef288c4be848a0ee072c8da06a1a2fb25b0a3781cbea96ff02",
+      "modified_from_import": true
     },
     {
       "path": "skills/audit/references/rule-index.md",
@@ -1739,7 +1739,7 @@
       "path": "skills/code-principles/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "64b677f116d8f985c126279e6558ab92f962026ad5d76f057a033d738e438912",
+      "current_sha256": "1870d79c6f3c17ca343f60708a899939210ba1f0c89349004375c68f2b14915d",
       "modified_from_import": true
     },
     {
@@ -1816,7 +1816,7 @@
       "path": "skills/debug-loop/SKILL.md",
       "source": "coding-debugger",
       "source_sha256": "4f9b91866eab93783578746025a56c1416d4d2c10cc68113761c41f5f9328dcf",
-      "current_sha256": "ab8acb306f4e87672a36abf40abe39b0aefa058fea675c191c9ae8e393484aea",
+      "current_sha256": "8d66551446af316346d265d087d73070af4d6ea512b071e6cc78fdf9c35db95a",
       "modified_from_import": true
     },
     {
@@ -1830,14 +1830,14 @@
       "path": "skills/debug-loop/references/convergence-rules.md",
       "source": "coding-debugger",
       "source_sha256": "cc7a17de5013ac6ddcbf13737cb3904e2e2decd0b2b2812e5c893c2d891f62ad",
-      "current_sha256": "cc7a17de5013ac6ddcbf13737cb3904e2e2decd0b2b2812e5c893c2d891f62ad",
-      "modified_from_import": false
+      "current_sha256": "c7cbb673c857c4f285b968799b96cd920533001b7c891c13354318a74e4c76e6",
+      "modified_from_import": true
     },
     {
       "path": "skills/debugging-memory/SKILL.md",
       "source": "coding-debugger",
       "source_sha256": "2139ecd13e7e159b0db29df6afe82b852ae74ce312e05c0bd922f8cfefa26205",
-      "current_sha256": "ee54793665701b100b62f895728b3c127576af91b9f84a04f096da10572db98e",
+      "current_sha256": "a7c6a4d9004c364ca5ed9fb2cfea9c2bbfafed47ae8178408f589649201124f0",
       "modified_from_import": true
     },
     {
@@ -1889,7 +1889,8 @@
     "Canonical rule cards replace the source repo symlink; no duplicate card authority.",
     "Audit packaging tests validate combined identity and independent plugin/tool versions.",
     "Memory workflow matches actual tool schemas and optional host capabilities.",
-    "Debugger package and lockfile remove automatic install setup; compiled runtime rebuilt from copied source."
+    "Debugger package and lockfile remove automatic install setup; compiled runtime rebuilt from copied source.",
+    "2026-10-17: Add review convergence, evidence-sensitive finding reopening, incident applicability and negative-outcome guidance, research limits and a held-out synthetic review evaluation; MCP schemas and runtime unchanged."
   ],
   "removed_imports": [
     {

@@ -11,8 +11,9 @@ Find wasted work and broken contracts, choose the simplest adequate fix for the 
 ## Workflow
 
 ```text
-READ intended outcome, scope, constraints, relevant code, callers and tests
-IF debugger available: SEARCH past incidents
+READ intended outcome, scope, revisions, constraints, project review guidance and tests
+IF reviewing: READ review-feedback.md; SELECT effort and justified shared budget
+IF debugger available: FOLLOW ../debugging-memory/SKILL.md; SEARCH past incidents
 ELSE: STATE the incident-coverage gap
 IF scanner available: SCAN relevant files; TREAT hits as leads
 ELSE: STATE the scan-coverage gap; CONTINUE permitted manual review
@@ -30,8 +31,11 @@ FOR each suspected problem:
     FOR work-count, growth or memory claims: PROVIDE matching evidence and limits
     RECORD evidence, relevant rule premises, tradeoffs, executed checks, uncertainty
     DISTINGUISH recommendations from verified fixes
-STOP when scoped work complete OR required external dependency blocks progress
+REPORT material findings and coverage; RECONCILE prior dispositions on re-review
+STOP when scoped work complete OR budget/dependency blocks progress; PRESERVE unresolved work
 ```
+
+For review output, budgets, re-review, deduplication, reopening and evaluation, use [review feedback](references/review-feedback.md). For memory applicability, rejected approaches and outcomes, use [incident learning](references/incident-learning.md). A causal finding need not fit a checklist ID; evaluate rule fit and repair adequacy separately.
 
 For command syntax and outcome logging, use [tool instructions](references/tool-use.md).
 

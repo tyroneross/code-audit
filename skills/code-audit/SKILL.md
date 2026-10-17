@@ -7,7 +7,9 @@ description: Review, audit, debug or improve code using shared engineering princ
 
 ```text
 resolve intent, target revision, scope and supported behavior
-read project instructions and existing contracts
+read project instructions, REVIEW.md when present, and existing contracts
+choose review effort and a justified shared budget
+if reviewing: load ../code-principles/references/review-feedback.md
 if symptoms: load ../debug/SKILL.md; treat retrieved incidents as hypotheses
 else if explicit full principles audit: load ../audit/SKILL.md
 else if planning: load ../plan/SKILL.md
@@ -18,17 +20,20 @@ trace callers, state owners, boundaries and failure paths
 compare a local patch with the simplest adequate shared correction
 if repair authorized: fix the confirmed cause and preserve valid behavior
 verify changed behavior and affected guarantees
-report prioritized findings, evidence, coverage and remaining gaps
-record reusable verified repairs when authorized and incident storage is available
+report material finding count, evidence, coverage, dispositions and remaining gaps
+if re-reviewing: reconcile prior findings against new and affected behavior
+if recording authorized: use ../debugging-memory/SKILL.md storage checks before every write
 ```
 
-Resolve paths from this skill's actual installed folder, not the project's working directory. The plugin root is two levels above this file. A review alone is read-only; a request to fix or improve authorizes proportionate repairs in scope. Do not force a full thirty-rule report for a small review.
+Resolve paths from this skill's actual installed folder, not the project's working directory. The plugin root is two directories above this skill's folder. A review alone is read-only; a request to fix or improve authorizes proportionate repairs in scope. Do not force a full thirty-rule report for a small review.
 
 ## Shared judgment
 
 Read [foundations](../code-principles/references/engineering-foundations.md) for simplicity, systems engineering, usability and human factors. Use [challenge guidance](../code-principles/references/challenge-guidance.md) to select deeper definitions. Read [whole-system repair](../code-principles/references/whole-system-repair.md) when choosing a shared correction and [timeouts](../code-principles/references/timeouts.md) for timing and retries. Real policy constants may be correct; distinguish them from unexplained hard-coded workarounds.
 
 Optimize the user's whole operation under known constraints. Compare end-to-end cost and preserved guarantees, not just lines changed or one successful example. A shared data structure, state owner or boundary may solve the class of issue; speculative frameworks may add burden. Explain why the selected scope is adequate.
+
+For first and repeated reviews, use [review feedback](../code-principles/references/review-feedback.md): stable findings, current evidence, affected-path coverage and one shared budget. For historical repairs, use [incident learning](../code-principles/references/incident-learning.md). Do not require a full report or persistent ledger for a small task.
 
 ## Evidence and research
 

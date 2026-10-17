@@ -76,5 +76,45 @@
     "automatic_mcp_registration_verified": false,
     "receipt_sha256": "cac5eb8ec922a0dcff1085e80d0729306eef9de9f78556eab0e663c6eb0ecdec"
   },
-  "publication_at_recording": "Local only; no remote created or pushed"
+  "publication_at_recording": "Local only; no remote created or pushed",
+  "review_feedback_update": {
+    "date": "2026-10-17",
+    "version": "0.2.0",
+    "affected_checks": [
+      {
+        "check": "audit",
+        "tests": 88,
+        "exit_code": 0
+      },
+      {
+        "check": "principles",
+        "tests": 9,
+        "exit_code": 0
+      },
+      {
+        "check": "combined-integration",
+        "tests": 15,
+        "exit_code": 0
+      },
+      {
+        "check": "review-scorer",
+        "tests": 10,
+        "exit_code": 0
+      }
+    ],
+    "current_check_count": 122,
+    "timeout_repair_replay": {
+      "tests": 18,
+      "passed": 18
+    },
+    "review_comparison": "../evals/review/results/comparison.md",
+    "runtime_changed": false,
+    "limits": [
+      "One model run per arm on nine synthetic review cases; no general improvement claim.",
+      "Historical runtime suites were not rerun.",
+      "Desktop discovery, production acceptance, real-memory benefit and operational review budgets remain unmeasured."
+    ],
+    "independent_review": "review-feedback-review.json",
+    "linked_invalidation_retrieval": "Passed in temporary-project MCP integration roundtrip; not a real-corpus ranking claim."
+  }
 }

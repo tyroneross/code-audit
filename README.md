@@ -26,6 +26,8 @@ The [entry skill](skills/code-audit/SKILL.md) starts with pseudocode, selects th
 
 Shared guidance covers simplicity, systems engineering, usability, human factors, data structures, failure isolation, whole-system repair and intentional timeouts. Choose the simplest adequate causal correction across supported paths.
 
+Reviews track finding identity and disposition, inspect changed code and affected contracts, and separate severity from introduced/pre-existing origin. Incident lessons retain applicability, failed approaches and evidence limits. Start with the [review workflow](skills/code-principles/references/review-feedback.md), [incident learning](skills/code-principles/references/incident-learning.md) and [evaluation evidence](evals/review/README.md) when those challenges apply.
+
 ## Load locally
 
 Python 3.10+ runs audit tools; Node.js 18+ runs memory. Compiled debugger code is included, so ordinary MCP use needs no dependency installation. No automatic mining hook is enabled.
@@ -64,6 +66,7 @@ Memory uses the compatible per-project `.claude/memory` path and explicit `CLAUD
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s skills/audit/scripts -p 'test_*.py'
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s skills/code-principles/scripts -p 'test_*.py'
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p 'test_*.py'
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s evals/review -p 'test_*.py'
 ```
 
 For runtime development use the bundled package lockfile, disable install scripts, build TypeScript and rerun the supplied runtime suites. Compiled outputs are tracked for dependency-free startup. See [integration](docs/integration.md), [source provenance](docs/source-provenance.json) and [verification](docs/verification.md). Source checks, host loading, model repairs, live application behavior and deployment remain separate evidence.

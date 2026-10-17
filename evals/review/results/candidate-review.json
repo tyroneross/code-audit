@@ -1,0 +1,158 @@
+{
+  "cases": [
+    {
+      "case_id": "R01",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The new polling path calls apply() unconditionally. The revision guard lives only in live.py, not in the shared state owner, so a poll event carrying an older revision for a job overwrites the newer state that a live event already applied. This violates the requirement that all event sources reject older per-job revisions.",
+          "locations": [
+            "poll.py:2",
+            "store.py:2",
+            "live.py:3"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Move the revision comparison into store.apply, the single state owner: write only if no prior entry exists or event.revision > old.revision. Have both on_live and on_poll call it, and remove the duplicated check from live.py so future sources inherit the guard.",
+          "verification": "Apply a live event with revision 5 for job J, then a poll event with revision 4 for J; assert state[J].revision == 5. Repeat with the two sources swapped. Also apply a poll event with revision 6 and assert it is accepted. Both directions fail against the current poll.py."
+        }
+      ]
+    },
+    {
+      "case_id": "R02",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R03",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R04",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "provider.send now interprets its timeout argument as seconds, but the unchanged caller client.request still forwards timeout_ms directly. Every request therefore gets a transport timeout 1000x larger than intended (for example, 500 ms becomes 500 s). This defeats the caller's deadline and can hang requests.",
+          "locations": [
+            "client.py:2",
+            "provider.py:1-2"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Keep the public timeout_ms parameter and convert at the boundary: provider.send(payload, timeout_ms / 1000). Also check any other provider.send callers for the same unit mismatch.",
+          "verification": "With a fake transport recording the timeout, call client.request(payload, timeout_ms=500) and assert the transport receives timeout=0.5. This fails at the current revision, which passes 500."
+        }
+      ]
+    },
+    {
+      "case_id": "R05",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R06",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F-ready",
+          "cause": "Handler.start is now a coroutine, but owner.launch calls handler.start() without awaiting it. The call only creates a coroutine object, so initialize() never runs before publish('ready'), and the coroutine is never awaited at all. F-ready was closed on the premise that start() was synchronous and returned only after initialization; that premise no longer holds, so the finding is reopened.",
+          "locations": [
+            "owner.py:2-3",
+            "handler.py:1-2"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "reopened",
+          "suggested_change": "Change owner.launch to 'await handler.start()' before publish('ready').",
+          "verification": "Use a fake initialize that records completion and a publish spy. Run launch and assert that initialize completed before publish('ready') was called and that no 'coroutine was never awaited' warning occurs. This fails at the current revision."
+        }
+      ]
+    },
+    {
+      "case_id": "R07",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "checkout generates a fresh new_uuid() idempotency key for each outer attempt instead of using the caller-supplied stable operation_id. After a lost response, the retry reaches the provider with a different key, so provider deduplication cannot recognize it, and one logical checkout can execute more than once (duplicate charge). Separate invocations of the same logical checkout also never share a key.",
+          "locations": [
+            "checkout.py:4"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Pass operation_id as the key on every attempt and in every invocation.",
+          "verification": "Use a fake provider that commits the write and then raises TimeoutError on the first send. Assert that every send receives key == operation_id and that the provider records exactly one committed write after checkout returns or retries."
+        },
+        {
+          "id": "F2",
+          "cause": "Retries occur at two nested layers: checkout loops max_attempts times, and gateway retries provider.send 3 times per call. Up to 3*max_attempts provider attempts can occur, which violates max_attempts as an upper bound and multiplies load on a timing-out provider.",
+          "locations": [
+            "checkout.py:2",
+            "gateway.py:2"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Keep a single retry owner (checkout), bounded by max_attempts, and make gateway perform exactly one provider.send per call.",
+          "verification": "Use a fake provider that always times out, with max_attempts=2. Assert that provider.send is called at most 2 times. The current code makes 6 calls."
+        },
+        {
+          "id": "F3",
+          "cause": "The deadline is a total duration budget measured from checkout entry, but every provider.send receives timeout=deadline, the full budget. Elapsed time is never subtracted, so total wall time can reach roughly attempts x deadline, which violates the total-deadline contract.",
+          "locations": [
+            "gateway.py:4",
+            "checkout.py:4"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "In checkout, record a monotonic start time. Before each attempt, compute remaining = deadline - elapsed and stop retrying when remaining <= 0. Pass the remaining budget as the per-attempt timeout.",
+          "verification": "Use a fake clock and a provider that consumes its full timeout and then raises TimeoutError, with deadline=10 and max_attempts=3. Assert that the total simulated elapsed time is <= 10 and that each send's timeout equals the remaining budget."
+        }
+      ]
+    },
+    {
+      "case_id": "R08",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The new audit handler is defined but never registered. bootstrap.build constructs App(handlers=[]), so application.run(event) iterates over an empty list and audit.handle is invoked zero times, not the required exactly once.",
+          "locations": [
+            "bootstrap.py:3",
+            "audit.py:1"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Register the handler in bootstrap: import audit and construct App(handlers=[audit.handle]), keeping it listed exactly once.",
+          "verification": "Call build().run(event) with audit_store faked, and assert that audit_store.append was called exactly once with the event. This fails at the current revision (zero calls)."
+        }
+      ]
+    },
+    {
+      "case_id": "R09",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "read_doc returns doc.body without checking that actor is the document's owner, so any actor can read any document. This violates the owner-only read contract. The shown change only renames HEADING; the unchecked access existed identically before it.",
+          "locations": [
+            "page.py:2-3"
+          ],
+          "severity": "high",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Add an ownership check in read_doc: if actor is not doc's owner, raise an authorization error (or return the project's established denial) before returning doc.body. Treat this separately from the heading rename.",
+          "verification": "Call read_doc with a non-owner actor and assert that access is denied. Call it with the owner and assert that doc.body is returned. The non-owner case fails at both the base and current revisions."
+        }
+      ]
+    }
+  ]
+}
