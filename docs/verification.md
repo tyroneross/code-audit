@@ -1,6 +1,6 @@
 # Observed verification
 
-As of October 16, 2026. This is a local repository, not a published or globally installed plugin.
+These checks were recorded on October 16, 2026. They describe source, test and host boundaries; public source availability does not establish global plugin installation.
 
 | Boundary | Observed result | Limit |
 |---|---|---|
@@ -12,7 +12,7 @@ As of October 16, 2026. This is a local repository, not a published or globally 
 | Claude host | Manifest validator passes; the actual Skill tool loads code-audit:code-audit | MCP status was separately registered in an isolated host and reported its actual working directory, memory path and absent index. Automatic plugin MCP registration is not established by this smoke test. |
 | Opus 5.5 repair | Exact claude-opus-5-5 receipt; 18 of 18 held-out behavior checks pass | One synthetic checkout task. Public contract, simulator and existing public test preserved. |
 | Codex host | Portable and compatibility manifests plus local marketplace packaged | Desktop installation/loading not performed. |
-| Publication/deployment | Not performed | Original repositories and installations remain intact. |
+| Publication/deployment at the recorded test date | Not performed | Original repositories and installations remain intact. Public source publication is separate from application deployment. |
 
 The [replayable fixture](../evals/README.md) includes the observed model identity, frozen guidance hashes and repaired example. Passing tests establish the observed boundary, not production acceptance or a universal prompt-format advantage.
 

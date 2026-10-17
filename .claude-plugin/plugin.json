@@ -12,5 +12,7 @@
     "audit",
     "engineering",
     "research"
-  ]
+  ],
+  "repository": "https://github.com/tyroneross/code-audit",
+  "homepage": "https://github.com/tyroneross/code-audit"
 }

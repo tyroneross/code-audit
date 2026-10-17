@@ -63,7 +63,6 @@
     "Automatic plugin MCP registration in either host",
     "Production/runtime/user acceptance beyond tested boundaries"
   ],
-  "publication": "Local only; no remote created or pushed",
   "claude_host_smoke": {
     "skill": "code-audit:code-audit",
     "observed_tool_calls": [
@@ -76,5 +75,6 @@
     "explicit_mcp_registration": true,
     "automatic_mcp_registration_verified": false,
     "receipt_sha256": "cac5eb8ec922a0dcff1085e80d0729306eef9de9f78556eab0e663c6eb0ecdec"
-  }
+  },
+  "publication_at_recording": "Local only; no remote created or pushed"
 }
