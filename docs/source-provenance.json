@@ -1,0 +1,2100 @@
+{
+  "created": "2026-10-16",
+  "sources": [
+    {
+      "source": "code-principles-audit",
+      "head": "4361bd38045e21e4651ec265261d0aad7a9092ff",
+      "includes_local_changes": true
+    },
+    {
+      "source": "coding-debugger",
+      "head": "8cc675e52c3a837741d6f30bfe890a2769a83012",
+      "includes_local_changes": true
+    }
+  ],
+  "imported_files": [
+    {
+      "path": "LICENSE",
+      "source": "coding-debugger",
+      "source_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "current_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/LICENSE",
+      "source": "coding-debugger",
+      "source_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "current_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/cli/index.ts",
+      "source": "coding-debugger",
+      "source_sha256": "59024ba7d45fd257555d77b9fc2d033bf8b61b4806699cdfdec8d13c568be22e",
+      "current_sha256": "59024ba7d45fd257555d77b9fc2d033bf8b61b4806699cdfdec8d13c568be22e",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/cli/init.ts",
+      "source": "coding-debugger",
+      "source_sha256": "10972d4f5ff99587eb751246485504d6b760d41bc8888157ad129e1418a0768f",
+      "current_sha256": "10972d4f5ff99587eb751246485504d6b760d41bc8888157ad129e1418a0768f",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/cli/index.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "d7de95e76949ec8f9f893c0c182f1700272c5be89e2fba43d2a71f193da75ab5",
+      "current_sha256": "d7de95e76949ec8f9f893c0c182f1700272c5be89e2fba43d2a71f193da75ab5",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/cli/index.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "bfcf484e73f733c690260f472f78610b0ce120db829af98af5699399fd567eea",
+      "current_sha256": "bfcf484e73f733c690260f472f78610b0ce120db829af98af5699399fd567eea",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/cli/index.js",
+      "source": "coding-debugger",
+      "source_sha256": "121a472e258dd6d004a3d42504448982c1be653be2692acc6e4230a8bd726e11",
+      "current_sha256": "121a472e258dd6d004a3d42504448982c1be653be2692acc6e4230a8bd726e11",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/cli/index.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "d474e6713814ee4fdd8570e6904fd7add2b0342066eb4bc86adfec0f2ac4634e",
+      "current_sha256": "d474e6713814ee4fdd8570e6904fd7add2b0342066eb4bc86adfec0f2ac4634e",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/cli/init.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "7995344905e7e0a75903d87f83ac274834cdb050b989c9a49cfdd4a428f384f0",
+      "current_sha256": "7995344905e7e0a75903d87f83ac274834cdb050b989c9a49cfdd4a428f384f0",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/cli/init.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "9d39378f5aae9d375dabc07a3269c404dea41fec0ca8cfd67813964a5413a8e1",
+      "current_sha256": "9d39378f5aae9d375dabc07a3269c404dea41fec0ca8cfd67813964a5413a8e1",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/cli/init.js",
+      "source": "coding-debugger",
+      "source_sha256": "06ac1759d5ad7ca366ecd9e1f2c67cd96982041436776f4e9672c5e867fb4644",
+      "current_sha256": "06ac1759d5ad7ca366ecd9e1f2c67cd96982041436776f4e9672c5e867fb4644",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/cli/init.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "597881f6f40ef59a39fb53c7227ededb42534a9e3db67cbdf7688f59664581ee",
+      "current_sha256": "597881f6f40ef59a39fb53c7227ededb42534a9e3db67cbdf7688f59664581ee",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/package.json",
+      "source": "coding-debugger",
+      "source_sha256": "5dc51c86168bdb2a765f599f5c4fb808544efd41a6f4708ec380f6dffd023e48",
+      "current_sha256": "cc9a312f23986b90bc2b270e7c4b62b41e68516cd5cfb10029dcef3478d465d5",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/assessment-orchestrator.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "c43db02dfd45137d9e6929d925f8c585a1db6f1d9113a682ef01c4e6dc575d25",
+      "current_sha256": "c43db02dfd45137d9e6929d925f8c585a1db6f1d9113a682ef01c4e6dc575d25",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/assessment-orchestrator.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "b10e0f35a4eeec5917b7f78e9862934d1392efca0adb79796de477f8b3f3a76d",
+      "current_sha256": "b10e0f35a4eeec5917b7f78e9862934d1392efca0adb79796de477f8b3f3a76d",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/assessment-orchestrator.js",
+      "source": "coding-debugger",
+      "source_sha256": "9424e67ca1f2e53d3ae32b2f0a1e85ff3307e37d7a5dc8e1132b294a635e76b9",
+      "current_sha256": "9424e67ca1f2e53d3ae32b2f0a1e85ff3307e37d7a5dc8e1132b294a635e76b9",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/assessment-orchestrator.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "a07166714ae60f18a060fb076b5382691f11d9bc45f76b9c3accd3d0157a1698",
+      "current_sha256": "a07166714ae60f18a060fb076b5382691f11d9bc45f76b9c3accd3d0157a1698",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/audit-miner.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "fcafe2374fe85a9071de53f276fd9fb4aaccb0b4e117cc6302df81cb79951fed",
+      "current_sha256": "fcafe2374fe85a9071de53f276fd9fb4aaccb0b4e117cc6302df81cb79951fed",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/audit-miner.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "329292838a7e117f9db7cf48ddbd6e7079dc374badaf6f293baa88e5f4d3112a",
+      "current_sha256": "329292838a7e117f9db7cf48ddbd6e7079dc374badaf6f293baa88e5f4d3112a",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/audit-miner.js",
+      "source": "coding-debugger",
+      "source_sha256": "24a235d326ee65f7a99b0d53bf079d4c50c0427fea36081eb04e2a8a4aa3780c",
+      "current_sha256": "24a235d326ee65f7a99b0d53bf079d4c50c0427fea36081eb04e2a8a4aa3780c",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/audit-miner.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "748af81653e6ca65a7dd100660b00a81b8536d5373c94fcafe6be8f2acdb0e1d",
+      "current_sha256": "748af81653e6ca65a7dd100660b00a81b8536d5373c94fcafe6be8f2acdb0e1d",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/batch-operations.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "9fb9827d328818fa55a7beb080ae18b83162e08f77df14c3c92b49315e91c98c",
+      "current_sha256": "9fb9827d328818fa55a7beb080ae18b83162e08f77df14c3c92b49315e91c98c",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/batch-operations.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "4cf0c7e3ea7756c4364fc7fdae3769418ddf9a32aa58e6947ff6962682b76d39",
+      "current_sha256": "4cf0c7e3ea7756c4364fc7fdae3769418ddf9a32aa58e6947ff6962682b76d39",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/batch-operations.js",
+      "source": "coding-debugger",
+      "source_sha256": "2ec2bf95913f5df140f03e36b2d98852650336ab26a0f4ec1ce0f676ab37a9ab",
+      "current_sha256": "2ec2bf95913f5df140f03e36b2d98852650336ab26a0f4ec1ce0f676ab37a9ab",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/batch-operations.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "6aaae12421795b25177bc533db5bccf02ef0543a830a0bd495bee08a0b82773b",
+      "current_sha256": "6aaae12421795b25177bc533db5bccf02ef0543a830a0bd495bee08a0b82773b",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/config.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "a769615a27684ea22bddf3d685e59f4588219db123c4180b48872c9148a39552",
+      "current_sha256": "a769615a27684ea22bddf3d685e59f4588219db123c4180b48872c9148a39552",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/config.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "65e7dfdc951be3179591bc959e97320a35dd99778bd75b8d0992051e9c63f96a",
+      "current_sha256": "65e7dfdc951be3179591bc959e97320a35dd99778bd75b8d0992051e9c63f96a",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/config.js",
+      "source": "coding-debugger",
+      "source_sha256": "8225dade2007f66128a1cf91aeac84c40c4954ab1f9a889b0f10331197e79d1d",
+      "current_sha256": "8225dade2007f66128a1cf91aeac84c40c4954ab1f9a889b0f10331197e79d1d",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/config.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "a8da8f5084574e458b0d346a5d40f64378c758b13e928cd106933e5eced1e64c",
+      "current_sha256": "a8da8f5084574e458b0d346a5d40f64378c758b13e928cd106933e5eced1e64c",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/context-engine.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "57644ded34bb9b6a42e95bf279240d8881fe704a87e45a470e4c6ef343901015",
+      "current_sha256": "57644ded34bb9b6a42e95bf279240d8881fe704a87e45a470e4c6ef343901015",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/context-engine.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "1ae5588989b2c9785b3f527ebde8a0d1470d037f9008f7044b5bbeceab073511",
+      "current_sha256": "1ae5588989b2c9785b3f527ebde8a0d1470d037f9008f7044b5bbeceab073511",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/context-engine.js",
+      "source": "coding-debugger",
+      "source_sha256": "fe1862ff6f5aeca3b589ae6801ed5d517c635bd3325c8aea43e45b95a260049b",
+      "current_sha256": "fe1862ff6f5aeca3b589ae6801ed5d517c635bd3325c8aea43e45b95a260049b",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/context-engine.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "eb9e9204d2b89a2fbca529d3064ed4fe32efb658e7007d437a395e0d7bb38512",
+      "current_sha256": "eb9e9204d2b89a2fbca529d3064ed4fe32efb658e7007d437a395e0d7bb38512",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/debug-wrapper.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "fd320ea5891a0619b78d795ba6763ffa9dad508be7e58b72b4b6c9e6fc056715",
+      "current_sha256": "fd320ea5891a0619b78d795ba6763ffa9dad508be7e58b72b4b6c9e6fc056715",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/debug-wrapper.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "3b21ebce03a89103a46a4ea2c2e4f818f621b20cb5d24bcab7b144da08a0a6d8",
+      "current_sha256": "3b21ebce03a89103a46a4ea2c2e4f818f621b20cb5d24bcab7b144da08a0a6d8",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/debug-wrapper.js",
+      "source": "coding-debugger",
+      "source_sha256": "20130478cc96f5b03747f9eb3cf94ebd70bfb4b67395ace504063ca90d8697b0",
+      "current_sha256": "20130478cc96f5b03747f9eb3cf94ebd70bfb4b67395ace504063ca90d8697b0",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/debug-wrapper.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "3a7a832ec5189ef76699ca5deeb5a66c2bb41a9d4b9a6a6ba0373139a0930aca",
+      "current_sha256": "3a7a832ec5189ef76699ca5deeb5a66c2bb41a9d4b9a6a6ba0373139a0930aca",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/index.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "32ca40518abbead0873cb15a6309219b7341b2e581535ecdb08b2828040bffd2",
+      "current_sha256": "32ca40518abbead0873cb15a6309219b7341b2e581535ecdb08b2828040bffd2",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/index.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "cd586bc46c144a9c6d797980afbd10f7c6668b74430a34f0ca893c6e7346eab0",
+      "current_sha256": "cd586bc46c144a9c6d797980afbd10f7c6668b74430a34f0ca893c6e7346eab0",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/index.js",
+      "source": "coding-debugger",
+      "source_sha256": "0c0ae366a1fc3bb8f1491ffdb7683f1106862fe27b4f35d631d874bb0ebeb881",
+      "current_sha256": "0c0ae366a1fc3bb8f1491ffdb7683f1106862fe27b4f35d631d874bb0ebeb881",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/index.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "e9ff1b2c9f24fb22a89eacfd4a538704e4795c55523301688d39212de2ab50b7",
+      "current_sha256": "e9ff1b2c9f24fb22a89eacfd4a538704e4795c55523301688d39212de2ab50b7",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/interactive-verifier.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "2a1eee570eb97f59a2bf464f4a6806646d2fca99c9acba8808ce04e78bd3cdc8",
+      "current_sha256": "2a1eee570eb97f59a2bf464f4a6806646d2fca99c9acba8808ce04e78bd3cdc8",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/interactive-verifier.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "04a51648f773f36483bb1d3ad698274bc0bdd05392405cdc027ca0f8a946f536",
+      "current_sha256": "04a51648f773f36483bb1d3ad698274bc0bdd05392405cdc027ca0f8a946f536",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/interactive-verifier.js",
+      "source": "coding-debugger",
+      "source_sha256": "7839313ca47b8afa60d65f07cd4d0674233fd6c1273b4e040ac1234114aa3039",
+      "current_sha256": "7839313ca47b8afa60d65f07cd4d0674233fd6c1273b4e040ac1234114aa3039",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/interactive-verifier.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "e86a8b0f27c142131bc8f53b181f05afb81a9518769dfb7a1f3f697726724a8c",
+      "current_sha256": "e86a8b0f27c142131bc8f53b181f05afb81a9518769dfb7a1f3f697726724a8c",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/lessons.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "5ccdb7c17a6ce1e83d1f775783f9f492772836d52ac54a5cc0c4f222702f2879",
+      "current_sha256": "5ccdb7c17a6ce1e83d1f775783f9f492772836d52ac54a5cc0c4f222702f2879",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/lessons.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "6b0b393f808ab7939a5724ef68df9b94be4d5658fcb0aaf828ac26b4c1e0f126",
+      "current_sha256": "6b0b393f808ab7939a5724ef68df9b94be4d5658fcb0aaf828ac26b4c1e0f126",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/lessons.js",
+      "source": "coding-debugger",
+      "source_sha256": "fb4d30de076fa441befc5217c6a3fbeae8997a2a20878d7d47fc6f6eebc1e701",
+      "current_sha256": "fb4d30de076fa441befc5217c6a3fbeae8997a2a20878d7d47fc6f6eebc1e701",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/lessons.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "34e28830e11d71c67e226d58efa2c9f4003549a20f033f4c7867507515f5dbcd",
+      "current_sha256": "34e28830e11d71c67e226d58efa2c9f4003549a20f033f4c7867507515f5dbcd",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/log-reader.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "ac14672ba3b591447f344847e10780e6501f30d5df2bb44298264b1d09f5f645",
+      "current_sha256": "bd91d1417fb352dbd71f8c11c15ea60c61b0db9de3712662d13fc53259eb6592",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/log-reader.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "edc4d5aa3b68f945af3ed448e87bbc0c1cb3897b046c1b56da633f081b12b3e0",
+      "current_sha256": "8623b4d140bc4400468c51ce5e3ef69c38aea1bf4e439c077215a1846366552d",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/log-reader.js",
+      "source": "coding-debugger",
+      "source_sha256": "29684901ea006e222aa56225650381487f5deb804aa397dbb0dcf99599f6a723",
+      "current_sha256": "4443cbbc585b30a7f214317d0536e9ba99959a3c79be86229f11c3f2616f8e57",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/log-reader.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "45b316a74c442b099fbbb0f2cdcffda84175a78a2a9f80cb8d2738bcd5837f56",
+      "current_sha256": "76a050db3adcad1e3d7a991c8066769a7e77912dff6683fd94ad3bcc8e2b9f0f",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/logger.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "c22bed418c50466425d3b339e474f6c97b4804cd00ba147127d56a1318ed4aa7",
+      "current_sha256": "41634dd34679413ec72f02f8d311353fd5d282d927f2b680905f518db9fde63e",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/logger.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "c29b5901f9fbd6f26cdde24525e234d206055b7f19d6a880246cc633ff5fa610",
+      "current_sha256": "0151a6e2c80e1f5111b0a67db1d9b93932190c08468d5e3b5c464160c83d60c6",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/logger.js",
+      "source": "coding-debugger",
+      "source_sha256": "4da24df68a6506813e41d3485ef0b9725ff7eb8f9bbe0429a1223c0b02f56796",
+      "current_sha256": "860239002e07ff09c9dc356360ae56077f4316f5952646a4d63337a7af391489",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/logger.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "a770494d4189b311d2524af11c898fbea2855569accb1e02fd9d6c3941e5e088",
+      "current_sha256": "e9300548b926fb337378c98dd2bf02673e4a76650c9c09e2d1531d5fea36c723",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/mcp/server.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "621e70e08131a1d1879590766d623aeecc78620161555de40bd52108e69de4dc",
+      "current_sha256": "621e70e08131a1d1879590766d623aeecc78620161555de40bd52108e69de4dc",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/mcp/server.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "165fce170772bd35a2b35f3779484849ff831b6e6e4035467ddfb786fa139ac4",
+      "current_sha256": "165fce170772bd35a2b35f3779484849ff831b6e6e4035467ddfb786fa139ac4",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/mcp/server.js",
+      "source": "coding-debugger",
+      "source_sha256": "44736848a1ce60d2a57c9ad8cbf5349c02f64a36518971bef73979fc2a887f91",
+      "current_sha256": "40e6a1067ba1eb1d962c031e5c1ecaa01966f531390dfddab7801ff656b6679a",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/mcp/server.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "88b3c2c60148246325f63b16ebf14bf36e57e812ebccdf564026d8af62ea6258",
+      "current_sha256": "e2344b2db4aec393f5ab6864fa8d7fc334d76f9a5241f88772c791970bc416de",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/mcp/tools.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "f17d74796d4ebb807858bad72f1e4fdd6644d3a17d00d3c6c7770391417cb73d",
+      "current_sha256": "4761fb0fc6ed0af6a2d154682084803894fb6d5a2b9b74664495f1d3b4a9fe12",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/mcp/tools.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "f438011e3bbabd83e236bb908dfdc3593dcc7aedb72314f527de97939527ffbb",
+      "current_sha256": "97d5c756eb710785eb6e39a20c25f1a86f7140f43bc3eb149de179ae1abc833d",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/mcp/tools.js",
+      "source": "coding-debugger",
+      "source_sha256": "73411cbde215cec2dad12d6fc5aec8f2ad159e7efdab48ed25d014c798dc0c6a",
+      "current_sha256": "c0d31380d7b6781d7ea3cc86ba7c3104f1651b4716b8b8d6d9ce28f2de7ecec0",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/mcp/tools.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "fb37bf662e7a4f27fd1ca105a7397a7e5677eb88307a76f4e8c50c50354a47be",
+      "current_sha256": "dded1c5ed982270982cfb93869e99d219b2dca7e6137130889cb579ff0702263",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/parallel-retrieval.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "fcaa29eee0503b43b770c1ec14e2b4638f17b5020f5e0c07471ed463dc17e48a",
+      "current_sha256": "fcaa29eee0503b43b770c1ec14e2b4638f17b5020f5e0c07471ed463dc17e48a",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/parallel-retrieval.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "a2a4f2a61c3ee9ed588095912168f402f87b618496d759b6519321757c41c5c1",
+      "current_sha256": "a2a4f2a61c3ee9ed588095912168f402f87b618496d759b6519321757c41c5c1",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/parallel-retrieval.js",
+      "source": "coding-debugger",
+      "source_sha256": "43e342cb988bf1fde247bc178a9f6445d7da7e0e82f15c05e0686868e8edffbf",
+      "current_sha256": "43e342cb988bf1fde247bc178a9f6445d7da7e0e82f15c05e0686868e8edffbf",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/parallel-retrieval.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "0eaa41bd9b16db89a069db2bff9981f571a57a07c4d1c7ff3f16140df3124c3f",
+      "current_sha256": "0eaa41bd9b16db89a069db2bff9981f571a57a07c4d1c7ff3f16140df3124c3f",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/pattern-extractor.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "1f69c77e1360ab2061291992ad11b5db9294b1ed2c0e03814f813a5645647820",
+      "current_sha256": "1f69c77e1360ab2061291992ad11b5db9294b1ed2c0e03814f813a5645647820",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/pattern-extractor.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "34bc3d37eb398ba284f137c61b10af529e4863a850ab47c2c18bcffa5e1e2434",
+      "current_sha256": "34bc3d37eb398ba284f137c61b10af529e4863a850ab47c2c18bcffa5e1e2434",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/pattern-extractor.js",
+      "source": "coding-debugger",
+      "source_sha256": "26fece406ca78a0f28b0891904404978dfcccabfca258165ab334e80bd168031",
+      "current_sha256": "26fece406ca78a0f28b0891904404978dfcccabfca258165ab334e80bd168031",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/pattern-extractor.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "c7d4669f9546ea51d907d55660dd2403cf39b9c5cf768fa29b4f7ec0669de126",
+      "current_sha256": "c7d4669f9546ea51d907d55660dd2403cf39b9c5cf768fa29b4f7ec0669de126",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/quality.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "b274face33c8ddcad00dfc5cebca65c251b892c3867111ad91f79efbe268d97a",
+      "current_sha256": "b274face33c8ddcad00dfc5cebca65c251b892c3867111ad91f79efbe268d97a",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/quality.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "caea38ee6f19bb3d2de34730063997f2a7a921217e1f8e461a4cb3618f22a659",
+      "current_sha256": "caea38ee6f19bb3d2de34730063997f2a7a921217e1f8e461a4cb3618f22a659",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/quality.js",
+      "source": "coding-debugger",
+      "source_sha256": "2ca9aeb8805c4bd2f658b998c4e9b63090aa9639682755741875d5ad06a2534a",
+      "current_sha256": "2ca9aeb8805c4bd2f658b998c4e9b63090aa9639682755741875d5ad06a2534a",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/quality.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "49c03fa8f9c9d4094df655099ee19ee6e1576370b1453d22e392279dfae8f3b1",
+      "current_sha256": "49c03fa8f9c9d4094df655099ee19ee6e1576370b1453d22e392279dfae8f3b1",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/result-aggregator.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "5e3f141962e7d0db789f875d4869255791dd11292d57944baa49fa51b8605228",
+      "current_sha256": "5e3f141962e7d0db789f875d4869255791dd11292d57944baa49fa51b8605228",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/result-aggregator.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "111672a258b25d28dd097e68daff14329ce3da6afd31681c5bbcd28ef8265eae",
+      "current_sha256": "111672a258b25d28dd097e68daff14329ce3da6afd31681c5bbcd28ef8265eae",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/result-aggregator.js",
+      "source": "coding-debugger",
+      "source_sha256": "65b4fa67de5994741ab5705cc9445afd163b7d58b7a0ef6b5993178ffea944a3",
+      "current_sha256": "65b4fa67de5994741ab5705cc9445afd163b7d58b7a0ef6b5993178ffea944a3",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/result-aggregator.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "c48be4a20da68469389426d0a166f4f1c8f6a218ea2fd843fb95178dca716eb6",
+      "current_sha256": "c48be4a20da68469389426d0a166f4f1c8f6a218ea2fd843fb95178dca716eb6",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/retrieval.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "225583d2da311c1890526ae1ad684adbb4ef8ff32e116d51e910035b8b178b88",
+      "current_sha256": "01db9fe8f6f98e07b3b501b30f5fafc1cc0e93ea39292da7e24c72452a782c10",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/retrieval.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "aed670aee69a7f7783f573550eeb1bcc801138779ea5c8feb0f1e180ac79a2f4",
+      "current_sha256": "aed670aee69a7f7783f573550eeb1bcc801138779ea5c8feb0f1e180ac79a2f4",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/retrieval.js",
+      "source": "coding-debugger",
+      "source_sha256": "aa585361bcd54c6639a9a4135584724ed64f3d9f6ae5612b4ec86b2a341bab07",
+      "current_sha256": "93fcc98c190ba65831206563b53cc6712260650ae2ff5b844eca444db60116da",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/retrieval.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "9208378389d6fcd25bd05752d6a452f81bd925b106762b23fb550b1ef06f4fe5",
+      "current_sha256": "c840bcf3247187782aa5be8af7fbb0eb78ad43a19978c9a68f92c30ac7805a46",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/auto-setup.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "64556e416f0d4052b7fb0b6d0be9ea6f69bd656dedc7531c94c08fe456858e75",
+      "current_sha256": "64556e416f0d4052b7fb0b6d0be9ea6f69bd656dedc7531c94c08fe456858e75",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/auto-setup.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "7ef4df185ccd898e1c1e5b8d0e0f9b8720da777324ff2c3ca5d578ac74ce98f9",
+      "current_sha256": "7ef4df185ccd898e1c1e5b8d0e0f9b8720da777324ff2c3ca5d578ac74ce98f9",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/auto-setup.js",
+      "source": "coding-debugger",
+      "source_sha256": "ba0af0a5ed98e8e7ef363108b92bae33d96517e128ad8132dc8f25619cfb8fdf",
+      "current_sha256": "ba0af0a5ed98e8e7ef363108b92bae33d96517e128ad8132dc8f25619cfb8fdf",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/auto-setup.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "c152c42c3f473629783a3993fb40f17d2447144ec14d2882b81c067290199638",
+      "current_sha256": "c152c42c3f473629783a3993fb40f17d2447144ec14d2882b81c067290199638",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/configure-hooks.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "45088ba423bd1e3db9ddeff84b310d16415b3b885cf3897fb0fb64f30ace1d46",
+      "current_sha256": "45088ba423bd1e3db9ddeff84b310d16415b3b885cf3897fb0fb64f30ace1d46",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/configure-hooks.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "430944c707222c94802a6c19c36db578218fd63ac9edb5937e8e3856e87c7216",
+      "current_sha256": "430944c707222c94802a6c19c36db578218fd63ac9edb5937e8e3856e87c7216",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/configure-hooks.js",
+      "source": "coding-debugger",
+      "source_sha256": "ad86133db097f14199ae69d81117bd4471e358692c2e23d40d92be136d5826a3",
+      "current_sha256": "ad86133db097f14199ae69d81117bd4471e358692c2e23d40d92be136d5826a3",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/configure-hooks.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "ccefd60bb6d266b677541473647a885365e1b94e8ee53da789bcdb56915961d2",
+      "current_sha256": "ccefd60bb6d266b677541473647a885365e1b94e8ee53da789bcdb56915961d2",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/create-slash-commands.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "ed83da4e774d5587e51b6d2fd8ba7a60308c632c1577c9155ebbf8f5eae7c729",
+      "current_sha256": "ed83da4e774d5587e51b6d2fd8ba7a60308c632c1577c9155ebbf8f5eae7c729",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/create-slash-commands.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "a2841ca3e82bf4d69699f7c31d54bea24ff5050fa0bd2812bcefc642e8661fd0",
+      "current_sha256": "a2841ca3e82bf4d69699f7c31d54bea24ff5050fa0bd2812bcefc642e8661fd0",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/create-slash-commands.js",
+      "source": "coding-debugger",
+      "source_sha256": "ac0b46e4b7ee0c514f943ed83d74f925c143db4dc16fb9623cebf69613f3a0d4",
+      "current_sha256": "ac0b46e4b7ee0c514f943ed83d74f925c143db4dc16fb9623cebf69613f3a0d4",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/create-slash-commands.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "7343adfca9cd717f4ab3bf70b8756bb709527e2516e82f9b5f935eb0827c5154",
+      "current_sha256": "7343adfca9cd717f4ab3bf70b8756bb709527e2516e82f9b5f935eb0827c5154",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/index.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "1ffdad8c4ce2b6b8cd7d19e795827612d462a04643c2e7f56786d985ac10352d",
+      "current_sha256": "1ffdad8c4ce2b6b8cd7d19e795827612d462a04643c2e7f56786d985ac10352d",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/index.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "a73cdf1082818692799b9b6c6d4ccd127118beba59e8c847a470be4711d78d1c",
+      "current_sha256": "a73cdf1082818692799b9b6c6d4ccd127118beba59e8c847a470be4711d78d1c",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/index.js",
+      "source": "coding-debugger",
+      "source_sha256": "1ee6bb8db175ed5bfa3e3a1ea8c442b23dbb472853040979aabc9cdd8b24bfda",
+      "current_sha256": "1ee6bb8db175ed5bfa3e3a1ea8c442b23dbb472853040979aabc9cdd8b24bfda",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/index.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "cdac9b0eee3077aaca4c107c8fd847a8273c2f37763775019d5a08d97c8809ab",
+      "current_sha256": "cdac9b0eee3077aaca4c107c8fd847a8273c2f37763775019d5a08d97c8809ab",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/inject-claude-md.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "6f16e661218f435b6a124c82d8dd9fd063b16c3f185c3b76c9ebc8bde7e5f79d",
+      "current_sha256": "6f16e661218f435b6a124c82d8dd9fd063b16c3f185c3b76c9ebc8bde7e5f79d",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/inject-claude-md.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "3e6c9a395ca0d6a2b1fd3866de858b451781a434624950b5e6e624ad64936b62",
+      "current_sha256": "3e6c9a395ca0d6a2b1fd3866de858b451781a434624950b5e6e624ad64936b62",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/inject-claude-md.js",
+      "source": "coding-debugger",
+      "source_sha256": "0776f2c04e1f74ed8c458645281fdf5badb9c8f59c8db4a8394f48e49db6a1dd",
+      "current_sha256": "0776f2c04e1f74ed8c458645281fdf5badb9c8f59c8db4a8394f48e49db6a1dd",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/inject-claude-md.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "25c1f769653d43fa0b73b86ca4ec1a87f0603cb422b2692dac71ff2daeb99ad0",
+      "current_sha256": "25c1f769653d43fa0b73b86ca4ec1a87f0603cb422b2692dac71ff2daeb99ad0",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/uninstall.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "a232f849462f9d918a3764501aba0fb2cdf21285da196d306eb40651f9ba9174",
+      "current_sha256": "a232f849462f9d918a3764501aba0fb2cdf21285da196d306eb40651f9ba9174",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/uninstall.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "e99c152a9143fa113fa4fa6149688a38267a7284d2fa99a746e52ae4dc26fdea",
+      "current_sha256": "e99c152a9143fa113fa4fa6149688a38267a7284d2fa99a746e52ae4dc26fdea",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/uninstall.js",
+      "source": "coding-debugger",
+      "source_sha256": "ed370dcfe96a5ed9a2a6cd29491701f7f17c60eb3e940729449fcb3a779fb5bb",
+      "current_sha256": "ed370dcfe96a5ed9a2a6cd29491701f7f17c60eb3e940729449fcb3a779fb5bb",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/setup/uninstall.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "f51e5442aab93be70cb533576d09cbd6a37354e029911766fd6355274e27da2d",
+      "current_sha256": "f51e5442aab93be70cb533576d09cbd6a37354e029911766fd6355274e27da2d",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/storage.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "a3abcb137bc90719cb0366dc41237b888f5907964052d810269f68073cb4d024",
+      "current_sha256": "a3abcb137bc90719cb0366dc41237b888f5907964052d810269f68073cb4d024",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/storage.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "ee54c36bd7d6e6a7cb57254c6bb3602b66d48a7ba9297d0ec750abb195f28e0c",
+      "current_sha256": "ee54c36bd7d6e6a7cb57254c6bb3602b66d48a7ba9297d0ec750abb195f28e0c",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/storage.js",
+      "source": "coding-debugger",
+      "source_sha256": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361",
+      "current_sha256": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/storage.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "81f7bba12869371e93f1d59a4e7851ce9e6cb2a169e0170e52487ece2a0448ca",
+      "current_sha256": "81f7bba12869371e93f1d59a4e7851ce9e6cb2a169e0170e52487ece2a0448ca",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/string-similarity.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "0d6b810a300d9b7bf20fc42934f13fa1eb7b083bfaf9e11cfe73a3c25672694f",
+      "current_sha256": "0d6b810a300d9b7bf20fc42934f13fa1eb7b083bfaf9e11cfe73a3c25672694f",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/string-similarity.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "d9cabf54c5b993fd3a31740bdbf5efcf5746c862b94eada181cf64bcab5ee87f",
+      "current_sha256": "d9cabf54c5b993fd3a31740bdbf5efcf5746c862b94eada181cf64bcab5ee87f",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/string-similarity.js",
+      "source": "coding-debugger",
+      "source_sha256": "25a403397cc99c1caf64a8570c0985869d0f4fc441cc17607f7c4f41829a5fa8",
+      "current_sha256": "25a403397cc99c1caf64a8570c0985869d0f4fc441cc17607f7c4f41829a5fa8",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/string-similarity.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "871f6904286e9bd03b6899dcef1fba6f0c24ec8223fb2de57a27a186e28edcff",
+      "current_sha256": "871f6904286e9bd03b6899dcef1fba6f0c24ec8223fb2de57a27a186e28edcff",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/browser.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "ae8021660cd02ca7d4a69ddbe503f38ee2ea92820f092b95dfaa433a5c9bea8e",
+      "current_sha256": "ae8021660cd02ca7d4a69ddbe503f38ee2ea92820f092b95dfaa433a5c9bea8e",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/browser.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "40fa418cccd0c6f64f596b1ff7aaf660e782209df0126dbbf250ebc1e220a5eb",
+      "current_sha256": "40fa418cccd0c6f64f596b1ff7aaf660e782209df0126dbbf250ebc1e220a5eb",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/browser.js",
+      "source": "coding-debugger",
+      "source_sha256": "a2ab151201837bb2888a300e75a2f43906d4f1c50e1bd37afcb44dee3bcf8108",
+      "current_sha256": "a2ab151201837bb2888a300e75a2f43906d4f1c50e1bd37afcb44dee3bcf8108",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/browser.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "ae01af0eb0d0118ae1d52fb382dc592cb11d2126cf53aa636bf9ad069e37c750",
+      "current_sha256": "ae01af0eb0d0118ae1d52fb382dc592cb11d2126cf53aa636bf9ad069e37c750",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/index.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "6c6e61e161c7936cba7196d2f415698df941d71cf7a0a7201e5bc5c1eb1000de",
+      "current_sha256": "6c6e61e161c7936cba7196d2f415698df941d71cf7a0a7201e5bc5c1eb1000de",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/index.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "0ff8c0f8c62bdc4997d305e6466cd086da0f57eb06c19ea136686a4c5d8f63aa",
+      "current_sha256": "0ff8c0f8c62bdc4997d305e6466cd086da0f57eb06c19ea136686a4c5d8f63aa",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/index.js",
+      "source": "coding-debugger",
+      "source_sha256": "fd0d9053dd15f44d90deb0d67255a6feae791f502fa6a9eee10e973af1196bf9",
+      "current_sha256": "fd0d9053dd15f44d90deb0d67255a6feae791f502fa6a9eee10e973af1196bf9",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/index.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "bb69ccd8f712b5309a5da2c80fc31b0f2c61209d3fb1d8359a99306bf54ede7b",
+      "current_sha256": "bb69ccd8f712b5309a5da2c80fc31b0f2c61209d3fb1d8359a99306bf54ede7b",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/langchain.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "150c6838f5f0de20998349bae7383446612b8ec1b3d110472fcb49a458e67df9",
+      "current_sha256": "150c6838f5f0de20998349bae7383446612b8ec1b3d110472fcb49a458e67df9",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/langchain.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "93eae4d9679c6de55916981a8f33b5a0227692f3ae556cec9e11702eba9d6ebb",
+      "current_sha256": "93eae4d9679c6de55916981a8f33b5a0227692f3ae556cec9e11702eba9d6ebb",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/langchain.js",
+      "source": "coding-debugger",
+      "source_sha256": "f2816020434a5f14cd24f7438a1db9dea59983520c90cde4a9cb6f5d16c381a6",
+      "current_sha256": "f2816020434a5f14cd24f7438a1db9dea59983520c90cde4a9cb6f5d16c381a6",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/langchain.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "9803a2f8b7b285a3d3c699e2bd85ec845e481940962e994b62fa7d8a76fcddcd",
+      "current_sha256": "9803a2f8b7b285a3d3c699e2bd85ec845e481940962e994b62fa7d8a76fcddcd",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/opentelemetry.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "a778df07d4e666e874f26ef4c754e58d21bd15226ae93c4c365013b1769e0afb",
+      "current_sha256": "a778df07d4e666e874f26ef4c754e58d21bd15226ae93c4c365013b1769e0afb",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/opentelemetry.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "1eb1057e7f7484a64c2e341fd9cd70ddb5e89bbbeab32743a63bc32f169f9463",
+      "current_sha256": "1eb1057e7f7484a64c2e341fd9cd70ddb5e89bbbeab32743a63bc32f169f9463",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/opentelemetry.js",
+      "source": "coding-debugger",
+      "source_sha256": "a9de06ed338a04e69472d12fb634207aac8da49539af63405abeeac44d9d9178",
+      "current_sha256": "a9de06ed338a04e69472d12fb634207aac8da49539af63405abeeac44d9d9178",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/opentelemetry.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "e92479f936bce56e49f5a56898e83306b1e7add61aa13fc30df5f227f0003752",
+      "current_sha256": "e92479f936bce56e49f5a56898e83306b1e7add61aa13fc30df5f227f0003752",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/sentry.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "a25d87afea2064538c5a7fe8a8d16026de81ef03c03e60f5585e9fa11e4be522",
+      "current_sha256": "a25d87afea2064538c5a7fe8a8d16026de81ef03c03e60f5585e9fa11e4be522",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/sentry.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "9ceb3270f7b8ca29fd8c6ea44459c15a7de612ee34e2b3842c6a74267cbfac8c",
+      "current_sha256": "9ceb3270f7b8ca29fd8c6ea44459c15a7de612ee34e2b3842c6a74267cbfac8c",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/sentry.js",
+      "source": "coding-debugger",
+      "source_sha256": "b07bb52186951476254a0d9596f7efd3c7fb9b24e78cc1944bdc07d5e73bf709",
+      "current_sha256": "b07bb52186951476254a0d9596f7efd3c7fb9b24e78cc1944bdc07d5e73bf709",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/adapters/sentry.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "0072f3392f95e80a4473cc22c5733d9a2df256cef6b063113f8d5d716c8f0535",
+      "current_sha256": "0072f3392f95e80a4473cc22c5733d9a2df256cef6b063113f8d5d716c8f0535",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/index.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "a71922cb1d16624f5e9f84a9ee6f6f0ed9fb73ac661d8e654b6bcf96279d5c1f",
+      "current_sha256": "a71922cb1d16624f5e9f84a9ee6f6f0ed9fb73ac661d8e654b6bcf96279d5c1f",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/index.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "2d105a115be9616237e0e9e27c2f4141cc63dfe33362d3d1973e5b58d6338bd8",
+      "current_sha256": "2d105a115be9616237e0e9e27c2f4141cc63dfe33362d3d1973e5b58d6338bd8",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/index.js",
+      "source": "coding-debugger",
+      "source_sha256": "103ba557af79c8b28999d0eab1d9fb6c1d512c70916403dd7cd6e7ad66939061",
+      "current_sha256": "103ba557af79c8b28999d0eab1d9fb6c1d512c70916403dd7cd6e7ad66939061",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/index.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "f975576a71a16a5ce2aef8125c5b9b750bd56d1b0f388bf7ff04825d956308f1",
+      "current_sha256": "f975576a71a16a5ce2aef8125c5b9b750bd56d1b0f388bf7ff04825d956308f1",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/storage.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "0a5a99155d3aab632b57e3e99d2409de83eac21233a35549d80c4a8313cb1a94",
+      "current_sha256": "0a5a99155d3aab632b57e3e99d2409de83eac21233a35549d80c4a8313cb1a94",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/storage.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "e56dbabee45a9a9bf11744ebbf702844caae2e520bcff644edad30ad3f2822a4",
+      "current_sha256": "e56dbabee45a9a9bf11744ebbf702844caae2e520bcff644edad30ad3f2822a4",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/storage.js",
+      "source": "coding-debugger",
+      "source_sha256": "6b5de27a31cafd6c5c6c83a5fd258d9cd20a8ab89e308dfc49b1e81bd4e701a4",
+      "current_sha256": "6b5de27a31cafd6c5c6c83a5fd258d9cd20a8ab89e308dfc49b1e81bd4e701a4",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/storage.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "793a3af9b55657a4a982b96111b390375d0b2cc1227a902481bd8a2d8b48d069",
+      "current_sha256": "793a3af9b55657a4a982b96111b390375d0b2cc1227a902481bd8a2d8b48d069",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/summarizer.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "b305e277b911b1bde3af07442582ef233f9365fd1d44a56654cf2110f99a1c72",
+      "current_sha256": "b305e277b911b1bde3af07442582ef233f9365fd1d44a56654cf2110f99a1c72",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/summarizer.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "bbfd5585c8c78b73c37fe1d577b3bb067a634478c6238a98cabe7567a5f620df",
+      "current_sha256": "bbfd5585c8c78b73c37fe1d577b3bb067a634478c6238a98cabe7567a5f620df",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/summarizer.js",
+      "source": "coding-debugger",
+      "source_sha256": "bdbcf6c894ca7ca01aa043c57b23c486621cc0ab26b414668a7112a10db4d46e",
+      "current_sha256": "bdbcf6c894ca7ca01aa043c57b23c486621cc0ab26b414668a7112a10db4d46e",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/summarizer.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "186d2a52fb7e66c4246af79ac11943a09cfa1d0b7d2ad8ed2f5c5c13ad5678c1",
+      "current_sha256": "186d2a52fb7e66c4246af79ac11943a09cfa1d0b7d2ad8ed2f5c5c13ad5678c1",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/types.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "979f479a90cf709e06a5baa22f02bc74e87a2dbf6bcedff54ced3e891b1f16a9",
+      "current_sha256": "979f479a90cf709e06a5baa22f02bc74e87a2dbf6bcedff54ced3e891b1f16a9",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/types.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "7efc4e99b84453ea408496293e31a589a3e1f23e5eb91af48ab11a94355a4e9f",
+      "current_sha256": "7efc4e99b84453ea408496293e31a589a3e1f23e5eb91af48ab11a94355a4e9f",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/types.js",
+      "source": "coding-debugger",
+      "source_sha256": "2ef251d9864f84674a5c4c8e3ae779a72ba331213a18c84c684f6fd88a907c41",
+      "current_sha256": "2ef251d9864f84674a5c4c8e3ae779a72ba331213a18c84c684f6fd88a907c41",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/traces/types.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "654e021534350cfb76fae3be85eaa801354da6645cc58d9b023f0c094cf62be0",
+      "current_sha256": "654e021534350cfb76fae3be85eaa801354da6645cc58d9b023f0c094cf62be0",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/types.d.ts",
+      "source": "coding-debugger",
+      "source_sha256": "6be8081caa993bef29b35a09bc82f9b56fcfd3dbd58ffef5a780ad8e9ad88963",
+      "current_sha256": "20df97323ffaaba6d37597ec80222e2dd9625e88d660c316a5a634f3af66c61e",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/types.d.ts.map",
+      "source": "coding-debugger",
+      "source_sha256": "7f2a4ca73ced915f60e60df23bdb40fb910cb30e98e3845fb13bbf80112181b3",
+      "current_sha256": "7048e7920328e1c4e853382036d141384ded8b37d71192d371ad2e48f9027c02",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/dist/src/types.js",
+      "source": "coding-debugger",
+      "source_sha256": "ecadca60cc2857ef8817c342c40b6dbbaf1d403e948aff6807544b27aa4fb0de",
+      "current_sha256": "ecadca60cc2857ef8817c342c40b6dbbaf1d403e948aff6807544b27aa4fb0de",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/dist/src/types.js.map",
+      "source": "coding-debugger",
+      "source_sha256": "5c6469250c78a757d5ffb8d3fad22e98733ee5b9d3740e07f7153ff2d73983d3",
+      "current_sha256": "5c6469250c78a757d5ffb8d3fad22e98733ee5b9d3740e07f7153ff2d73983d3",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/package-lock.json",
+      "source": "coding-debugger",
+      "source_sha256": "af253c53b5aeaef796d566085d1ee1078909c11657bd0d3a5f087c04b3ec053c",
+      "current_sha256": "a615f8d69312b2bae44cc0710abd97e9546eb37f47a96ad8c47c9c4f0d7e7125",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/src/assessment-orchestrator.ts",
+      "source": "coding-debugger",
+      "source_sha256": "4264c399da7697890fd1d2cfd571b8c99ff624150dd70f8e6588d2f56b173012",
+      "current_sha256": "4264c399da7697890fd1d2cfd571b8c99ff624150dd70f8e6588d2f56b173012",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/audit-miner.ts",
+      "source": "coding-debugger",
+      "source_sha256": "1468785f1eebc8794e8eae56f9c98a8e10704ce8707dff510f43c5f106a6af78",
+      "current_sha256": "1468785f1eebc8794e8eae56f9c98a8e10704ce8707dff510f43c5f106a6af78",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/batch-operations.ts",
+      "source": "coding-debugger",
+      "source_sha256": "30c79f0921a26ee5eaca5841285f4817c0d79ee89569d17ea01faca5e27179f0",
+      "current_sha256": "30c79f0921a26ee5eaca5841285f4817c0d79ee89569d17ea01faca5e27179f0",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/config.ts",
+      "source": "coding-debugger",
+      "source_sha256": "305bdedbb121b768d0a066e9d51bbc468b47b3a3277cf1b92bf720509b8519a3",
+      "current_sha256": "305bdedbb121b768d0a066e9d51bbc468b47b3a3277cf1b92bf720509b8519a3",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/context-engine.ts",
+      "source": "coding-debugger",
+      "source_sha256": "72d8fb0928b450787f35017f327b1313e4f35ebab63ca7ffcc0204d7bd160ce4",
+      "current_sha256": "72d8fb0928b450787f35017f327b1313e4f35ebab63ca7ffcc0204d7bd160ce4",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/debug-wrapper.ts",
+      "source": "coding-debugger",
+      "source_sha256": "77ecc8f4dea7b71116e2a27987dd620e2037c455d53346cb644a97ecb39ea779",
+      "current_sha256": "77ecc8f4dea7b71116e2a27987dd620e2037c455d53346cb644a97ecb39ea779",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/index.ts",
+      "source": "coding-debugger",
+      "source_sha256": "b706e73f02985896f8642d491eb19d3d71ffcd4a244a22aac138315aad207cd1",
+      "current_sha256": "b706e73f02985896f8642d491eb19d3d71ffcd4a244a22aac138315aad207cd1",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/interactive-verifier.ts",
+      "source": "coding-debugger",
+      "source_sha256": "178d1a53f57ba2c46e4a871c67002631d8049160b584974127182b8d915a9553",
+      "current_sha256": "178d1a53f57ba2c46e4a871c67002631d8049160b584974127182b8d915a9553",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/lessons.ts",
+      "source": "coding-debugger",
+      "source_sha256": "c96974ec5318b189bfa1d9b1602cfa54efc5d34862c5d662a6ce7bce6c0bc97d",
+      "current_sha256": "c96974ec5318b189bfa1d9b1602cfa54efc5d34862c5d662a6ce7bce6c0bc97d",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/log-reader.ts",
+      "source": "coding-debugger",
+      "source_sha256": "2355ffacaece70d45398e0d217ab8dd381fdc644ceb97fd33149e6f10b56eeb1",
+      "current_sha256": "7278f7841efef57cdf22807d3a8445e21b4d2b6a9cfd9b3e4588dff25720a629",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/src/logger.ts",
+      "source": "coding-debugger",
+      "source_sha256": "0d719706b37b7a9c3045c638dbca1bd184cb441a66a4785c7c10788ba6f26df9",
+      "current_sha256": "fbc6626a9456a1ab75fa63018222f1347eb0841748cc419af33fcb134009d942",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/src/mcp/server.ts",
+      "source": "coding-debugger",
+      "source_sha256": "ded5390783e30ad066b2d43d67e19bd1434671b7139f8e918734776ce2fc4519",
+      "current_sha256": "28cc7c2b6db7edb183d2406c39c97ff75c1dc4baaed0bfc41cb26687f1ff94e3",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/src/mcp/tools.ts",
+      "source": "coding-debugger",
+      "source_sha256": "cc37487da687dda595da713239d18c6580e95e112fe035b79014603d3429e4f3",
+      "current_sha256": "cddca2d201d8c1d996133917ff44808d07067e8da59b17501a30d938f096e94d",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/src/parallel-retrieval.ts",
+      "source": "coding-debugger",
+      "source_sha256": "0d10128a46987c1bc7cfa56cb38e0a69f1a03b8a0e137376e68d5b6e5350cf13",
+      "current_sha256": "0d10128a46987c1bc7cfa56cb38e0a69f1a03b8a0e137376e68d5b6e5350cf13",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/pattern-extractor.ts",
+      "source": "coding-debugger",
+      "source_sha256": "ca017ea02a00d287a376abea20cfa5d9435a339f9995d19e11db82e28202ddf8",
+      "current_sha256": "ca017ea02a00d287a376abea20cfa5d9435a339f9995d19e11db82e28202ddf8",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/quality.ts",
+      "source": "coding-debugger",
+      "source_sha256": "c0f4f0e1ff42fca30d5e0ac2f457880896a3719044f6b6b0037dcc0ee05b062c",
+      "current_sha256": "c0f4f0e1ff42fca30d5e0ac2f457880896a3719044f6b6b0037dcc0ee05b062c",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/result-aggregator.ts",
+      "source": "coding-debugger",
+      "source_sha256": "bc6d09c6f1624f98ba2096ff459cd676fc30b8270e9a7c2500fe8c367b2129f9",
+      "current_sha256": "bc6d09c6f1624f98ba2096ff459cd676fc30b8270e9a7c2500fe8c367b2129f9",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/retrieval.ts",
+      "source": "coding-debugger",
+      "source_sha256": "d731035669bdceb372e2f28c74e6ade9490ac82b130ce7bf84d8b2883e29bf2d",
+      "current_sha256": "58f1c2c93bd6ac4841f80141d0afa72e6024ff98047cbb267e5b09e8cd9135f8",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/src/setup/auto-setup.ts",
+      "source": "coding-debugger",
+      "source_sha256": "19f723f8dbc8e69b13ab61fffb0af0709c7dcce10f9a4b620c899d0c2bff6dd2",
+      "current_sha256": "19f723f8dbc8e69b13ab61fffb0af0709c7dcce10f9a4b620c899d0c2bff6dd2",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/setup/configure-hooks.ts",
+      "source": "coding-debugger",
+      "source_sha256": "5fa1ab9b742d5ec61a059ef2cd1c35dc0717886227169df9a78eace243759548",
+      "current_sha256": "5fa1ab9b742d5ec61a059ef2cd1c35dc0717886227169df9a78eace243759548",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/setup/create-slash-commands.ts",
+      "source": "coding-debugger",
+      "source_sha256": "0206094bc943e7d1aea885a36248169d81c3ab6c2b4b8ed550e387f469ea6a62",
+      "current_sha256": "0206094bc943e7d1aea885a36248169d81c3ab6c2b4b8ed550e387f469ea6a62",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/setup/index.ts",
+      "source": "coding-debugger",
+      "source_sha256": "533553be4d38a9a182b6038b312565aa20b755e75a7f5b92344a09a4d4b7f01e",
+      "current_sha256": "533553be4d38a9a182b6038b312565aa20b755e75a7f5b92344a09a4d4b7f01e",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/setup/inject-claude-md.ts",
+      "source": "coding-debugger",
+      "source_sha256": "8ca87c51558045455fcbf09207a494ea373ab85e95de158119d53e3df179bbf4",
+      "current_sha256": "8ca87c51558045455fcbf09207a494ea373ab85e95de158119d53e3df179bbf4",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/setup/uninstall.ts",
+      "source": "coding-debugger",
+      "source_sha256": "6b9192999ba7f6d47035a97a703609e154d7ef82ebab98c66928f0e4c1c36884",
+      "current_sha256": "6b9192999ba7f6d47035a97a703609e154d7ef82ebab98c66928f0e4c1c36884",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/storage.ts",
+      "source": "coding-debugger",
+      "source_sha256": "a384fde223a93df9ae02596cd74f50e7e041f191b6c201c089194224ea59d3dc",
+      "current_sha256": "a384fde223a93df9ae02596cd74f50e7e041f191b6c201c089194224ea59d3dc",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/string-similarity.ts",
+      "source": "coding-debugger",
+      "source_sha256": "a6076a20c9ecd9ff8a3725b4ee87256a8d555d4922353d0328917a727212b7a8",
+      "current_sha256": "a6076a20c9ecd9ff8a3725b4ee87256a8d555d4922353d0328917a727212b7a8",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/traces/adapters/browser.ts",
+      "source": "coding-debugger",
+      "source_sha256": "c6b2370fd6aeee17d31aa6ead23dcff0dd62a1d78d2b1db25d8e66db0d19967a",
+      "current_sha256": "c6b2370fd6aeee17d31aa6ead23dcff0dd62a1d78d2b1db25d8e66db0d19967a",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/traces/adapters/index.ts",
+      "source": "coding-debugger",
+      "source_sha256": "ff074f287ff5dda1c97c4324d2a75ed493da912fc29cbd2268383cf24b1101e4",
+      "current_sha256": "ff074f287ff5dda1c97c4324d2a75ed493da912fc29cbd2268383cf24b1101e4",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/traces/adapters/langchain.ts",
+      "source": "coding-debugger",
+      "source_sha256": "c073b910c89703482debd081444301de011d97535fbc92460575909ff3ad74f0",
+      "current_sha256": "c073b910c89703482debd081444301de011d97535fbc92460575909ff3ad74f0",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/traces/adapters/opentelemetry.ts",
+      "source": "coding-debugger",
+      "source_sha256": "64a70000b281852010157e9f12b8428967457f81c7a9bc2cffa0a0c70a121308",
+      "current_sha256": "64a70000b281852010157e9f12b8428967457f81c7a9bc2cffa0a0c70a121308",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/traces/adapters/sentry.ts",
+      "source": "coding-debugger",
+      "source_sha256": "50ac8a34e6baa91452b4859d4c985e1c27f4b57345875f523e9275e2440c9c03",
+      "current_sha256": "50ac8a34e6baa91452b4859d4c985e1c27f4b57345875f523e9275e2440c9c03",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/traces/index.ts",
+      "source": "coding-debugger",
+      "source_sha256": "b944cbdf6251736fd3e3ea47a6fdb5a76975db31cbe021e8563b1bf24d091e55",
+      "current_sha256": "b944cbdf6251736fd3e3ea47a6fdb5a76975db31cbe021e8563b1bf24d091e55",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/traces/storage.ts",
+      "source": "coding-debugger",
+      "source_sha256": "e5e937fa5f03cdee346e6cb0b0501cc97aa75c4d11595935890cb11b484db73d",
+      "current_sha256": "e5e937fa5f03cdee346e6cb0b0501cc97aa75c4d11595935890cb11b484db73d",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/traces/summarizer.ts",
+      "source": "coding-debugger",
+      "source_sha256": "14a3a799c3b8de650926b6c24fdc64e5f78a0558cf52745e265ef0a0a38a527f",
+      "current_sha256": "14a3a799c3b8de650926b6c24fdc64e5f78a0558cf52745e265ef0a0a38a527f",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/traces/types.ts",
+      "source": "coding-debugger",
+      "source_sha256": "9ae5b5af689c40d3ac27d0665e26ee9be1357ee5101028f851881ec9501c1f7b",
+      "current_sha256": "9ae5b5af689c40d3ac27d0665e26ee9be1357ee5101028f851881ec9501c1f7b",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/src/types.ts",
+      "source": "coding-debugger",
+      "source_sha256": "5da9b8bdd87fec032b4b4030106c386596bb14d9d0ff6566101fdd2a28b547a5",
+      "current_sha256": "84cabdef49750eac9b1aa299631aee3e3bb383ab09c5ebd49c76a0270f1ad47a",
+      "modified_from_import": true
+    },
+    {
+      "path": "runtime/debugger/test-v1.4.0-e2e.js",
+      "source": "coding-debugger",
+      "source_sha256": "36a4df11a4753f7ca5a748b167bcc23e1bd48424a3a165636fb83de1baacbca5",
+      "current_sha256": "36a4df11a4753f7ca5a748b167bcc23e1bd48424a3a165636fb83de1baacbca5",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/test-v1.5.0-e2e.js",
+      "source": "coding-debugger",
+      "source_sha256": "d0832d3178a6c36548dbe22e33a1640b2becc84a4a7607e4a2be92d71c978ceb",
+      "current_sha256": "d0832d3178a6c36548dbe22e33a1640b2becc84a4a7607e4a2be92d71c978ceb",
+      "modified_from_import": false
+    },
+    {
+      "path": "runtime/debugger/tsconfig.json",
+      "source": "coding-debugger",
+      "source_sha256": "1a406c4086f904e91a959910f63a0fab1ef3f34a16ac4c8b211244296c0ac85b",
+      "current_sha256": "1a406c4086f904e91a959910f63a0fab1ef3f34a16ac4c8b211244296c0ac85b",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/SKILL.md",
+      "source": "code-principles-audit",
+      "source_sha256": "bc2da6a65ac686306119043f302dddc32d4d985a79e2eedab3c39ffde95b9e1d",
+      "current_sha256": "bc2da6a65ac686306119043f302dddc32d4d985a79e2eedab3c39ffde95b9e1d",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/audit-interpretation.json",
+      "source": "code-principles-audit",
+      "source_sha256": "fa55f26591e7f22162bfc3a3743b7ecdec7f7e4f8a1c82c7e27a06ee7cfc8c3b",
+      "current_sha256": "fa55f26591e7f22162bfc3a3743b7ecdec7f7e4f8a1c82c7e27a06ee7cfc8c3b",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P01.md",
+      "source": "code-principles-audit",
+      "source_sha256": "ea4fb535d728ca8cdc3543db65797df61159ad3208c96e65d0384f2360463d2e",
+      "current_sha256": "ea4fb535d728ca8cdc3543db65797df61159ad3208c96e65d0384f2360463d2e",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P02.md",
+      "source": "code-principles-audit",
+      "source_sha256": "eb626ae6bd69311c61d89fa6a09ad143b7e0176557387d3d5bcb5932a0a45c2b",
+      "current_sha256": "eb626ae6bd69311c61d89fa6a09ad143b7e0176557387d3d5bcb5932a0a45c2b",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P03.md",
+      "source": "code-principles-audit",
+      "source_sha256": "34429e509fa9bbc54dbb108f1ccc2f52227a0121f1fa83eb0b2b7ee2efe97a08",
+      "current_sha256": "34429e509fa9bbc54dbb108f1ccc2f52227a0121f1fa83eb0b2b7ee2efe97a08",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P04.md",
+      "source": "code-principles-audit",
+      "source_sha256": "190dbd35c018967add392897f44d376825b293249bc5ee411c3b23da4184eff3",
+      "current_sha256": "190dbd35c018967add392897f44d376825b293249bc5ee411c3b23da4184eff3",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P05.md",
+      "source": "code-principles-audit",
+      "source_sha256": "44fa9dba935c8eba889c69dc4c15ffa075993f91f28568f22acef62e96bf2b1c",
+      "current_sha256": "44fa9dba935c8eba889c69dc4c15ffa075993f91f28568f22acef62e96bf2b1c",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P06.md",
+      "source": "code-principles-audit",
+      "source_sha256": "33ee3d299388da978e5cb00eae251d8932f2939fe969f02cbd7b2e9002c23364",
+      "current_sha256": "33ee3d299388da978e5cb00eae251d8932f2939fe969f02cbd7b2e9002c23364",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P07.md",
+      "source": "code-principles-audit",
+      "source_sha256": "51946db9ac0340bc09383641153c0a76a101a37a7ab928a8b0f69101e0f073ff",
+      "current_sha256": "51946db9ac0340bc09383641153c0a76a101a37a7ab928a8b0f69101e0f073ff",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P08.md",
+      "source": "code-principles-audit",
+      "source_sha256": "16ffb87420f98371df2b7f1312368f00d96ae96b0055396a0e120b6beee86342",
+      "current_sha256": "16ffb87420f98371df2b7f1312368f00d96ae96b0055396a0e120b6beee86342",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P09.md",
+      "source": "code-principles-audit",
+      "source_sha256": "02b0bd9efbdc090a86c2a8cd79f9942f5dee0a4f943a94ac33b9fc350d5ef5df",
+      "current_sha256": "02b0bd9efbdc090a86c2a8cd79f9942f5dee0a4f943a94ac33b9fc350d5ef5df",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P10.md",
+      "source": "code-principles-audit",
+      "source_sha256": "f5570d01eb82d4fd905ae51634a6968665cb97ba8324bf80ab3672f45b99669c",
+      "current_sha256": "f5570d01eb82d4fd905ae51634a6968665cb97ba8324bf80ab3672f45b99669c",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P11.md",
+      "source": "code-principles-audit",
+      "source_sha256": "9cc6ba8f65c63705f8114559b2ef196ff07b68685ccebfca61a273aefba6fc3c",
+      "current_sha256": "9cc6ba8f65c63705f8114559b2ef196ff07b68685ccebfca61a273aefba6fc3c",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P12.md",
+      "source": "code-principles-audit",
+      "source_sha256": "a18c987b8f0766e88ae21ee8780a0f083e71c4b30c29ef79c1f6cb5174af3862",
+      "current_sha256": "a18c987b8f0766e88ae21ee8780a0f083e71c4b30c29ef79c1f6cb5174af3862",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P13.md",
+      "source": "code-principles-audit",
+      "source_sha256": "19be27eef653c24d0c734d5df8d718f2cee44ffdb5145768738319ff6ae5304d",
+      "current_sha256": "19be27eef653c24d0c734d5df8d718f2cee44ffdb5145768738319ff6ae5304d",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P14.md",
+      "source": "code-principles-audit",
+      "source_sha256": "568db822af346c04bafbbab6b1fd5f9942e4195787365901fb964b54fd7f9cfe",
+      "current_sha256": "568db822af346c04bafbbab6b1fd5f9942e4195787365901fb964b54fd7f9cfe",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P15.md",
+      "source": "code-principles-audit",
+      "source_sha256": "58480c9a8d809c9d3ae2790c161b4f83efa77b16a62dabf1ce656ca4251882b6",
+      "current_sha256": "58480c9a8d809c9d3ae2790c161b4f83efa77b16a62dabf1ce656ca4251882b6",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P16.md",
+      "source": "code-principles-audit",
+      "source_sha256": "1a5fc11fe1064f0639fd7fcaff00fee44968a9907f1874f8873421a34dcdafcf",
+      "current_sha256": "1a5fc11fe1064f0639fd7fcaff00fee44968a9907f1874f8873421a34dcdafcf",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P17.md",
+      "source": "code-principles-audit",
+      "source_sha256": "068c9e1a8fad3777403c28bf8ae079a673495b2b106b7a26e66368376117b56e",
+      "current_sha256": "068c9e1a8fad3777403c28bf8ae079a673495b2b106b7a26e66368376117b56e",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P18.md",
+      "source": "code-principles-audit",
+      "source_sha256": "21790d69528e8cb5bdfc140130e97b998f5427fedcf89c1ae73d2df75c48b64e",
+      "current_sha256": "21790d69528e8cb5bdfc140130e97b998f5427fedcf89c1ae73d2df75c48b64e",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P19.md",
+      "source": "code-principles-audit",
+      "source_sha256": "cb06164ab19a31c4430ee826239a34a8180313cede6fa37a91be5260c70ff204",
+      "current_sha256": "cb06164ab19a31c4430ee826239a34a8180313cede6fa37a91be5260c70ff204",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P20.md",
+      "source": "code-principles-audit",
+      "source_sha256": "0adebce87ffcfc53bd0ce0ec945d94043963da5569b86e0c808d505193a54367",
+      "current_sha256": "0adebce87ffcfc53bd0ce0ec945d94043963da5569b86e0c808d505193a54367",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P21.md",
+      "source": "code-principles-audit",
+      "source_sha256": "520a6d13b9202f58ce9eccbd828f4ec6f4f0d489d4f89ce3d68d9a05c67ee2fe",
+      "current_sha256": "520a6d13b9202f58ce9eccbd828f4ec6f4f0d489d4f89ce3d68d9a05c67ee2fe",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P22.md",
+      "source": "code-principles-audit",
+      "source_sha256": "8f5300e55c1a5a8656872b759670fc83d80f02d6da806264ddcbd1ee75de4001",
+      "current_sha256": "8f5300e55c1a5a8656872b759670fc83d80f02d6da806264ddcbd1ee75de4001",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P23.md",
+      "source": "code-principles-audit",
+      "source_sha256": "2c8281eab34235e51b34f8aa2752e290c2cf7948e63e0f4ec122e10c56ba38f3",
+      "current_sha256": "2c8281eab34235e51b34f8aa2752e290c2cf7948e63e0f4ec122e10c56ba38f3",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P24.md",
+      "source": "code-principles-audit",
+      "source_sha256": "793b0b68a0a701c80334fe10573874b897cd874cfcd73510dec41d97b67a845e",
+      "current_sha256": "793b0b68a0a701c80334fe10573874b897cd874cfcd73510dec41d97b67a845e",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P25.md",
+      "source": "code-principles-audit",
+      "source_sha256": "daa00c2a6516986c55c36bc8a5213dd4e0061505d160c931d75c28456206f56b",
+      "current_sha256": "daa00c2a6516986c55c36bc8a5213dd4e0061505d160c931d75c28456206f56b",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P26.md",
+      "source": "code-principles-audit",
+      "source_sha256": "a7592ca4990216f3d21fe8af19101b92309065d8fe729d56944380be96aedcc3",
+      "current_sha256": "a7592ca4990216f3d21fe8af19101b92309065d8fe729d56944380be96aedcc3",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P27.md",
+      "source": "code-principles-audit",
+      "source_sha256": "a264209f6b804a7eb28408b168953cab6b8f2547de6539a759d31ad32a0325b9",
+      "current_sha256": "a264209f6b804a7eb28408b168953cab6b8f2547de6539a759d31ad32a0325b9",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P28.md",
+      "source": "code-principles-audit",
+      "source_sha256": "f01ec61cec77c2b6a3892be3915cec17b6127f7da4a0eaeaeae8474d70d5edcb",
+      "current_sha256": "f01ec61cec77c2b6a3892be3915cec17b6127f7da4a0eaeaeae8474d70d5edcb",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P29.md",
+      "source": "code-principles-audit",
+      "source_sha256": "c346ebcdf058c750afa19546790c46179eb689c6e9972dd95e4c1d17917b392d",
+      "current_sha256": "c346ebcdf058c750afa19546790c46179eb689c6e9972dd95e4c1d17917b392d",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/cards/P30.md",
+      "source": "code-principles-audit",
+      "source_sha256": "5acb83adfa9d56fffd0ffa7bd727e4989ca16450d8f595e93a59d9762a4f2f5f",
+      "current_sha256": "5acb83adfa9d56fffd0ffa7bd727e4989ca16450d8f595e93a59d9762a4f2f5f",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/optimization-playbook.md",
+      "source": "code-principles-audit",
+      "source_sha256": "e6dbace3bff733c42caf299eeb8490a541aba9d60100484f4b3ff098d88f7102",
+      "current_sha256": "e6dbace3bff733c42caf299eeb8490a541aba9d60100484f4b3ff098d88f7102",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/outcome-guidance.md",
+      "source": "code-principles-audit",
+      "source_sha256": "918f1dd833784ba138e0c2b6a6ca328ef4f269e567d2e34d6e939b49b21748dd",
+      "current_sha256": "918f1dd833784ba138e0c2b6a6ca328ef4f269e567d2e34d6e939b49b21748dd",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/recommendation-contract.md",
+      "source": "code-principles-audit",
+      "source_sha256": "98b1ef0c8cc0409f551654f50bea0a9f5f05522154b39af595c2a40a6c756480",
+      "current_sha256": "98b1ef0c8cc0409f551654f50bea0a9f5f05522154b39af595c2a40a6c756480",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/repair-record-template.json",
+      "source": "code-principles-audit",
+      "source_sha256": "3e547baf1969013dec496186d0d074426b9e100ef9ef66618da757478ca32332",
+      "current_sha256": "3e547baf1969013dec496186d0d074426b9e100ef9ef66618da757478ca32332",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/report-contract.md",
+      "source": "code-principles-audit",
+      "source_sha256": "10af737652cffd1550248682327c7db159b15cc661f858caf57bb48ae599e4a2",
+      "current_sha256": "10af737652cffd1550248682327c7db159b15cc661f858caf57bb48ae599e4a2",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/research-evidence.md",
+      "source": "code-principles-audit",
+      "source_sha256": "620fb6475b8cba5728a493622065d9d405017263ea4c801941879b772c272c61",
+      "current_sha256": "620fb6475b8cba5728a493622065d9d405017263ea4c801941879b772c272c61",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/reviewer-role.md",
+      "source": "code-principles-audit",
+      "source_sha256": "d01b89ac25741a035fa66e18575241ef1b5c89ce0f9b980cc9f45dc0809f6dc0",
+      "current_sha256": "d01b89ac25741a035fa66e18575241ef1b5c89ce0f9b980cc9f45dc0809f6dc0",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/rule-index.md",
+      "source": "code-principles-audit",
+      "source_sha256": "4718746c8764683499643ca45c50258211debbaccff8c2319104b1f2225ae65c",
+      "current_sha256": "4718746c8764683499643ca45c50258211debbaccff8c2319104b1f2225ae65c",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/rules.json",
+      "source": "code-principles-audit",
+      "source_sha256": "0a87a5e9867d109d191674abd5631a62fba734e5d932750ea854e9b26fb71463",
+      "current_sha256": "0a87a5e9867d109d191674abd5631a62fba734e5d932750ea854e9b26fb71463",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/references/workflow-contract.md",
+      "source": "code-principles-audit",
+      "source_sha256": "ac35b2a34f9cd71dc6c92bab009ed07fa5a47754464dd50f13ffcf48b69649fa",
+      "current_sha256": "ac35b2a34f9cd71dc6c92bab009ed07fa5a47754464dd50f13ffcf48b69649fa",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/scripts/audit.py",
+      "source": "code-principles-audit",
+      "source_sha256": "8319c32dc30eeeb40341d75e07100be1d87e2e51d1f694ec09821855d053f7c8",
+      "current_sha256": "8319c32dc30eeeb40341d75e07100be1d87e2e51d1f694ec09821855d053f7c8",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/scripts/campaign.py",
+      "source": "code-principles-audit",
+      "source_sha256": "d19eff7ce4c629e79ffe927952dee17a2541e66581cc1d1866e7cddb451682c6",
+      "current_sha256": "d19eff7ce4c629e79ffe927952dee17a2541e66581cc1d1866e7cddb451682c6",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/scripts/planning.py",
+      "source": "code-principles-audit",
+      "source_sha256": "06ce032b7257f7a6459c19c84f989061c7b547a4406c58cf057e59b8f0a733bb",
+      "current_sha256": "06ce032b7257f7a6459c19c84f989061c7b547a4406c58cf057e59b8f0a733bb",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/scripts/recommendations.py",
+      "source": "code-principles-audit",
+      "source_sha256": "3bbe8eda88c13c1f2b7f43bfbbd9066b3d5a5355fe17f8aeb8c8afc76da455fa",
+      "current_sha256": "3bbe8eda88c13c1f2b7f43bfbbd9066b3d5a5355fe17f8aeb8c8afc76da455fa",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/scripts/test_audit.py",
+      "source": "code-principles-audit",
+      "source_sha256": "b929db4dc00352966211e520f6390d8d386ad49957a5f20015d83da73b09e116",
+      "current_sha256": "58359a2a7bd2c918f84a8ac83d98c3872c1cac97df604bf01afbfaa537f619f9",
+      "modified_from_import": true
+    },
+    {
+      "path": "skills/audit/scripts/test_recommendations.py",
+      "source": "code-principles-audit",
+      "source_sha256": "b2bc6467f130c241064e13b0be56052c56630885d9b9fe431d2a7905fe134ab7",
+      "current_sha256": "b2bc6467f130c241064e13b0be56052c56630885d9b9fe431d2a7905fe134ab7",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/audit/scripts/test_workflows.py",
+      "source": "code-principles-audit",
+      "source_sha256": "02ce7ed5d483c7d12d05620b01f87da6243b53b77cefbee6b8faf377823abf0b",
+      "current_sha256": "ea48a093f0d63ae7a16e61c7f94b86a12477d9b33ac47cfc4f7db2449964c67a",
+      "modified_from_import": true
+    },
+    {
+      "path": "skills/code-principles/SKILL.md",
+      "source": "code-principles-audit",
+      "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
+      "current_sha256": "64b677f116d8f985c126279e6558ab92f962026ad5d76f057a033d738e438912",
+      "modified_from_import": true
+    },
+    {
+      "path": "skills/code-principles/references/challenge-guidance.md",
+      "source": "code-principles-audit",
+      "source_sha256": "78ac53a0dafd61c97d50024d9d3eedb1abf5940e6daa96c9c75a675019962e85",
+      "current_sha256": "78ac53a0dafd61c97d50024d9d3eedb1abf5940e6daa96c9c75a675019962e85",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/code-principles/references/change-isolation.md",
+      "source": "code-principles-audit",
+      "source_sha256": "f91f48b7ea9f0dfa9b225ba04c500d9ca1e6901f9159ddf30ae8c15c7ce087e8",
+      "current_sha256": "f91f48b7ea9f0dfa9b225ba04c500d9ca1e6901f9159ddf30ae8c15c7ce087e8",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/code-principles/references/data-structures.md",
+      "source": "code-principles-audit",
+      "source_sha256": "95eda3fcd73041f61c1c2a707c3fa8dfd52047ebba43c872d4fba2a073a25ec2",
+      "current_sha256": "95eda3fcd73041f61c1c2a707c3fa8dfd52047ebba43c872d4fba2a073a25ec2",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/code-principles/references/engineering-foundations.md",
+      "source": "code-principles-audit",
+      "source_sha256": "1688aa97da8aa44472aa0f439392e65628cde32cf6e471870692eca0d250852b",
+      "current_sha256": "1688aa97da8aa44472aa0f439392e65628cde32cf6e471870692eca0d250852b",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/code-principles/references/timeouts.md",
+      "source": "code-principles-audit",
+      "source_sha256": "0763a913371e421cef97616413a4f816f0c01c2c8287ddcf7da64a7629c6ee61",
+      "current_sha256": "0763a913371e421cef97616413a4f816f0c01c2c8287ddcf7da64a7629c6ee61",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/code-principles/references/tool-use.md",
+      "source": "code-principles-audit",
+      "source_sha256": "bdc4b4d2643e054dbd42e8897dcf570e5fce6eccd507c0ef2cfd4f448e15b318",
+      "current_sha256": "ddf00781aabc4c59990ce3d90d5b37cf7f79e9c69a414e3cc2223bafae2bb876",
+      "modified_from_import": true
+    },
+    {
+      "path": "skills/code-principles/references/whole-system-repair.md",
+      "source": "code-principles-audit",
+      "source_sha256": "635df09592b701e5a97952210ad6adfaca06acf0c014b56c9142255c5cca18bd",
+      "current_sha256": "635df09592b701e5a97952210ad6adfaca06acf0c014b56c9142255c5cca18bd",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/code-principles/scripts/outcome.py",
+      "source": "code-principles-audit",
+      "source_sha256": "5b276ef7b788fefc680484bb735e755d0ae39f2533bb578c5199ca69627d9bed",
+      "current_sha256": "5b276ef7b788fefc680484bb735e755d0ae39f2533bb578c5199ca69627d9bed",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/code-principles/scripts/scan.py",
+      "source": "code-principles-audit",
+      "source_sha256": "97cf11fcb5f0da3f47d9423f32ccc5b6d3ccbefbfdac3565333dc88d3a763cd0",
+      "current_sha256": "97cf11fcb5f0da3f47d9423f32ccc5b6d3ccbefbfdac3565333dc88d3a763cd0",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/code-principles/scripts/test_code_principles.py",
+      "source": "code-principles-audit",
+      "source_sha256": "9c80362958d93924a150b65478c7140fd7c087c761fd53d96032c82eeb9932ae",
+      "current_sha256": "9c80362958d93924a150b65478c7140fd7c087c761fd53d96032c82eeb9932ae",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/debug-loop/SKILL.md",
+      "source": "coding-debugger",
+      "source_sha256": "4f9b91866eab93783578746025a56c1416d4d2c10cc68113761c41f5f9328dcf",
+      "current_sha256": "ab8acb306f4e87672a36abf40abe39b0aefa058fea675c191c9ae8e393484aea",
+      "modified_from_import": true
+    },
+    {
+      "path": "skills/debug-loop/references/change-isolation.md",
+      "source": "coding-debugger",
+      "source_sha256": "4c89db90a58e48a527ff3a328513ef786a312c17963851f933cc249f9f8243bf",
+      "current_sha256": "4c89db90a58e48a527ff3a328513ef786a312c17963851f933cc249f9f8243bf",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/debug-loop/references/convergence-rules.md",
+      "source": "coding-debugger",
+      "source_sha256": "cc7a17de5013ac6ddcbf13737cb3904e2e2decd0b2b2812e5c893c2d891f62ad",
+      "current_sha256": "cc7a17de5013ac6ddcbf13737cb3904e2e2decd0b2b2812e5c893c2d891f62ad",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/debugging-memory/SKILL.md",
+      "source": "coding-debugger",
+      "source_sha256": "2139ecd13e7e159b0db29df6afe82b852ae74ce312e05c0bd922f8cfefa26205",
+      "current_sha256": "ee54793665701b100b62f895728b3c127576af91b9f84a04f096da10572db98e",
+      "modified_from_import": true
+    },
+    {
+      "path": "skills/debugging-memory/examples/incident-example.json",
+      "source": "coding-debugger",
+      "source_sha256": "7dc9a54b77d371beeef7c431879a09f0570ec6c2949b6c80b275cf897e0adeed",
+      "current_sha256": "7dc9a54b77d371beeef7c431879a09f0570ec6c2949b6c80b275cf897e0adeed",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/improve/SKILL.md",
+      "source": "code-principles-audit",
+      "source_sha256": "bb2bfb901d83b200bd1c94bcf73edd85682452f96fa87ac54c940146525bff77",
+      "current_sha256": "bb2bfb901d83b200bd1c94bcf73edd85682452f96fa87ac54c940146525bff77",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/logging-tracer/SKILL.md",
+      "source": "coding-debugger",
+      "source_sha256": "bc54a2cac9648d30043b2a114d21cc02dd7a852b569176fa64bf12760b78f00f",
+      "current_sha256": "76aca5efedb094f945226c9d1b0f78d0a39f2667297cea980035ff2fb4d6d40b",
+      "modified_from_import": true
+    },
+    {
+      "path": "skills/logging-tracer/references/log-analysis.md",
+      "source": "coding-debugger",
+      "source_sha256": "a09e31778a51515b709b6178e11d57b5b4aed4f50b0609fb820aec30b7ad3e84",
+      "current_sha256": "a09e31778a51515b709b6178e11d57b5b4aed4f50b0609fb820aec30b7ad3e84",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/logging-tracer/references/stack-templates.md",
+      "source": "coding-debugger",
+      "source_sha256": "0fb1d08523668df45d379fb9ee7782aa68da88f93833256e5262210c85bbc646",
+      "current_sha256": "0fb1d08523668df45d379fb9ee7782aa68da88f93833256e5262210c85bbc646",
+      "modified_from_import": false
+    },
+    {
+      "path": "skills/plan/SKILL.md",
+      "source": "code-principles-audit",
+      "source_sha256": "ad4bd1652ac3ebfc2c3df0b64895da316e49227f58c7b5c84d21a7dc874d0319",
+      "current_sha256": "ad4bd1652ac3ebfc2c3df0b64895da316e49227f58c7b5c84d21a7dc874d0319",
+      "modified_from_import": false
+    }
+  ],
+  "hash_semantics": "source_sha256 records imported bytes; current_sha256 records current retained bytes. Removed imports are historical provenance, not packaged resources. Incidental session state is excluded.",
+  "adaptations": [
+    "Root manifests/router/debug adapter/research catalog are new.",
+    "Canonical rule cards replace the source repo symlink; no duplicate card authority.",
+    "Audit packaging tests validate combined identity and independent plugin/tool versions.",
+    "Memory workflow matches actual tool schemas and optional host capabilities.",
+    "Debugger package and lockfile remove automatic install setup; compiled runtime rebuilt from copied source."
+  ],
+  "removed_imports": [
+    {
+      "path": "skills/code-principles/cards/P01.md",
+      "source": "code-principles-audit",
+      "source_sha256": "ea4fb535d728ca8cdc3543db65797df61159ad3208c96e65d0384f2360463d2e",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P02.md",
+      "source": "code-principles-audit",
+      "source_sha256": "eb626ae6bd69311c61d89fa6a09ad143b7e0176557387d3d5bcb5932a0a45c2b",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P03.md",
+      "source": "code-principles-audit",
+      "source_sha256": "34429e509fa9bbc54dbb108f1ccc2f52227a0121f1fa83eb0b2b7ee2efe97a08",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P04.md",
+      "source": "code-principles-audit",
+      "source_sha256": "190dbd35c018967add392897f44d376825b293249bc5ee411c3b23da4184eff3",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P05.md",
+      "source": "code-principles-audit",
+      "source_sha256": "44fa9dba935c8eba889c69dc4c15ffa075993f91f28568f22acef62e96bf2b1c",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P06.md",
+      "source": "code-principles-audit",
+      "source_sha256": "33ee3d299388da978e5cb00eae251d8932f2939fe969f02cbd7b2e9002c23364",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P07.md",
+      "source": "code-principles-audit",
+      "source_sha256": "51946db9ac0340bc09383641153c0a76a101a37a7ab928a8b0f69101e0f073ff",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P08.md",
+      "source": "code-principles-audit",
+      "source_sha256": "16ffb87420f98371df2b7f1312368f00d96ae96b0055396a0e120b6beee86342",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P09.md",
+      "source": "code-principles-audit",
+      "source_sha256": "02b0bd9efbdc090a86c2a8cd79f9942f5dee0a4f943a94ac33b9fc350d5ef5df",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P10.md",
+      "source": "code-principles-audit",
+      "source_sha256": "f5570d01eb82d4fd905ae51634a6968665cb97ba8324bf80ab3672f45b99669c",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P11.md",
+      "source": "code-principles-audit",
+      "source_sha256": "9cc6ba8f65c63705f8114559b2ef196ff07b68685ccebfca61a273aefba6fc3c",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P12.md",
+      "source": "code-principles-audit",
+      "source_sha256": "a18c987b8f0766e88ae21ee8780a0f083e71c4b30c29ef79c1f6cb5174af3862",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P13.md",
+      "source": "code-principles-audit",
+      "source_sha256": "19be27eef653c24d0c734d5df8d718f2cee44ffdb5145768738319ff6ae5304d",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P14.md",
+      "source": "code-principles-audit",
+      "source_sha256": "568db822af346c04bafbbab6b1fd5f9942e4195787365901fb964b54fd7f9cfe",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P15.md",
+      "source": "code-principles-audit",
+      "source_sha256": "58480c9a8d809c9d3ae2790c161b4f83efa77b16a62dabf1ce656ca4251882b6",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P16.md",
+      "source": "code-principles-audit",
+      "source_sha256": "1a5fc11fe1064f0639fd7fcaff00fee44968a9907f1874f8873421a34dcdafcf",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P17.md",
+      "source": "code-principles-audit",
+      "source_sha256": "068c9e1a8fad3777403c28bf8ae079a673495b2b106b7a26e66368376117b56e",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P18.md",
+      "source": "code-principles-audit",
+      "source_sha256": "21790d69528e8cb5bdfc140130e97b998f5427fedcf89c1ae73d2df75c48b64e",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P19.md",
+      "source": "code-principles-audit",
+      "source_sha256": "cb06164ab19a31c4430ee826239a34a8180313cede6fa37a91be5260c70ff204",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P20.md",
+      "source": "code-principles-audit",
+      "source_sha256": "0adebce87ffcfc53bd0ce0ec945d94043963da5569b86e0c808d505193a54367",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P21.md",
+      "source": "code-principles-audit",
+      "source_sha256": "520a6d13b9202f58ce9eccbd828f4ec6f4f0d489d4f89ce3d68d9a05c67ee2fe",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P22.md",
+      "source": "code-principles-audit",
+      "source_sha256": "8f5300e55c1a5a8656872b759670fc83d80f02d6da806264ddcbd1ee75de4001",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P23.md",
+      "source": "code-principles-audit",
+      "source_sha256": "2c8281eab34235e51b34f8aa2752e290c2cf7948e63e0f4ec122e10c56ba38f3",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P24.md",
+      "source": "code-principles-audit",
+      "source_sha256": "793b0b68a0a701c80334fe10573874b897cd874cfcd73510dec41d97b67a845e",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P25.md",
+      "source": "code-principles-audit",
+      "source_sha256": "daa00c2a6516986c55c36bc8a5213dd4e0061505d160c931d75c28456206f56b",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P26.md",
+      "source": "code-principles-audit",
+      "source_sha256": "a7592ca4990216f3d21fe8af19101b92309065d8fe729d56944380be96aedcc3",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P27.md",
+      "source": "code-principles-audit",
+      "source_sha256": "a264209f6b804a7eb28408b168953cab6b8f2547de6539a759d31ad32a0325b9",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P28.md",
+      "source": "code-principles-audit",
+      "source_sha256": "f01ec61cec77c2b6a3892be3915cec17b6127f7da4a0eaeaeae8474d70d5edcb",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P29.md",
+      "source": "code-principles-audit",
+      "source_sha256": "c346ebcdf058c750afa19546790c46179eb689c6e9972dd95e4c1d17917b392d",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/code-principles/cards/P30.md",
+      "source": "code-principles-audit",
+      "source_sha256": "5acb83adfa9d56fffd0ffa7bd727e4989ca16450d8f595e93a59d9762a4f2f5f",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/debugging-memory/references/incident-documentation.md",
+      "source": "coding-debugger",
+      "source_sha256": "e9c0c1f5445e350e54f4f45d7a337f30a80a019c5896a7df284b0a589767751e",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/debugging-memory/references/ios-notification-alarm-playbook.md",
+      "source": "coding-debugger",
+      "source_sha256": "0ccd6b366a059e3160baa7f4afe72f6dab82f9fb4f092c00b3e0bda81e93d243",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/debugging-memory/references/pattern-extraction.md",
+      "source": "coding-debugger",
+      "source_sha256": "9010a9b24e967f73e35f7508cc60947f0920f4ca8755b90917ea9f7738c485dc",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    },
+    {
+      "path": "skills/debugging-memory/references/subagent-integration.md",
+      "source": "coding-debugger",
+      "source_sha256": "7ff7494b12757667701dd9224553a7e9947a03c9b4870222ba4bda40bf318a92",
+      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+    }
+  ]
+}

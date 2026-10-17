@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "code-audit-debugger": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/scripts/debugger-server.cjs"
+      ]
+    }
+  }
+}

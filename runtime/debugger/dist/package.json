@@ -1,0 +1,87 @@
+{
+    "name": "@tyroneross/coding-debugger",
+    "version": "1.9.1",
+    "description": "Coding Debugger for Claude Code and Codex: debugging memory, verdict-first retrieval, root-cause workflows, context compression, and parallel assessment.",
+    "main": "dist/src/index.js",
+    "types": "dist/src/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/src/index.d.ts",
+            "require": "./dist/src/index.js",
+            "import": "./dist/src/index.js"
+        }
+    },
+    "bin": {
+        "coding-debugger": "dist/cli/index.js",
+        "claude-code-debugger": "dist/cli/index.js"
+    },
+    "files": [
+        "dist",
+        "commands",
+        "skills",
+        "hooks",
+        "agents",
+        ".claude-plugin",
+        ".codex-plugin",
+        ".mcp.json",
+        "README.md",
+        "LICENSE"
+    ],
+    "scripts": {
+        "build": "tsc",
+        "watch": "tsc --watch",
+        "test": "node test-v1.4.0-e2e.js && node test-v1.5.0-e2e.js",
+        "benchmark": "node benchmark-scoring.js",
+        "mcp": "node dist/src/mcp/server.js",
+        "clean": "rm -rf dist"
+    },
+    "keywords": [
+        "debugging",
+        "memory",
+        "coding-debugger",
+        "claude-code",
+        "codex",
+        "agent-tools",
+        "incident-tracking",
+        "pattern-recognition",
+        "developer-tools",
+        "opentelemetry",
+        "traces",
+        "parallel-assessment",
+        "sentry",
+        "langchain"
+    ],
+    "author": "Tyrone Ross, Jr <46267523+tyroneross@users.noreply.github.com>",
+    "license": "Apache-2.0",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/tyroneross/claude-code-debugger.git"
+    },
+    "bugs": {
+        "url": "https://github.com/tyroneross/claude-code-debugger/issues"
+    },
+    "homepage": "https://github.com/tyroneross/claude-code-debugger#readme",
+    "dependencies": {
+        "commander": "^14.0.3",
+        "prompts": "^2.4.2"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/prompts": "^2.4.9",
+        "typescript": "^5.0.0"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "packageManager": "npm@10.x",
+    "os": [
+        "darwin",
+        "linux",
+        "win32"
+    ],
+    "publishConfig": {
+        "access": "public",
+        "provenance": true
+    },
+    "private": true
+}

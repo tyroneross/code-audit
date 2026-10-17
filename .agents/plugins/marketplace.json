@@ -1,0 +1,20 @@
+{
+  "name": "code-audit-local",
+  "interface": {
+    "displayName": "Code Audit Local"
+  },
+  "plugins": [
+    {
+      "name": "code-audit",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Coding"
+    }
+  ]
+}
