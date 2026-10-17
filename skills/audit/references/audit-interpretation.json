@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "catalog_sha256": "0a87a5e9867d109d191674abd5631a62fba734e5d932750ea854e9b26fb71463",
+  "scope": "Additive audit interpretation; original rules.json remains authoritative source text, interpreted with these audit-selection safeguards.",
+  "general": [
+    "A technique prerequisite is not an audit-relevance gate: review unsafe uses, absent necessary guarantees, and unsupported claims as well as justified uses.",
+    "Validation lists are context-adapted probes, not mandatory unrelated tests. Preserve the behavior under examination and choose a probe suited to the actual runtime, contract, and risk.",
+    "Options can complement or follow one another. They are qualitative alternatives, not exclusive ranks or compliance levels.",
+    "Missing a preferred technique alone is not a defect. Establish the relevant premise and consequential failure before recommending proportional action.",
+    "Name the subject: code behavior, reporting claim, or context. An unsupported assertion can be a reporting violation while actual runtime behavior remains unknown.",
+    "Observed alignment is limited to reviewed evidence and scope. Unknowns, omitted dependencies, and unreviewed rules are never proof of success or failure.",
+    "No universal function-line threshold, tests for every edit, wrappers for all numbers, mandatory layers or microservices, always-retry, always-crash, or never-rewrite rule is authorized."
+  ],
+  "rules": {
+    "P19": {
+      "audit_consider_when": "Code, a proposed change, or a recovery claim decides whether to repeat or reconcile an operation after failure or uncertain completion. Unsafe or uncertain repetition remains relevant.",
+      "required_reasoning": "Establish repeat-safety, expected usefulness, load, deadline, ownership, and actual provider guarantees. Missing prerequisites limit or reject repetition; they do not imply not_applicable."
+    },
+    "P06": {
+      "validation_interpretation": "ID and duration checks are examples. Select probes that reveal a consequential value-boundary mistake in the actual contract; local clear names can be sufficient."
+    }
+  }
+}

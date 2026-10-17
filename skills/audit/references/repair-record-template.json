@@ -1,0 +1,15 @@
+{
+  "status": "proposed",
+  "user_goal_and_authorized_scope": "",
+  "original_finding": {"report": "", "snapshot_id": "", "rule_id": "", "finding_index": null},
+  "root_cause_and_related_sites": "",
+  "before_reproduction": {"boundary": "", "observed_result": "", "receipt": ""},
+  "plan_and_principle_decisions": "",
+  "changed_paths_and_source_identity": [],
+  "after_evidence": {"snapshot": "", "report": "", "source_identity": ""},
+  "checks_actually_run": [],
+  "required_outcome_and_observed_result": "",
+  "counterevidence_and_remaining_risk": "",
+  "reviewer_and_review_boundary": "",
+  "blocker_or_rejection_reason": ""
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "code-audit",
+  "version": "0.1.0",
+  "description": "Audit, debug and improve code using shared engineering principles, causal investigation, contextual research and verified outcomes.",
+  "author": {
+    "name": "Tyrone Ross"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "code-review",
+    "debugging",
+    "audit",
+    "engineering",
+    "research"
+  ]
+}

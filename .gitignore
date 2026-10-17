@@ -1,0 +1,9 @@
+node_modules/
+__pycache__/
+*.pyc
+.DS_Store
+.build-loop/
+.claude/
+.claude-code-debugger/
+.code-audit/
+.bookmark/

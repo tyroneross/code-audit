@@ -1,0 +1,80 @@
+{
+  "date": "2026-10-16",
+  "plugin": "code-audit",
+  "version": "0.1.0",
+  "source_and_integration_tests": 215,
+  "checks": [
+    {
+      "check": "audit",
+      "tests": 88,
+      "exit_code": 0
+    },
+    {
+      "check": "principles",
+      "tests": 9,
+      "exit_code": 0
+    },
+    {
+      "check": "integration",
+      "tests": 15,
+      "exit_code": 0
+    },
+    {
+      "check": "debugger-v14",
+      "tests": 45,
+      "exit_code": 0
+    },
+    {
+      "check": "debugger-v15",
+      "tests": 58,
+      "exit_code": 0
+    }
+  ],
+  "opus_repair": {
+    "requested_model": "claude-opus-5-5",
+    "served_model": "claude-opus-5-5",
+    "passed": 18,
+    "tests": 18,
+    "boundary": "Synthetic checkout repair; simulator and contracts preserved"
+  },
+  "independent_source_review": {
+    "served_models": [
+      "claude-opus-5-5"
+    ],
+    "verdict": "APPROVE",
+    "receipt_sha256": "be13ae9f2721487be25675230682e842c84bbd379477624b15800d8c0b4096c7",
+    "boundary": "Independent source critique plus supplied execution receipts; not live review execution"
+  },
+  "final_scope_guard_review": {
+    "served_models": [
+      "claude-opus-5-5"
+    ],
+    "verdict": "APPROVE",
+    "receipt_sha256": "7b2e769254ca4f7efa34d01f1f431ba4415c32f93d1e005a1a39d82b06b3f3c3"
+  },
+  "build_parity": {
+    "compiler_exit_code": 0,
+    "files_compared": 76,
+    "mismatches": [],
+    "boundary": "Final scope guard included. Exact JS/declaration parity; map paths depend on output directory."
+  },
+  "known_gaps": [
+    "Codex desktop installation/discovery",
+    "Automatic plugin MCP registration in either host",
+    "Production/runtime/user acceptance beyond tested boundaries"
+  ],
+  "publication": "Local only; no remote created or pushed",
+  "claude_host_smoke": {
+    "skill": "code-audit:code-audit",
+    "observed_tool_calls": [
+      "Skill",
+      "mcp__code-audit-debugger__status"
+    ],
+    "served_models": [
+      "claude-opus-5-5"
+    ],
+    "explicit_mcp_registration": true,
+    "automatic_mcp_registration_verified": false,
+    "receipt_sha256": "cac5eb8ec922a0dcff1085e80d0729306eef9de9f78556eab0e663c6eb0ecdec"
+  }
+}

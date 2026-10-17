@@ -1,0 +1,2339 @@
+{
+  "basis": "Spectrum recommendations and grouping are analyst interpretation of the researched guide, not direct author prescriptions. Positions are qualitative alternatives, not scores or a universal ranking.",
+  "groups": [
+    {
+      "id": "behavior",
+      "ids": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05"
+      ],
+      "label": "Plan and deliver software",
+      "question": "What must work?"
+    },
+    {
+      "id": "structure",
+      "ids": [
+        "P06",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "P11",
+        "P12",
+        "P13"
+      ],
+      "label": "Organize code and data",
+      "question": "Where should complexity live?"
+    },
+    {
+      "id": "failure",
+      "ids": [
+        "P14",
+        "P15",
+        "P16",
+        "P17",
+        "P18",
+        "P19"
+      ],
+      "label": "Handle failures and partial changes",
+      "question": "What happens when it fails?"
+    },
+    {
+      "id": "async",
+      "ids": [
+        "P20",
+        "P21"
+      ],
+      "label": "Manage background and parallel work",
+      "question": "Who owns unfinished work?"
+    },
+    {
+      "id": "evidence",
+      "ids": [
+        "P22",
+        "P23",
+        "P24",
+        "P25"
+      ],
+      "label": "Test behavior and explain decisions",
+      "question": "What evidence supports the claim?"
+    },
+    {
+      "id": "evolution",
+      "ids": [
+        "P26",
+        "P27",
+        "P28",
+        "P29",
+        "P30"
+      ],
+      "label": "Change and operate software",
+      "question": "What should we preserve or change?"
+    }
+  ],
+  "principles": [
+    {
+      "adaptations": [
+        {
+          "change": "The main unknown is what users need, rather than how to implement an agreed behavior.",
+          "response": "Prototype and observe the task before freezing a detailed specification; preserve a clear experimental question."
+        },
+        {
+          "change": "The behavior is now established and the change is purely presentational.",
+          "response": "Reuse the contract and perform the relevant rendered check; omit a new design document."
+        }
+      ],
+      "apply_when": "Inputs, acceptance criteria, partial completion, or the caller's next action admit consequential alternative interpretations.",
+      "assumptions": [
+        "A material behavior choice remains unresolved.",
+        "Clarifying it costs less than likely rework or a wrong result."
+      ],
+      "avoid_when": "The existing contract already answers the question, or the change is a small reversible adjustment whose outcome is obvious.",
+      "axis": [
+        "Established or exploratory behavior",
+        "Unresolved consequential behavior"
+      ],
+      "counterexample": "Correcting a misspelled button label does not justify inventing an application architecture brief.",
+      "example": "A batch import must decide whether one invalid item rejects the batch or produces a partial result.",
+      "goal": "Implement the intended behavior with avoidable ambiguity resolved.",
+      "id": "P01",
+      "mechanism": "Concrete examples expose incompatible interpretations while changing the design is still cheap.",
+      "options": [
+        {
+          "label": "Reuse or prototype",
+          "when": "Existing behavior is already defined, or the user need is still being discovered.",
+          "action": "Reuse the existing examples when behavior is known; prototype the task when the need is unknown.",
+          "gain": "Gets feedback without documenting assumptions as settled requirements.",
+          "cost": "Hidden assumptions may survive, and prototype behavior may need revision."
+        },
+        {
+          "label": "Write concrete examples",
+          "when": "Different interpretations of success, failure, or partial completion would produce different code.",
+          "action": "Write examples showing accepted inputs, rejected inputs, visible changes, and rules that must remain true.",
+          "gain": "Exposes disagreements before implementation makes them expensive to fix.",
+          "cost": "Examples must be updated when the intended behavior changes."
+        },
+        {
+          "label": "Define an explicit contract",
+          "when": "Several callers or costly side effects depend on exactly the same behavior.",
+          "action": "Specify normal outcomes, important edge cases, permitted effects, and checks at the public boundary.",
+          "gain": "Gives implementations and callers a shared definition of correct behavior.",
+          "cost": "Detailed specifications take time and can lock in an untested requirement."
+        }
+      ],
+      "short": "Define what the software should do before coding",
+      "sources": [
+        {
+          "date_and_scope": "October 2, 2000. Behavior design before implementation.",
+          "id": "J5",
+          "locator": "The most important function",
+          "title": "Painless Functional Specifications, Part 1: Why Bother?",
+          "url": "https://www.joelonsoftware.com/2000/10/02/painless-functional-specifications-part-1-why-bother/"
+        },
+        {
+          "date_and_scope": "March 6, 2013. Strong testing discipline with explicit exceptions.",
+          "id": "M4",
+          "locator": "I don’t write tests for getters",
+          "title": "The Pragmatics of TDD",
+          "url": "https://blog.cleancoder.com/uncle-bob/2013/03/06/ThePragmaticsOfTDD.html"
+        }
+      ],
+      "title": "Define what the software should do before coding",
+      "validation": [
+        "A success example and a material failure example have unambiguous expected outcomes.",
+        "The delivered behavior satisfies those outcomes at the relevant boundary."
+      ],
+      "statement": "Before coding, clarify expected behavior with concrete examples whenever different interpretations could change the result."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A one-off experiment becomes a maintained component.",
+          "response": "Add repeatable setup and checks before multiple consumers depend on it."
+        },
+        {
+          "change": "An existing pipeline already covers the changed boundary.",
+          "response": "Run and reference it instead of building another pipeline or tracking surface."
+        }
+      ],
+      "apply_when": "Changes recur, several contributors work on the product, setup knowledge is implicit, or a reported defect cannot be reproduced.",
+      "assumptions": [
+        "The artifact will be maintained, reproduced, or handed off.",
+        "Automation will support a recurring operation rather than add an unused parallel process."
+      ],
+      "avoid_when": "A working repository workflow already supplies the needed evidence; do not create a competing build or tracking system for one task.",
+      "axis": [
+        "Infrequent, reversible operation",
+        "Repeated, consequential operation"
+      ],
+      "counterexample": "Saving a uniquely named research document does not require constructing a CI pipeline or a new defect database.",
+      "example": "A packaging fix must be reproducible outside the developer's configured machine.",
+      "goal": "Reproduce important changes, failures, and delivery operations reliably.",
+      "id": "P02",
+      "mechanism": "Versioned inputs, repeatable builds, and concrete defect evidence let different people or agents reproduce the same operation.",
+      "options": [
+        {
+          "label": "Follow documented steps",
+          "when": "The operation is rare, short, and easy for another person to repeat.",
+          "action": "Record the inputs and steps, perform the check, and keep the result.",
+          "gain": "Makes the operation repeatable without maintaining automation.",
+          "cost": "People can omit steps or use different inputs."
+        },
+        {
+          "label": "Script the repeated step",
+          "when": "Setup or validation is repeated often enough that manual steps are being missed or performed differently.",
+          "action": "Reuse existing tools and automate the repeated step that causes errors or wasted effort.",
+          "gain": "Reduces variation without building a second delivery system.",
+          "cost": "Someone must maintain the script and its assumptions about the environment."
+        },
+        {
+          "label": "Use an integrated pipeline",
+          "when": "Several contributors repeatedly build, check, and deliver changes that others depend on.",
+          "action": "Connect the required build, verification, and delivery steps in the existing pipeline.",
+          "gain": "Runs the same checks consistently and catches omissions earlier.",
+          "cost": "The pipeline needs maintenance and can delay feedback or delivery when it fails."
+        }
+      ],
+      "short": "Make builds, checks, and releases repeatable",
+      "sources": [
+        {
+          "date_and_scope": "August 9, 2000. Engineering conditions and feedback practices.",
+          "id": "J1",
+          "locator": "Checklist",
+          "title": "The Joel Test: 12 Steps to Better Code",
+          "url": "https://www.joelonsoftware.com/2000/08/09/the-joel-test-12-steps-to-better-code/"
+        }
+      ],
+      "title": "Make builds, checks, and releases repeatable",
+      "validation": [
+        "The intended build or check works from the documented starting state.",
+        "Another contributor can reproduce a material defect or the evidence explains why it remains uncertain."
+      ],
+      "statement": "When a build, check, or delivery step must be repeated or handed off, make it reproducible and add automation only when its recurring benefit justifies maintenance."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A formerly internal choice now determines user-visible cost or data loss.",
+          "response": "Make that consequence explicit and obtain the required choice instead of silently applying the old default."
+        },
+        {
+          "change": "The system can now determine a formerly technical choice reliably.",
+          "response": "Remove the unnecessary prompt while retaining a useful recovery or override path."
+        }
+      ],
+      "apply_when": "Users face technical options, confusing errors, invisible state, or a workflow whose success cannot be inferred from code alone.",
+      "assumptions": [
+        "The system has enough information to choose safely, or a useful default can be reversed.",
+        "The decision is an implementation detail rather than a material user preference or authorization."
+      ],
+      "avoid_when": "The choice expresses meaningful intent, has consequences only the user can judge, or requires the user's authority.",
+      "axis": [
+        "System can choose reliably",
+        "User must choose the consequence"
+      ],
+      "counterexample": "The software must not infer that a user wants to discard conflicting records merely to avoid a dialog.",
+      "example": "An importer detects supported encodings automatically when detection is reliable and the user can preview the result.",
+      "goal": "Let users complete tasks and make meaningful informed choices.",
+      "id": "P03",
+      "mechanism": "Task-based defaults and observed usability reduce unnecessary decisions and reveal whether users can complete the real workflow.",
+      "options": [
+        {
+          "label": "Choose a safe default",
+          "when": "The system can determine a safe implementation choice and the user can easily reverse it.",
+          "action": "Apply the default and provide a clear way to change or undo it.",
+          "gain": "Lets the user finish the task with fewer interruptions.",
+          "cost": "A wrong default can hide a consequence the user would have chosen differently."
+        },
+        {
+          "label": "Offer optional controls",
+          "when": "Most users can use the default, but some need to adjust the behavior.",
+          "action": "Provide a useful default and make additional controls available when needed.",
+          "gain": "Keeps the common task simple while allowing informed adjustments.",
+          "cost": "Users may not discover a control they need if it is hidden too deeply."
+        },
+        {
+          "label": "Ask for a decision",
+          "when": "The choice depends on the user's preferences, acceptable loss or cost, or authority.",
+          "action": "Explain the actual consequences and ask for the decision needed to proceed.",
+          "gain": "Preserves the user's control over outcomes the system cannot choose for them.",
+          "cost": "Adds a step; asking about implementation trivia creates unnecessary work."
+        }
+      ],
+      "short": "Use safe defaults and ask users when their judgment is needed",
+      "sources": [
+        {
+          "date_and_scope": "Book chapter 1, printed pages 1–18. User decisions and interface design.",
+          "id": "C7",
+          "locator": "Chapter 1, user decisions",
+          "title": "Authorized sample: Initial Forays into User Interface Design",
+          "url": "https://www.informit.com/content/images/9780321440303/samplechapter/chen_ch01.pdf"
+        },
+        {
+          "date_and_scope": "August 9, 2000. Engineering conditions and feedback practices.",
+          "id": "J1",
+          "locator": "Checklist",
+          "title": "The Joel Test: 12 Steps to Better Code",
+          "url": "https://www.joelonsoftware.com/2000/08/09/the-joel-test-12-steps-to-better-code/"
+        }
+      ],
+      "title": "Use safe defaults and ask users when their judgment is needed",
+      "validation": [
+        "A representative user can complete the task and understand the resulting state.",
+        "The product does not silently choose a material preference or conceal an unresolved failure."
+      ],
+      "statement": "When a workflow requires a choice, use a safe default for implementation details and ask the user when their preferences, judgment, or authority are necessary."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "The experiment now serves customers or stores persistent user data.",
+          "response": "Reassess validation, ownership, compatibility, and recovery before treating it as production infrastructure."
+        },
+        {
+          "change": "The component is being discarded and its results are reproducible.",
+          "response": "Remove unnecessary generalization and long-term maintenance work while preserving truthful output."
+        }
+      ],
+      "apply_when": "Choosing test depth, abstraction, automation, or release scope under limited time.",
+      "assumptions": [
+        "Failure consequences and expected reuse are sufficiently understood to choose a proportionate approach.",
+        "The reduced scope still satisfies the user's required guarantees."
+      ],
+      "avoid_when": "Do not use a deadline, prototype label, or confident code generation as a reason to waive known correctness or recovery requirements.",
+      "axis": [
+        "Disposable, low consequence",
+        "Durable, costly failure"
+      ],
+      "counterexample": "A time-limited release still needs duplicate-prevention guarantees if repeating a remote operation would harm users.",
+      "example": "Prototype a visual interaction quickly, then test durable selection logic once the interaction is chosen.",
+      "goal": "Meet required guarantees with proportionate engineering effort.",
+      "id": "P04",
+      "mechanism": "Spend effort where it reduces a consequential uncertainty or recurring cost, and preserve the ability to change cheap experiments.",
+      "options": [
+        {
+          "label": "Run a limited experiment",
+          "when": "The purpose is learning and the result can be discarded before others depend on it.",
+          "action": "Build the smallest experiment that answers the question and limit its exposure to users and data.",
+          "gain": "Produces early feedback with little long-term maintenance commitment.",
+          "cost": "The experiment may need substantial changes before it can support ongoing use."
+        },
+        {
+          "label": "Build a focused solution",
+          "when": "The required behavior is known and the change affects a small part of the system.",
+          "action": "Implement a simple solution and add safeguards for the failures that can actually occur.",
+          "gain": "Meets the current requirement without paying for speculative infrastructure.",
+          "cost": "Larger workloads or new requirements may require revisiting the design."
+        },
+        {
+          "label": "Invest in stronger guarantees",
+          "when": "Data loss, widespread disruption, or difficult recovery makes failure expensive.",
+          "action": "Add the recovery, isolation, compatibility, and verification needed for those consequences.",
+          "gain": "Reduces specific failure risks that a simpler implementation cannot adequately control.",
+          "cost": "Increases design time, delivery time, and continuing operating work."
+        }
+      ],
+      "short": "Match design and testing effort to failure risk",
+      "sources": [
+        {
+          "date_and_scope": "September 23, 2009. Pragmatism, delivery, and the limits of overengineering.",
+          "id": "J6",
+          "locator": "Duct tape programmers are pragmatic",
+          "title": "The Duct Tape Programmer",
+          "url": "https://www.joelonsoftware.com/2009/09/23/the-duct-tape-programmer/"
+        },
+        {
+          "date_and_scope": "March 6, 2013. Strong testing discipline with explicit exceptions.",
+          "id": "M4",
+          "locator": "I don’t write tests for getters",
+          "title": "The Pragmatics of TDD",
+          "url": "https://blog.cleancoder.com/uncle-bob/2013/03/06/ThePragmaticsOfTDD.html"
+        },
+        {
+          "date_and_scope": "August 9, 2000. Engineering conditions and feedback practices.",
+          "id": "J1",
+          "locator": "Checklist",
+          "title": "The Joel Test: 12 Steps to Better Code",
+          "url": "https://www.joelonsoftware.com/2000/08/09/the-joel-test-12-steps-to-better-code/"
+        }
+      ],
+      "title": "Match design and testing effort to failure risk",
+      "validation": [
+        "The selected work meets the required outcome.",
+        "Deferred work has an explicit consequence and revisit trigger; limitations are not presented as completed guarantees."
+      ],
+      "statement": "Match engineering effort to the cost of failure and expected reuse, using the simplest approach that still meets the required correctness, recovery, and compatibility guarantees."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "New tooling makes implementation faster but integration work remains similar.",
+          "response": "Recalibrate those work categories separately rather than applying the implementation speedup to the entire schedule."
+        },
+        {
+          "change": "The team, task class, or deployment process changes materially.",
+          "response": "Reduce reliance on old timing history until new comparable observations exist."
+        }
+      ],
+      "apply_when": "Planning milestones, communicating delivery uncertainty, or deciding whether to reduce scope.",
+      "assumptions": [
+        "There is a real planning decision to inform.",
+        "Past work is comparable enough to be useful, or the lack of comparability is disclosed."
+      ],
+      "avoid_when": "Do not present a statistical confidence or precise date without a defensible basis; a trivial task need not acquire a scheduling system.",
+      "axis": [
+        "Novel work, little history",
+        "Comparable work, useful history"
+      ],
+      "counterexample": "An LLM's confidence in its next answer is not measured delivery history.",
+      "example": "A format migration estimate includes fixture collection and compatibility validation, not only serialization code.",
+      "goal": "Plan delivery with an honest and relevant evidence basis.",
+      "id": "P05",
+      "mechanism": "Observed completion history and explicit assumptions constrain estimates and reveal when the comparison basis has changed.",
+      "options": [
+        {
+          "label": "Investigate before estimating",
+          "when": "Unknown requirements or integration behavior prevent a defensible delivery estimate.",
+          "action": "Set a limited investigation milestone and identify what must be learned before forecasting delivery.",
+          "gain": "Replaces major guesses with evidence.",
+          "cost": "A reliable final delivery date remains unavailable until the investigation resolves enough uncertainty."
+        },
+        {
+          "label": "Give a range and assumptions",
+          "when": "Some work is understood, but there is little relevant history or important dependencies remain uncertain.",
+          "action": "Give a delivery range and state the dependencies and assumptions that could change it.",
+          "gain": "Supports planning without presenting uncertain work as a precise promise.",
+          "cost": "The range may be broad and depend heavily on judgment."
+        },
+        {
+          "label": "Use comparable delivery history",
+          "when": "Completed work is sufficiently similar in scope, tools, and integration demands.",
+          "action": "Use observed delivery times and distinguish implementation time from integration and release work.",
+          "gain": "Bases the forecast on actual variation in comparable work.",
+          "cost": "Old timing data can mislead after the team, tools, or kind of work changes."
+        }
+      ],
+      "short": "Estimate delivery dates from evidence and state the uncertainty",
+      "sources": [
+        {
+          "date_and_scope": "October 26, 2007. Estimates calibrated by actual work and uncertainty.",
+          "id": "J7",
+          "locator": "What you get is not just",
+          "title": "Evidence Based Scheduling",
+          "url": "https://www.joelonsoftware.com/2007/10/26/evidence-based-scheduling/"
+        }
+      ],
+      "title": "Estimate delivery dates from evidence and state the uncertainty",
+      "validation": [
+        "The estimate covers the intended completion boundary.",
+        "Observed misses update the estimate or its comparison class rather than being explained away."
+      ],
+      "statement": "When planning delivery, investigate major unknowns and use comparable completed work where available, stating uncertainty instead of promising precision the evidence cannot support."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "An amount or ID that used to come from internal code now arrives through a form or API.",
+          "response": "Establish its unit from the input contract and validate its format and allowed values before constructing the internal type; a type name is not proof that new input satisfies those rules."
+        },
+        {
+          "change": "Text checked for one operation is now inserted into a different output context, such as an HTML page.",
+          "response": "Use the checks and output encoding required by that context; a length or ID-format check does not make the text safe to render as HTML."
+        }
+      ],
+      "apply_when": "The same number, string, or date representation can stand for different units, records, or time conventions, or external data has not yet been checked.",
+      "assumptions": [
+        "A concrete mix-up is plausible: for example, a timeout in milliseconds may be passed to a function expecting seconds.",
+        "Names, type checks, validation, and conversions enforce or expose the intended unit, ID kind, time convention, or input rule."
+      ],
+      "avoid_when": "Use names alone when a short local calculation makes the unit unambiguous and extra types would not prevent a plausible mistake. Checking one property, such as a nonempty ID, does not prove which customer it identifies.",
+      "axis": [
+        "One local unit or kind of ID",
+        "Different units, IDs, or time conventions"
+      ],
+      "counterexample": "A loop counter used only inside one short function rarely needs a separate class; an explicit unit in the name may suffice when no other unit enters the calculation.",
+      "example": "A timeout function expects seconds but receives 5000 milliseconds, so it waits 5000 seconds instead of 5 seconds unless the caller converts the unit.",
+      "goal": "Prevent wrong amounts, wrong record operations, wrong scheduled times, and reliance on unchecked input.",
+      "id": "P06",
+      "mechanism": "Explicit unit and ID names make a mix-up visible during review; types that enforce the distinction can reject the wrong argument, and entry checks can reject invalid external data.",
+      "options": [
+        {
+          "label": "Use clear names",
+          "when": "A short local calculation uses one unit or one kind of ID, and a reviewer can inspect all its uses in one place.",
+          "action": "Name the value amountInCents, timeoutInSeconds, or customerId so its unit or purpose is visible at each use.",
+          "gain": "Makes unit and ID mistakes easier to spot without introducing new types.",
+          "cost": "Does not prevent passing amountInCents to a function expecting dollars; the parameter name and value still need to be checked."
+        },
+        {
+          "label": "Use distinct types",
+          "when": "Several functions pass similarly represented values, and a mix-up could change an amount, record, or scheduled time.",
+          "action": "Use types such as AmountInCents, CustomerId, OrderId, and UtcTimestamp, with explicit unit and time conversions.",
+          "gain": "Can reject passing OrderId to a function that expects CustomerId when those types are actually enforced.",
+          "cost": "Adds definitions and conversions; a type alias that still accepts any number or string does not prevent the mix-up."
+        },
+        {
+          "label": "Check inputs before use",
+          "when": "A form or API supplies unchecked data that must satisfy a specific rule, such as a nonnegative amount or a date in UTC.",
+          "action": "Parse the input, establish its unit or time convention, check the required range or format, and construct a checked value only after the checks pass.",
+          "gain": "Later code can rely on the property that was actually checked, such as amountInCents being nonnegative.",
+          "cost": "Requires a defined rejection path; a nonnegative amount can still use the wrong currency, and a well-formed ID can still identify the wrong record."
+        }
+      ],
+      "short": "Make each value's meaning clear and prevent incorrect use",
+      "sources": [
+        {
+          "date_and_scope": "May 11, 2005. Semantic conventions that expose misuse.",
+          "id": "J4",
+          "locator": "This is the real art",
+          "title": "Making Wrong Code Look Wrong",
+          "url": "https://www.joelonsoftware.com/2005/05/11/making-wrong-code-look-wrong/"
+        }
+      ],
+      "title": "Make each value's meaning clear and prevent incorrect use",
+      "validation": [
+        "Try passing OrderId to an operation that expects CustomerId; confirm type checks reject it, or that clear names and checks expose the mismatch.",
+        "Verify that converting 1000 milliseconds produces 1 second, and that storing and reading IDs or dates does not discard their kind, unit, or time convention."
+      ],
+      "statement": "Give values specific names that communicate their meaning, units, and purpose, and use types and validation checks where needed to prevent values with different meanings from being used interchangeably."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A local operation becomes remote or eventually consistent.",
+          "response": "Revise timing, failure, freshness, and retry contracts; a source-compatible signature may no longer be behaviorally compatible."
+        },
+        {
+          "change": "A dependency now guarantees an operation atomically.",
+          "response": "Simplify local scaffolding where that guarantee really covers the required effects; retain handling for effects outside its scope."
+        }
+      ],
+      "apply_when": "Wrapping a database, remote API, filesystem, UI subsystem, or replaceable mechanism.",
+      "assumptions": [
+        "The boundary can state and enforce the guarantees it offers.",
+        "Callers do not need all underlying details, but some semantics affect their behavior."
+      ],
+      "avoid_when": "Do not promise locality, atomicity, freshness, or easy substitution merely because implementations share method signatures.",
+      "axis": [
+        "Local mechanism is sufficient",
+        "Callers depend on subtle guarantees"
+      ],
+      "counterexample": "A generic storage adapter cannot make two databases interchangeable if one lacks a required transaction guarantee.",
+      "example": "A save contract exposes a version conflict rather than silently overwriting a concurrent update.",
+      "goal": "Give callers a simple contract that preserves required semantics.",
+      "id": "P07",
+      "mechanism": "A simple interface reduces routine knowledge while an explicit contract preserves the constraints callers must act on.",
+      "options": [
+        {
+          "label": "Use the dependency directly",
+          "when": "The dependency already provides a simple contract that matches the required behavior.",
+          "action": "Call it directly and follow its documented timing, failure, and state guarantees.",
+          "gain": "Avoids an extra wrapper and a second set of concepts.",
+          "cost": "Callers depend on that implementation and may need changes when it changes."
+        },
+        {
+          "label": "Wrap a focused capability",
+          "when": "Callers benefit from hiding implementation details while retaining the guarantees they depend on.",
+          "action": "Expose a small interface and state its timing, errors, freshness, and consistency where these affect callers.",
+          "gain": "Reduces what callers must understand without hiding behavior that changes their decisions.",
+          "cost": "A misleading wrapper can make remote or non-atomic behavior look safer than it is."
+        },
+        {
+          "label": "Expose different guarantees",
+          "when": "Implementations differ in required behavior, such as ordering, freshness, or all-or-nothing updates.",
+          "action": "Expose the differing capabilities or use separate contracts instead of claiming the implementations are interchangeable.",
+          "gain": "Lets callers handle real limitations explicitly.",
+          "cost": "Callers must handle more variation and may need different execution paths."
+        }
+      ],
+      "short": "State the behavior and limitations callers must know",
+      "sources": [
+        {
+          "date_and_scope": "November 11, 2002. Constraints that remain beneath abstractions.",
+          "id": "J3",
+          "locator": "All non-trivial abstractions",
+          "title": "The Law of Leaky Abstractions",
+          "url": "https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/"
+        },
+        {
+          "date_and_scope": "August 13, 2012. Policy, mechanisms, and source dependency direction.",
+          "id": "M2",
+          "locator": "This rule says",
+          "title": "The Clean Architecture",
+          "url": "https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html"
+        },
+        {
+          "date_and_scope": "Book chapter 3, printed pages 41–46. API behavior and conflicting constraints.",
+          "id": "C8",
+          "locator": "Chapter 3, conflicting goals",
+          "title": "Authorized sample: The Secret Life of GetWindowText",
+          "url": "https://www.informit.com/content/images/9780321440303/samplechapter/chen_ch03.pdf"
+        }
+      ],
+      "title": "State the behavior and limitations callers must know",
+      "validation": [
+        "Each implementation satisfies the same required semantics.",
+        "Failures and performance at the real boundary match the caller's assumptions."
+      ],
+      "statement": "When wrapping a dependency, hide unnecessary machinery while explicitly preserving the timing, failure, consistency, and other guarantees that callers need to make correct decisions."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "Two responsibilities repeatedly change for the same reason and require intimate shared state.",
+          "response": "Consider combining them or moving the shared rule into one owner."
+        },
+        {
+          "change": "A formerly unified policy gains independent owners and release requirements.",
+          "response": "Reconsider the boundary using those actual change drivers."
+        }
+      ],
+      "apply_when": "A module mixes independently changing business rules, presentation, persistence, or external protocols.",
+      "assumptions": [
+        "The proposed responsibilities have different owners, rules, or change patterns.",
+        "The split reduces coupling more than it adds navigation and coordination."
+      ],
+      "avoid_when": "Do not equate one responsibility with one method, one statement, or a fixed file size.",
+      "axis": [
+        "One coherent policy",
+        "Independent change drivers"
+      ],
+      "counterexample": "Splitting each validation predicate into a separate class can scatter one coherent validation rule.",
+      "example": "Separate tax-policy calculation from a vendor-specific persistence mapping when they evolve independently.",
+      "goal": "Localize changes without scattering one coherent rule.",
+      "id": "P08",
+      "mechanism": "Cohesion keeps knowledge that changes together in one place and separates genuinely different change drivers.",
+      "options": [
+        {
+          "label": "Keep one rule together",
+          "when": "The operations change together and rely on the same rule and state.",
+          "action": "Keep the rule and its required state under one module or component.",
+          "gain": "Avoids spreading one change across several files and interfaces.",
+          "cost": "Unrelated responsibilities can accumulate if later changes are not reviewed."
+        },
+        {
+          "label": "Separate an independent part",
+          "when": "A mechanism, such as storage or formatting, changes independently of the surrounding business rule.",
+          "action": "Move that part behind a small interface while leaving the shared rule in one place.",
+          "gain": "Lets the independent part change with fewer edits to the business rule.",
+          "cost": "Adds an interface, more navigation, and mapping between the parts."
+        },
+        {
+          "label": "Assign separate owners",
+          "when": "Responsibilities have different owners, release needs, or patterns of change.",
+          "action": "Give each responsibility a clear module or component and define how they interact.",
+          "gain": "Supports independent changes and makes responsibility for defects clearer.",
+          "cost": "A split across code that must change together adds coordination without real independence."
+        }
+      ],
+      "short": "Keep code together when it changes for the same reason",
+      "sources": [
+        {
+          "date_and_scope": "May 8, 2014. Reasons and actors for change.",
+          "id": "M1",
+          "locator": "Gather together",
+          "title": "The Single Responsibility Principle",
+          "url": "https://blog.cleancoder.com/uncle-bob/2014/05/08/SingleReponsibilityPrinciple.html"
+        }
+      ],
+      "title": "Keep code together when it changes for the same reason",
+      "validation": [
+        "A representative policy change stays within a coherent area.",
+        "The complete operation remains understandable and does not require duplicated knowledge across modules."
+      ],
+      "statement": "Separate code when its parts change for different reasons or owners, and keep it together when splitting would scatter one coherent rule."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "Only one implementation remains and further variation is no longer expected.",
+          "response": "Consider removing unused extension machinery if doing so reduces maintenance without disrupting consumers."
+        },
+        {
+          "change": "Variants no longer share the same semantics.",
+          "response": "Split the contracts or expose capabilities rather than forcing incompatible behavior into one extension point."
+        }
+      ],
+      "apply_when": "Several real variants or a committed requirement repeatedly exercise the same extension boundary.",
+      "assumptions": [
+        "The variation is real and its shared contract is understood.",
+        "The extension point is simpler to maintain than repeated coordinated modification."
+      ],
+      "avoid_when": "Do not create a plugin system for hypothetical variants or interpret open/closed as a ban on editing existing code.",
+      "axis": [
+        "One stable case",
+        "Repeated, coherent variation"
+      ],
+      "counterexample": "A one-off script with one output format does not need an extensible export plugin architecture.",
+      "example": "Several supported export formats share an established validation and publication contract.",
+      "goal": "Add real variants without repeatedly disturbing stable policy.",
+      "id": "P09",
+      "mechanism": "A stable contract localizes variation so an additional implementation can be introduced without duplicating or destabilizing common policy.",
+      "options": [
+        {
+          "label": "Implement the known cases",
+          "when": "There is one case or a small set that rarely changes.",
+          "action": "Use direct code or a clear conditional for those cases.",
+          "gain": "Keeps behavior easy to read and avoids extension machinery.",
+          "cost": "Adding a new case may require editing and rechecking the existing code."
+        },
+        {
+          "label": "Pass the varying operation",
+          "when": "One small operation needs real alternatives while the surrounding behavior stays the same.",
+          "action": "Pass a function or simple strategy for that operation.",
+          "gain": "Supports the variation without building a general plugin system.",
+          "cost": "Callbacks and captured state can make control flow harder to follow if the boundary is poorly chosen."
+        },
+        {
+          "label": "Define an extension contract",
+          "when": "Several real implementations share stable behavior and need to evolve independently.",
+          "action": "Define the extension interface and verify the required behavior for each implementation.",
+          "gain": "Allows new variants without repeatedly modifying the surrounding policy.",
+          "cost": "Adds configuration, lifecycle management, and more paths to debug."
+        }
+      ],
+      "short": "Add ways to extend code only for real alternatives",
+      "sources": [
+        {
+          "date_and_scope": "October 18, 2020. Dependency principles across programming styles.",
+          "id": "M3",
+          "locator": "Keep interfaces small",
+          "title": "Solid Relevance",
+          "url": "https://blog.cleancoder.com/uncle-bob/2020/10/18/Solid-Relevance.html"
+        }
+      ],
+      "title": "Add ways to extend code only for real alternatives",
+      "validation": [
+        "A representative new variant preserves existing behavior and required guarantees.",
+        "Adding it does not require scattered knowledge of the variant throughout the application."
+      ],
+      "statement": "Add an extension point only when real or committed variations share a stable contract and separating them is simpler to maintain than repeatedly changing the existing code."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "The new backend cannot preserve required ordering or consistency.",
+          "response": "Supply that guarantee explicitly or change the application contract and callers; do not rely on identical method names."
+        },
+        {
+          "change": "The application no longer relies on a historical guarantee.",
+          "response": "Relax the contract deliberately and update tests and consumers accordingly."
+        }
+      ],
+      "apply_when": "Introducing a new adapter, subtype, fake, backend, or framework implementation behind an existing interface.",
+      "assumptions": [
+        "Callers are intended to use the implementations interchangeably.",
+        "Their required behavior can be described independently of a particular implementation."
+      ],
+      "avoid_when": "Do not claim interchangeability when one implementation requires stricter inputs or supplies weaker required results.",
+      "axis": [
+        "Same observable guarantees",
+        "Incompatible observable guarantees"
+      ],
+      "counterexample": "A memory-only fake that never rejects writes is insufficient evidence for a persistent adapter's failure behavior.",
+      "example": "A fake store must reproduce conflict behavior if application recovery depends on conflicts.",
+      "goal": "Keep intended substitutes safe for existing callers.",
+      "id": "P10",
+      "mechanism": "Contract checks detect substitutions that would invalidate assumptions already embedded in callers.",
+      "options": [
+        {
+          "label": "Substitute directly",
+          "when": "The replacement accepts permitted inputs and preserves every guarantee the existing callers need.",
+          "action": "Run the same behavioral contract checks against the original and replacement.",
+          "gain": "Changes the implementation with few caller changes.",
+          "cost": "Matching method names and types can hide differences in errors, ordering, or state changes."
+        },
+        {
+          "label": "Adapt the missing behavior",
+          "when": "An adapter can reliably provide a required guarantee that the replacement lacks.",
+          "action": "Implement the missing guarantee explicitly and test it under relevant failures.",
+          "gain": "Preserves caller expectations while using a different underlying implementation.",
+          "cost": "The adapter may add state, latency, resource use, and new failure modes."
+        },
+        {
+          "label": "Change the caller contract",
+          "when": "The required behavior cannot be preserved at an acceptable cost.",
+          "action": "Expose the actual capabilities and migrate affected callers and tests deliberately.",
+          "gain": "Makes the new limitations visible instead of silently breaking expectations.",
+          "cost": "Callers must change, and the migration can disrupt existing uses."
+        }
+      ],
+      "short": "Preserve behavior that callers rely on when replacing code",
+      "sources": [
+        {
+          "date_and_scope": "October 18, 2020. Dependency principles across programming styles.",
+          "id": "M3",
+          "locator": "Keep interfaces small",
+          "title": "Solid Relevance",
+          "url": "https://blog.cleancoder.com/uncle-bob/2020/10/18/Solid-Relevance.html"
+        },
+        {
+          "date_and_scope": "November 11, 2002. Constraints that remain beneath abstractions.",
+          "id": "J3",
+          "locator": "All non-trivial abstractions",
+          "title": "The Law of Leaky Abstractions",
+          "url": "https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/"
+        }
+      ],
+      "title": "Preserve behavior that callers rely on when replacing code",
+      "validation": [
+        "Shared behavioral checks pass for every intended substitute.",
+        "Representative real dependency behavior agrees with the contract, including failures."
+      ],
+      "statement": "Use an implementation as a substitute only if it accepts all permitted inputs and preserves the behavior and guarantees that existing callers rely on."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "Consumers converge on the same tightly coupled operations.",
+          "response": "Consider one coherent contract rather than maintaining artificial fragmentation."
+        },
+        {
+          "change": "Permissions or ownership create a real new capability boundary.",
+          "response": "Separate that capability and validate that callers cannot accidentally acquire broader access."
+        }
+      ],
+      "apply_when": "A read-only consumer must depend on write/admin operations, or unrelated interface changes repeatedly affect it.",
+      "assumptions": [
+        "Consumers have meaningfully different needs.",
+        "Separating those needs reduces coupling without fragmenting one coherent operation."
+      ],
+      "avoid_when": "Do not split every method into its own interface when callers need one cohesive operation.",
+      "axis": [
+        "Consumers need the same capability",
+        "Consumers need distinct capabilities"
+      ],
+      "counterexample": "A transaction's begin, update, and commit operations may need a coherent lifecycle contract rather than unrelated single-method interfaces.",
+      "example": "A reporting operation receives a query capability rather than a general administrative store.",
+      "goal": "Limit consumer coupling to the coherent capability it needs.",
+      "id": "P11",
+      "mechanism": "A cohesive consumer-facing contract limits accidental dependencies and clarifies the actual required capability.",
+      "options": [
+        {
+          "label": "Keep one small interface",
+          "when": "Callers use the same closely related operations.",
+          "action": "Keep those operations in one clearly documented interface.",
+          "gain": "Makes the contract easy to find and understand.",
+          "cost": "The interface may grow to include operations some callers do not need."
+        },
+        {
+          "label": "Expose the needed subset",
+          "when": "A caller needs only a stable subset, such as reading records without changing them.",
+          "action": "Expose that subset while keeping the underlying rule in one place.",
+          "gain": "Reduces the number of unrelated changes that affect the caller.",
+          "cost": "Additional interface views and mappings must stay consistent."
+        },
+        {
+          "label": "Separate capabilities",
+          "when": "Operations have different permissions, owners, or reasons to change.",
+          "action": "Separate the capabilities and enforce the required access rules where the operations run.",
+          "gain": "Clarifies which operations a caller can use and reduces unwanted dependencies.",
+          "cost": "Adds interfaces and coordination; an interface split alone does not enforce security."
+        }
+      ],
+      "short": "Give each component only the operations it needs",
+      "sources": [
+        {
+          "date_and_scope": "October 18, 2020. Dependency principles across programming styles.",
+          "id": "M3",
+          "locator": "Keep interfaces small",
+          "title": "Solid Relevance",
+          "url": "https://blog.cleancoder.com/uncle-bob/2020/10/18/Solid-Relevance.html"
+        },
+        {
+          "date_and_scope": "Winter 2018 course. Interface complexity and deep modules.",
+          "id": "O2",
+          "locator": "Goal: interface should",
+          "title": "Stanford CS190: Modular Design",
+          "url": "https://web.stanford.edu/~ouster/cgi-bin/cs190-winter18/lecture.php?topic=modularDesign"
+        }
+      ],
+      "title": "Give each component only the operations it needs",
+      "validation": [
+        "A consumer can compile, execute, or be tested using only its required capability.",
+        "An unrelated capability change no longer forces that consumer to change."
+      ],
+      "statement": "Expose only the coherent capabilities a consumer needs when doing so reduces unwanted dependencies or separates meaningful permissions, without fragmenting operations that belong together."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "The program is a short-lived adapter with no independent business policy.",
+          "response": "Use the framework directly where clearer; avoid empty layers."
+        },
+        {
+          "change": "Rules gain a second delivery channel or substantial independent evolution.",
+          "response": "Extract the shared policy around its observed requirements."
+        }
+      ],
+      "apply_when": "A core rule cannot run without a web server, UI, or database setup, or mechanism changes repeatedly force policy edits.",
+      "assumptions": [
+        "There is substantive policy with an expected life beyond the current mechanism.",
+        "The boundary can reduce coupling without hiding semantics the policy requires."
+      ],
+      "avoid_when": "Do not reproduce a layered architecture diagram in a tiny program that has no independent policy or variation.",
+      "axis": [
+        "Mechanism is the whole program",
+        "Policy evolves independently"
+      ],
+      "counterexample": "A small command that copies a file does not automatically need entities, repositories, use-case classes, and presenters.",
+      "example": "Pricing rules run independently of HTTP request objects and database row classes.",
+      "goal": "Keep durable policy economical to change and verify.",
+      "id": "P12",
+      "mechanism": "Policy defines the capabilities it needs; boundary adapters translate external representations and implement those capabilities.",
+      "options": [
+        {
+          "label": "Use the framework directly",
+          "when": "The component is a simple or short-lived adapter with no independent business rules.",
+          "action": "Use the framework directly where it keeps the implementation clear.",
+          "gain": "Avoids layers and duplicate data models with no current benefit.",
+          "cost": "Business rules added later may become difficult to separate from the framework."
+        },
+        {
+          "label": "Extract the business rules",
+          "when": "Rules can be expressed using explicit inputs and outputs, without performing I/O inside the rule.",
+          "action": "Put those decisions in small functions and handle storage, network calls, or UI effects outside them.",
+          "gain": "Makes the rules easier to reason about and test in isolation.",
+          "cost": "Data conversion and integration code still need maintenance and testing."
+        },
+        {
+          "label": "Let rules own the interfaces",
+          "when": "Long-lived rules serve several interfaces or depend on integrations that change frequently.",
+          "action": "Define the interfaces the rules require and make database, network, or UI adapters implement them.",
+          "gain": "Lets rules evolve with less dependence on a particular framework or provider.",
+          "cost": "Adds interface definitions, adapters, and data mappings that must be maintained."
+        }
+      ],
+      "short": "Separate business rules from databases, frameworks, and services",
+      "sources": [
+        {
+          "date_and_scope": "August 13, 2012. Policy, mechanisms, and source dependency direction.",
+          "id": "M2",
+          "locator": "This rule says",
+          "title": "The Clean Architecture",
+          "url": "https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html"
+        },
+        {
+          "date_and_scope": "October 18, 2020. Dependency principles across programming styles.",
+          "id": "M3",
+          "locator": "Keep interfaces small",
+          "title": "Solid Relevance",
+          "url": "https://blog.cleancoder.com/uncle-bob/2020/10/18/Solid-Relevance.html"
+        }
+      ],
+      "title": "Separate business rules from databases, frameworks, and services",
+      "validation": [
+        "Important policy can be checked with controlled inputs without launching unnecessary mechanisms.",
+        "The real adapter still satisfies the policy's required guarantees."
+      ],
+      "statement": "Separate durable business rules from frameworks and external services when that lets the rules change or be tested independently at a justified maintenance cost."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "The extracted helpers repeatedly require the same large shared state.",
+          "response": "Reconsider their boundary or combine them around one owner."
+        },
+        {
+          "change": "One embedded operation becomes independently complex or reusable.",
+          "response": "Extract it when a simple contract now removes substantial detail."
+        }
+      ],
+      "apply_when": "Independent responsibilities or a reusable difficult operation can be understood behind a clear boundary.",
+      "assumptions": [
+        "The proposed extraction has a comprehensible contract.",
+        "It reduces the total context needed for the affected tasks."
+      ],
+      "avoid_when": "Do not use a universal line limit or extract code whose interface is as complicated as its body.",
+      "axis": [
+        "Cohesive local operation",
+        "Complex, independently meaningful operation"
+      ],
+      "counterexample": "Five one-line wrappers with identical parameters may add more navigation than understanding.",
+      "example": "An importer hides decoding and validation behind a result that communicates usable content or an actionable rejection.",
+      "goal": "Reduce the complete operation's understanding and maintenance cost.",
+      "id": "P13",
+      "mechanism": "A good boundary hides meaningful complexity behind a simpler contract and keeps the operation's invariant coherent.",
+      "options": [
+        {
+          "label": "Keep the operation together",
+          "when": "The operation is readable in one place and its steps share substantial context or state.",
+          "action": "Use one clearly structured function rather than splitting each step into a separate call.",
+          "gain": "Lets a reader follow the complete operation without jumping between files.",
+          "cost": "The function can become difficult to understand if unrelated work is added."
+        },
+        {
+          "label": "Extract a focused helper",
+          "when": "A named step has a simple input and output and requires little surrounding context.",
+          "action": "Extract that step with a name and interface that explain what the caller can rely on.",
+          "gain": "Removes distracting detail from the caller.",
+          "cost": "Adds navigation and parameter passing; a poor helper merely moves the same complexity."
+        },
+        {
+          "label": "Create a module that hides complexity",
+          "when": "A substantial subsystem can offer a small interface that hides difficult internal work.",
+          "action": "Keep the subsystem's rules and state together and expose only what callers need.",
+          "gain": "Lets callers use the capability without understanding most of its implementation.",
+          "cost": "A poor interface leaks internal details or creates layers that only forward calls."
+        }
+      ],
+      "short": "Split code only when the whole operation becomes easier to understand",
+      "sources": [
+        {
+          "date_and_scope": "Winter 2018 course. Interface complexity and deep modules.",
+          "id": "O2",
+          "locator": "Goal: interface should",
+          "title": "Stanford CS190: Modular Design",
+          "url": "https://web.stanford.edu/~ouster/cgi-bin/cs190-winter18/lecture.php?topic=modularDesign"
+        },
+        {
+          "date_and_scope": "May 8, 2014. Reasons and actors for change.",
+          "id": "M1",
+          "locator": "Gather together",
+          "title": "The Single Responsibility Principle",
+          "url": "https://blog.cleancoder.com/uncle-bob/2014/05/08/SingleReponsibilityPrinciple.html"
+        }
+      ],
+      "title": "Split code only when the whole operation becomes easier to understand",
+      "validation": [
+        "A reviewer can explain the operation with fewer unrelated concepts.",
+        "Representative changes avoid duplicated logic or extensive cross-file edits."
+      ],
+      "statement": "Extract a function or module only when its name and interface reduce the total context needed to understand, use, and change the operation."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A failure previously impossible in valid input becomes an expected user case.",
+          "response": "Provide a supported rejection or recovery contract rather than treating the user case as an internal bug."
+        },
+        {
+          "change": "Recovery now requires state owned by a different component.",
+          "response": "Move the decision to that owner and preserve the information it needs."
+        }
+      ],
+      "apply_when": "Designing an API's failure contract or deciding whether to reject, recover, retry, cancel, reconcile, or contain.",
+      "assumptions": [
+        "The affected state and operation contract are known enough to assess recovery.",
+        "The classification is specific to this boundary, rather than a universal label attached to the error type."
+      ],
+      "avoid_when": "Do not infer recoverability from outside our control, transient, exception, or panic alone.",
+      "axis": [
+        "Same next action",
+        "Different recovery decisions"
+      ],
+      "counterexample": "A network timeout outside the programmer's control is not automatically safe to retry.",
+      "example": "An unsupported customer file is an actionable rejection; an impossible internal parser state may be a defect.",
+      "goal": "Give each meaningful failure an appropriate next action and owner.",
+      "id": "P14",
+      "mechanism": "Separating cause from recoverability and responsibility identifies the component capable of restoring a valid state or selecting an alternative.",
+      "options": [
+        {
+          "label": "Return a small set of outcomes",
+          "when": "Several different causes require the same response from the caller.",
+          "action": "Return stable application outcomes and retain detailed causes for diagnosis.",
+          "gain": "Keeps caller decisions simple and less dependent on provider-specific errors.",
+          "cost": "Combining failures too broadly can remove information needed to recover."
+        },
+        {
+          "label": "Distinguish actionable failures",
+          "when": "Different failures require different responses, such as correcting input, retrying, or checking an uncertain result.",
+          "action": "Define failure categories around those actual next actions.",
+          "gain": "Lets the caller choose a response that fits the failure.",
+          "cost": "Too many categories make callers depend on details that may change."
+        },
+        {
+          "label": "Contain an internal defect",
+          "when": "A required state rule has failed and safe continuation has not been established.",
+          "action": "Preserve diagnostic information and stop the component needed to contain the affected state.",
+          "gain": "Prevents continued use of potentially corrupted state.",
+          "cost": "Work becomes unavailable at that boundary; preserving other work depends on actual isolation."
+        }
+      ],
+      "short": "Classify failures by the safe next action",
+      "sources": [
+        {
+          "date_and_scope": "February 7, 2016. Midori's design, bugs, expected failures, and isolation.",
+          "id": "D1",
+          "locator": "Our overall solution",
+          "title": "The Error Model",
+          "url": "https://joeduffyblog.com/2016/02/07/the-error-model/"
+        },
+        {
+          "date_and_scope": "Current official documentation accessed October 12, 2026. Recoverable errors and panic.",
+          "id": "R1",
+          "locator": "Instead, it has the type",
+          "title": "The Rust Programming Language: Error Handling",
+          "url": "https://doc.rust-lang.org/book/ch09-00-error-handling.html"
+        },
+        {
+          "date_and_scope": "Accessed October 12, 2026. Idempotency, transient failures, and retry tradeoffs.",
+          "id": "A1",
+          "locator": "Idempotency",
+          "title": "AWS Prescriptive Guidance: Retry with backoff pattern",
+          "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/retry-backoff.html"
+        }
+      ],
+      "title": "Classify failures by the safe next action",
+      "validation": [
+        "Each material failure has a defined next action and truthful resulting state.",
+        "No external write is reclassified as known failure solely because its response timed out."
+      ],
+      "statement": "When an operation fails, classify the failure by what the responsible component can safely do next, based on the actual operation and affected state."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A framework already defines a sound exception contract used by all callers.",
+          "response": "Use and document that contract unless a concrete problem justifies a result wrapper."
+        },
+        {
+          "change": "An expected rejection is frequently missed or confused with a defect.",
+          "response": "Strengthen its representation or call-site handling and validate that callers can distinguish it."
+        }
+      ],
+      "apply_when": "Creating a boundary, changing how expected failures are represented, or repairing routinely missed outcomes.",
+      "assumptions": [
+        "The chosen mechanism fits the language, framework, and caller contract.",
+        "Its propagation, cleanup, and termination semantics have been verified for the runtime in use."
+      ],
+      "avoid_when": "Do not transplant Midori's checked exceptions or abandonment model into a different runtime without its supporting assumptions.",
+      "axis": [
+        "Explicit call-site outcomes",
+        "Runtime propagation and boundary translation"
+      ],
+      "counterexample": "A goroutine must not be treated as a process-isolated failure boundary merely because a historical essay described it that way.",
+      "example": "A conflict outcome carries the current version needed for a caller to choose whether to refresh or merge.",
+      "goal": "Make failures visible and usable within the actual runtime.",
+      "id": "P15",
+      "mechanism": "Idiomatic typed results, exceptions, or checked contracts make meaningful outcomes visible and composable within the actual language ecosystem.",
+      "options": [
+        {
+          "label": "Return explicit outcomes",
+          "when": "Expected failures need different caller actions and the language supports a usable result type.",
+          "action": "Return success or a named failure that callers can inspect and, where supported, check exhaustively.",
+          "gain": "Makes expected failure choices visible in the function's contract.",
+          "cost": "Passing failures through many functions can add repetitive code."
+        },
+        {
+          "label": "Use runtime exceptions",
+          "when": "The language, framework, and callers already use exceptions with understood cleanup behavior.",
+          "action": "Use that mechanism, ensure resources are cleaned up, and catch where a useful response is possible.",
+          "gain": "Fits existing code and allows failures to propagate without a result check at every call.",
+          "cost": "Possible failure paths may be less visible; missed cleanup or overly broad catches can hide defects."
+        },
+        {
+          "label": "Translate dependency errors",
+          "when": "A dependency's errors do not match the decisions the application's callers need to make.",
+          "action": "Map relevant errors at the integration boundary while retaining their diagnostic causes.",
+          "gain": "Gives callers stable application outcomes instead of provider-specific details.",
+          "cost": "The mapping can lose useful distinctions or become wrong when the provider changes."
+        }
+      ],
+      "ordering": "Alternative designs; no universal quality order.",
+      "short": "Report failures in a form callers can handle correctly",
+      "sources": [
+        {
+          "date_and_scope": "February 7, 2016. Midori's design, bugs, expected failures, and isolation.",
+          "id": "D1",
+          "locator": "Our overall solution",
+          "title": "The Error Model",
+          "url": "https://joeduffyblog.com/2016/02/07/the-error-model/"
+        },
+        {
+          "date_and_scope": "January 14, 2005. Qualification of the exception critique.",
+          "id": "C2",
+          "locator": "You can write correct",
+          "title": "Cleaner, more elegant, and harder to recognize",
+          "url": "https://devblogs.microsoft.com/oldnewthing/20050114-00/?p=36693"
+        },
+        {
+          "date_and_scope": "Current official documentation accessed October 12, 2026. Recoverable errors and panic.",
+          "id": "R1",
+          "locator": "Instead, it has the type",
+          "title": "The Rust Programming Language: Error Handling",
+          "url": "https://doc.rust-lang.org/book/ch09-00-error-handling.html"
+        },
+        {
+          "date_and_scope": "Current official specification accessed October 12, 2026. Program termination and recovery semantics.",
+          "id": "G1",
+          "locator": "Handling panics",
+          "title": "Go language specification: Handling panics",
+          "url": "https://go.dev/ref/spec#Handling_panics"
+        }
+      ],
+      "title": "Report failures in a form callers can handle correctly",
+      "validation": [
+        "Callers handle representative expected failures correctly.",
+        "Propagation does not bypass necessary state or lifetime guarantees."
+      ],
+      "statement": "When designing a failure contract, choose results, exceptions, or translation according to the caller's required actions and the runtime's actual propagation and cleanup guarantees."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A lower component gains a reliable local fallback that preserves the contract.",
+          "response": "Move that recovery downward while preserving visibility of degraded behavior when relevant."
+        },
+        {
+          "change": "A fallback now changes meaning or loses required data.",
+          "response": "Stop treating it as recovery; expose rejection, partial completion, or a decision for the caller."
+        }
+      ],
+      "apply_when": "Choosing catch locations, mapping dependency errors, or defining a user-facing failure boundary.",
+      "assumptions": [
+        "The handler has an actual next action and knows the affected state.",
+        "Translation preserves the stable meaning needed by callers."
+      ],
+      "avoid_when": "Do not catch solely to silence an error, report success, or repeat the same logging at each layer.",
+      "axis": [
+        "Local recovery is sufficient",
+        "A higher owner must decide"
+      ],
+      "counterexample": "Returning an empty list after every database exception misrepresents unavailable data as a confirmed empty result.",
+      "example": "A query boundary distinguishes no matching records from a failed database query.",
+      "goal": "Return truthful outcomes and preserve useful failure context.",
+      "id": "P16",
+      "mechanism": "A deliberate error owner combines the failure with enough application context to recover, translate, explain, or contain it.",
+      "options": [
+        {
+          "label": "Recover in this component",
+          "when": "A fallback can preserve the behavior promised to the caller.",
+          "action": "Apply the fallback and report any reduced capability that matters to the caller.",
+          "gain": "Resolves the failure close to its cause and simplifies callers.",
+          "cost": "A fallback can appear successful while silently changing the meaning of the result."
+        },
+        {
+          "label": "Pass the failure to its owner",
+          "when": "The caller has the context or authority to choose recovery, reporting, or a user decision.",
+          "action": "Pass the failure with the operation, relevant state, and cause needed to make that decision.",
+          "gain": "Places the response where the necessary information and responsibility exist.",
+          "cost": "Useful local details can be lost if they are not included during propagation."
+        },
+        {
+          "label": "Stop at a safe boundary",
+          "when": "Continuing would use state whose validity is unknown.",
+          "action": "Stop the affected component and report a failed or uncertain outcome accurately.",
+          "gain": "Protects state integrity instead of reporting a false success.",
+          "cost": "Interrupts work and requires a recovery policy appropriate to that component."
+        }
+      ],
+      "short": "Handle failures where enough context exists to respond safely",
+      "sources": [
+        {
+          "date_and_scope": "February 7, 2016. Midori's design, bugs, expected failures, and isolation.",
+          "id": "D1",
+          "locator": "Our overall solution",
+          "title": "The Error Model",
+          "url": "https://joeduffyblog.com/2016/02/07/the-error-model/"
+        },
+        {
+          "date_and_scope": "April 22, 2004. Hidden failure paths and premature publication.",
+          "id": "C1",
+          "locator": "General design principle",
+          "title": "Cleaner, more elegant, and wrong",
+          "url": "https://devblogs.microsoft.com/oldnewthing/20040422-00/?p=39683"
+        },
+        {
+          "date_and_scope": "January 14, 2005. Qualification of the exception critique.",
+          "id": "C2",
+          "locator": "You can write correct",
+          "title": "Cleaner, more elegant, and harder to recognize",
+          "url": "https://devblogs.microsoft.com/oldnewthing/20050114-00/?p=36693"
+        }
+      ],
+      "title": "Handle failures where enough context exists to respond safely",
+      "validation": [
+        "A material failure reaches an owner who can act.",
+        "The caller receives a truthful outcome and diagnostics preserve the original cause.",
+        "Earlier effects remain accounted for after the handler returns."
+      ],
+      "statement": "Handle a failure at the component that can take a useful, safe next action; otherwise preserve context and pass it to that component."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "An isolated worker is merged into a shared application process.",
+          "response": "Reassess the failure boundary; do not inherit the old whole-process abandonment policy automatically."
+        },
+        {
+          "change": "The failure may already have corrupted shared state.",
+          "response": "Broaden containment or stop the shared owner rather than catching and continuing as if isolation still held."
+        }
+      ],
+      "apply_when": "An internal defect, resource failure, or lifetime violation prevents a component from honoring its contract.",
+      "assumptions": [
+        "The failure makes continued use of affected state unsafe or defeats a required guarantee.",
+        "The proposed boundary's owned and shared state are understood.",
+        "Restart and outstanding external effects have a defined policy."
+      ],
+      "avoid_when": "Do not crash for ordinary invalid user input or assume a thread or coroutine isolates shared memory and external effects.",
+      "axis": [
+        "State remains trustworthy",
+        "Shared state may be corrupted"
+      ],
+      "counterexample": "A malformed customer filename is not sufficient reason to terminate a healthy multi-user service.",
+      "example": "A disposable parser process can stop on an internal invariant failure while its supervisor marks the input for investigation.",
+      "goal": "Prevent use of untrustworthy state while preserving valid unrelated work.",
+      "id": "P17",
+      "mechanism": "Stopping the affected owner prevents further use of its invalid state while a trustworthy surrounding owner preserves or reconciles other work.",
+      "options": [
+        {
+          "label": "Reject only this operation",
+          "when": "The failure leaves both this operation's state and shared state valid.",
+          "action": "Reject the operation or roll back its changes, then allow unrelated work to continue.",
+          "gain": "Limits disruption while returning an accurate failure.",
+          "cost": "A wrong assumption about shared state can let damage spread to later operations."
+        },
+        {
+          "label": "Stop an isolated worker",
+          "when": "The worker's isolation actually contains its damaged state and effects.",
+          "action": "Stop or restart the worker under a supervisor and account for outstanding effects.",
+          "gain": "Contains the failure while other isolated workers continue.",
+          "cost": "Isolation, worker startup, and coordination require resources and operating logic."
+        },
+        {
+          "label": "Stop the process holding shared state",
+          "when": "The failure may have corrupted state shared within the process or a broader owning component.",
+          "action": "Stop that owner and recover from state that is known to be valid.",
+          "gain": "Prevents later work from using possibly corrupted shared state.",
+          "cost": "Interrupts more work and may require replay, reconciliation, or manual recovery."
+        }
+      ],
+      "short": "Stop work that could use corrupted data or invalid resources",
+      "sources": [
+        {
+          "date_and_scope": "February 7, 2016. Midori's design, bugs, expected failures, and isolation.",
+          "id": "D1",
+          "locator": "Our overall solution",
+          "title": "The Error Model",
+          "url": "https://joeduffyblog.com/2016/02/07/the-error-model/"
+        },
+        {
+          "date_and_scope": "July 4, 2023. Allocation failure and completion guarantees.",
+          "id": "C3",
+          "locator": "Fail fast right away",
+          "title": "How to wait for multiple C++ coroutines to complete before propagating failure, memory allocation failure",
+          "url": "https://devblogs.microsoft.com/oldnewthing/20230704-00/?p=108389"
+        },
+        {
+          "date_and_scope": "Current official specification accessed October 12, 2026. Program termination and recovery semantics.",
+          "id": "G1",
+          "locator": "Handling panics",
+          "title": "Go language specification: Handling panics",
+          "url": "https://go.dev/ref/spec#Handling_panics"
+        }
+      ],
+      "title": "Stop work that could use corrupted data or invalid resources",
+      "validation": [
+        "Unrelated state remains valid under the intended containment design.",
+        "A restart does not blindly duplicate outstanding effects.",
+        "The actual runtime's termination and cleanup behavior matches the design."
+      ],
+      "statement": "When a failure makes state unsafe to use, stop the operation, worker, or process needed to contain the damage, and continue unrelated work only if its state remains trustworthy."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A new storage transaction now covers every required effect.",
+          "response": "Use it and simplify redundant application staging after checking the actual transaction boundary."
+        },
+        {
+          "change": "A new remote effect lies outside the local transaction.",
+          "response": "Add an explicit gap and reconciliation policy; the earlier atomicity assumption is no longer sufficient."
+        }
+      ],
+      "apply_when": "An operation has several effects, publishes shared state, or can fail after making a persistent change.",
+      "assumptions": [
+        "The required invariant and observation boundary are identified.",
+        "Atomicity, rollback, and compensation are claimed only for effects they actually cover."
+      ],
+      "avoid_when": "Do not add staging around a single operation already covered by a sufficient atomic guarantee, or assume resource cleanup reverses persistent effects.",
+      "axis": [
+        "One covered local effect",
+        "Multiple effects outside one transaction"
+      ],
+      "counterexample": "Closing a network connection after an exception does not undo a record already created on the remote server.",
+      "example": "Publish a document only after its required source reference and content are valid.",
+      "goal": "Keep observable state within the operation's permitted guarantees.",
+      "id": "P18",
+      "mechanism": "Private preparation and a deliberate commitment boundary control which states become observable; reconciliation accounts for effects that cannot commit atomically.",
+      "options": [
+        {
+          "label": "Use one all-or-nothing operation",
+          "when": "One transaction or atomic primitive covers all changes that must succeed or fail together.",
+          "action": "Use that guarantee and check what happens when the operation fails.",
+          "gain": "Provides all-or-nothing changes within the guarantee's actual scope.",
+          "cost": "An email, remote request, or other effect outside that scope is still separate."
+        },
+        {
+          "label": "Prepare before publishing",
+          "when": "Work can be prepared privately and made visible at one defined commit point.",
+          "action": "Complete preparation first, then publish the result through that commit point.",
+          "gain": "Prevents readers from seeing incomplete preparation.",
+          "cost": "Preparation can require extra storage, memory, time, or temporary copies."
+        },
+        {
+          "label": "Track partial completion",
+          "when": "Required effects cannot all be included in one sufficient transaction.",
+          "action": "Record which effects completed, report partial status, and reconcile or compensate the remaining effects.",
+          "gain": "Provides accurate status and a deliberate path toward a consistent outcome.",
+          "cost": "Recovery is more complex, and compensation may not fully reverse an external effect."
+        }
+      ],
+      "short": "Define what happens when an operation succeeds only in part",
+      "sources": [
+        {
+          "date_and_scope": "April 22, 2004. Hidden failure paths and premature publication.",
+          "id": "C1",
+          "locator": "General design principle",
+          "title": "Cleaner, more elegant, and wrong",
+          "url": "https://devblogs.microsoft.com/oldnewthing/20040422-00/?p=39683"
+        },
+        {
+          "date_and_scope": "January 14, 2005. Qualification of the exception critique.",
+          "id": "C2",
+          "locator": "You can write correct",
+          "title": "Cleaner, more elegant, and harder to recognize",
+          "url": "https://devblogs.microsoft.com/oldnewthing/20050114-00/?p=36693"
+        },
+        {
+          "date_and_scope": "November 11, 2002. Constraints that remain beneath abstractions.",
+          "id": "J3",
+          "locator": "All non-trivial abstractions",
+          "title": "The Law of Leaky Abstractions",
+          "url": "https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/"
+        }
+      ],
+      "title": "Define what happens when an operation succeeds only in part",
+      "validation": [
+        "Inject or simulate a material failure between consequential steps.",
+        "Check that readers see only permitted states.",
+        "Check interruption and restart behavior when persistent effects exist."
+      ],
+      "statement": "If an operation can fail after changing visible or persistent state, define which effects commit together and how incomplete effects will be reported, rolled back, or reconciled."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "The provider adds a documented idempotency guarantee that covers the whole retry interval.",
+          "response": "Consider bounded automatic retries after validating that contract and the user's latency budget."
+        },
+        {
+          "change": "The retention window becomes shorter than possible recovery delays, or key scope changes.",
+          "response": "Stop relying on the old duplicate-prevention assumption; reconcile first or redesign durable operation tracking."
+        }
+      ],
+      "apply_when": "A material operation encounters a retryable environmental failure and all repetition prerequisites are established.",
+      "assumptions": [
+        "The operation is safe to repeat under the actual provider contract.",
+        "The cause is plausibly transient.",
+        "The idempotency scope, payload rules, and retention window cover the intended retry.",
+        "The retry fits the overall deadline and has a deliberate owner."
+      ],
+      "avoid_when": "Do not automatically retry a non-idempotent write, a persistent rejection, an expired idempotency key, or an operation whose outcome is unknown without a reconciliation strategy.",
+      "axis": [
+        "Repetition unsafe or unhelpful",
+        "Transient failure with safe repetition"
+      ],
+      "counterexample": "Generating a fresh key on each retry can represent several distinct create intentions rather than one repeated intention.",
+      "example": "Retry a timed-out create with the same provider-supported key while its documented guarantee remains valid.",
+      "goal": "Improve resilience without unsafe repetition or uncontrolled retry load.",
+      "id": "P19",
+      "mechanism": "A stable operation identity or otherwise idempotent contract limits duplicate effects; bounded attempts, backoff, and jitter limit retry pressure.",
+      "options": [
+        {
+          "label": "Do not repeat yet",
+          "when": "The failure will persist, or a write may already have completed and repetition could cause harm.",
+          "action": "Return the failure, correct the cause, or check the operation's status before deciding to repeat it.",
+          "gain": "Avoids harmful duplicate effects and requests that only add load.",
+          "cost": "A temporary failure may remain unresolved until a later recovery attempt."
+        },
+        {
+          "label": "Retry within limits",
+          "when": "Another attempt has a reasonable chance of success and the operation is safe to repeat.",
+          "action": "Limit attempts and total time; increase delays between attempts and add random variation to avoid synchronized retries.",
+          "gain": "Can recover temporary failures without requiring a separate recovery process.",
+          "cost": "Adds latency and load; retries can worsen an outage if their limits and delays are poorly chosen."
+        },
+        {
+          "label": "Track and reconcile the operation",
+          "when": "An important remote change must be recovered after a restart or an uncertain response.",
+          "action": "Save the operation's identity, determine what completed, and use verified duplicate-prevention guarantees before repeating it.",
+          "gain": "Supports recovery without blindly repeating changes that may already have happened.",
+          "cost": "Requires durable records and verified rules for duplicate detection, payload matching, and how long those rules remain valid."
+        }
+      ],
+      "short": "Retry failed requests only when another attempt can help safely",
+      "sources": [
+        {
+          "date_and_scope": "Accessed October 12, 2026. Idempotency, transient failures, and retry tradeoffs.",
+          "id": "A1",
+          "locator": "Idempotency",
+          "title": "AWS Prescriptive Guidance: Retry with backoff pattern",
+          "url": "https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/retry-backoff.html"
+        },
+        {
+          "date_and_scope": "Published December 5, 2019 (page checked October 14, 2026; the URL now redirects to builder.aws.com).",
+          "id": "A2",
+          "locator": "Timeouts and side effects",
+          "title": "AWS Builders' Library: Timeouts, retries, and backoff with jitter",
+          "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/"
+        },
+        {
+          "date_and_scope": "November 11, 2002. Constraints that remain beneath abstractions.",
+          "id": "J3",
+          "locator": "All non-trivial abstractions",
+          "title": "The Law of Leaky Abstractions",
+          "url": "https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/"
+        }
+      ],
+      "title": "Retry failed requests only when another attempt can help safely",
+      "validation": [
+        "Test a timeout before processing and after commitment.",
+        "Test restart, repeated attempts, key expiry or scope boundaries where applicable.",
+        "Confirm the total attempt count and time budget across layers."
+      ],
+      "statement": "Retry a failed request only if the next attempt has a reasonable chance of succeeding and can be made without excessive load or harmful duplicate effects."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "Work must now survive navigation.",
+          "response": "Move its ownership beyond the view and separate durable completion from view updates."
+        },
+        {
+          "change": "The implementation becomes synchronous and cannot produce late results.",
+          "response": "Remove redundant stale-result machinery while retaining required resource guarantees."
+        }
+      ],
+      "apply_when": "Using callbacks, asynchronous I/O, background tasks, changing selections, or navigation while work continues.",
+      "assumptions": [
+        "Work can outlive a scope, view, request, or resource owner.",
+        "The implementation distinguishes cancellation requested from work stopped."
+      ],
+      "avoid_when": "Do not add cancellation or generation machinery to a synchronous operation that cannot overlap or outlive its owner.",
+      "axis": [
+        "Work ends with its caller",
+        "Work must outlive its caller"
+      ],
+      "counterexample": "Setting a canceled flag does not establish that a task stopped using the resource the caller is about to release.",
+      "example": "A preview result is published only if it still belongs to the active selection.",
+      "goal": "Keep late work from violating resource lifetime or current intent.",
+      "id": "P20",
+      "mechanism": "Explicit ownership, completion semantics, and request identity keep lifetime and publication decisions aligned with the actual operation.",
+      "options": [
+        {
+          "label": "Finish work within its caller's lifetime",
+          "when": "Background tasks use resources that the caller will release when it finishes.",
+          "action": "Request cancellation where appropriate and wait for the tasks to stop before releasing their resources.",
+          "gain": "Prevents late work from accessing resources that no longer exist.",
+          "cost": "Waiting for cancellation or completion can delay the caller's response."
+        },
+        {
+          "label": "Ignore obsolete results",
+          "when": "Work can safely continue, but its result no longer belongs to the current view or request.",
+          "action": "Retain a valid resource owner and publish the result only if it still matches the current request.",
+          "gain": "Prevents an old search or selection result from replacing a newer one.",
+          "cost": "Ignoring a result does not stop the task, undo external changes, or release resources."
+        },
+        {
+          "label": "Give the job a longer-lived owner",
+          "when": "The operation must continue after navigation or after the initiating request returns.",
+          "action": "Transfer the job to an accountable manager and handle its status separately from view updates.",
+          "gain": "Keeps ownership valid for the operation's actual lifetime.",
+          "cost": "Completion, failure reporting, cancellation, and any restart persistence need explicit handling."
+        }
+      ],
+      "short": "Keep background work supervised until it finishes or stops",
+      "sources": [
+        {
+          "date_and_scope": "July 4, 2023. Allocation failure and completion guarantees.",
+          "id": "C3",
+          "locator": "Fail fast right away",
+          "title": "How to wait for multiple C++ coroutines to complete before propagating failure, memory allocation failure",
+          "url": "https://devblogs.microsoft.com/oldnewthing/20230704-00/?p=108389"
+        },
+        {
+          "date_and_scope": "June 23, 2009; discusses an October 2006 memo. Concurrent failure composition.",
+          "id": "D3",
+          "locator": "Failures can happen concurrently",
+          "title": "Concurrency and exceptions",
+          "url": "https://joeduffyblog.com/2009/06/23/concurrency-and-exceptions/"
+        }
+      ],
+      "title": "Keep background work supervised until it finishes or stops",
+      "validation": [
+        "Exercise owner disappearance, rapid superseding requests, late success, and late failure.",
+        "Confirm resources are released only after their actual users finish or ownership is safely transferred."
+      ],
+      "statement": "When background work can outlive its caller or become obsolete, keep its resources valid until it stops, assign an explicit owner, and prevent stale results from changing current state."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A batch changes from all-or-nothing to supported partial completion.",
+          "response": "Change aggregation, publication, and user reporting together; do not merely stop throwing the first error."
+        },
+        {
+          "change": "A child becomes independently owned and no longer uses parent resources.",
+          "response": "Consider earlier parent completion if the contract explicitly permits it."
+        }
+      ],
+      "apply_when": "Parallel batches, fan-out requests, concurrent imports, or helpers that promise to wait for all work.",
+      "assumptions": [
+        "Several tasks contribute to one logical operation.",
+        "The caller relies on a particular meaning of complete or failed."
+      ],
+      "avoid_when": "Do not impose wait-for-all if children are deliberately independent durable jobs with transferred ownership and the caller's contract allows that behavior.",
+      "axis": [
+        "Early failure reporting",
+        "Complete child outcome accounting"
+      ],
+      "counterexample": "Returning the first exception while sibling tasks still reference a caller's released buffer violates a wait-for-all contract.",
+      "example": "An importer gathers item outcomes while retaining ownership until all required workers finish.",
+      "goal": "Honor the logical operation's concurrent completion contract.",
+      "id": "P21",
+      "mechanism": "A composition policy specifies cancellation, joining, ownership transfer, and which failures remain diagnosable.",
+      "options": [
+        {
+          "label": "Cancel and wait for remaining tasks",
+          "when": "One task's failure makes the overall result unusable.",
+          "action": "Cancel the remaining tasks where possible and account for when they actually stop.",
+          "gain": "Limits wasted work and prevents tasks from outliving resources they still use.",
+          "cost": "Waiting for tasks to stop can delay the final failure response."
+        },
+        {
+          "label": "Collect every task's outcome",
+          "when": "Individual results, partial completion, or complete diagnostics remain useful after a failure.",
+          "action": "Wait for the tasks and report their successes, failures, and completed effects.",
+          "gain": "Gives an accurate batch result and supports complete cleanup.",
+          "cost": "The slowest task can delay the overall response."
+        },
+        {
+          "label": "Return while another owner supervises",
+          "when": "Tasks have independent ownership and the caller's contract allows them to continue.",
+          "action": "Transfer responsibility and distinguish job acceptance from eventual completion.",
+          "gain": "Lets the caller return while useful work continues.",
+          "cost": "Another owner must report late failures and account for continuing effects."
+        }
+      ],
+      "short": "Decide what happens when one of several parallel tasks fails",
+      "sources": [
+        {
+          "date_and_scope": "June 23, 2009; discusses an October 2006 memo. Concurrent failure composition.",
+          "id": "D3",
+          "locator": "Failures can happen concurrently",
+          "title": "Concurrency and exceptions",
+          "url": "https://joeduffyblog.com/2009/06/23/concurrency-and-exceptions/"
+        },
+        {
+          "date_and_scope": "July 4, 2023. Allocation failure and completion guarantees.",
+          "id": "C3",
+          "locator": "Fail fast right away",
+          "title": "How to wait for multiple C++ coroutines to complete before propagating failure, memory allocation failure",
+          "url": "https://devblogs.microsoft.com/oldnewthing/20230704-00/?p=108389"
+        }
+      ],
+      "title": "Decide what happens when one of several parallel tasks fails",
+      "validation": [
+        "Exercise simultaneous child failures, cancellation races, and failure while arranging completion.",
+        "Confirm no child accesses caller-owned resources after the promised completion point."
+      ],
+      "statement": "When several tasks form one operation, define whether failure cancels the rest, results are gathered, or work continues under another owner, and report completion according to that contract."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "Exploration has produced an agreed durable behavior.",
+          "response": "Add meaningful regression checks before further dependence or broad modification."
+        },
+        {
+          "change": "A test mostly asserts internal plumbing and produces no useful defect signal.",
+          "response": "Replace it with a behavioral or boundary check, or remove the redundant test."
+        }
+      ],
+      "apply_when": "Developing rules, transformations, state transitions, or a regression whose expected behavior can be stated concretely.",
+      "assumptions": [
+        "There is meaningful behavior with a useful expected-result oracle.",
+        "The behavior is durable or failure is consequential enough to justify automated feedback."
+      ],
+      "avoid_when": "Do not require accessor tests, implementation-mirroring assertions, or a fixed test-first sequence for disposable visual exploration.",
+      "axis": [
+        "Unknown or visual behavior",
+        "Known durable behavior"
+      ],
+      "counterexample": "A test asserting that a trivial accessor returns the exact field it immediately returns may add no useful assurance.",
+      "example": "Write conflict-resolution examples before implementing a durable merge rule.",
+      "goal": "Establish meaningful feedback for durable behavior without low-value ceremony.",
+      "id": "P22",
+      "mechanism": "Writing behavioral examples before or alongside logic clarifies outcomes and supplies regression feedback when the behavior is understood.",
+      "options": [
+        {
+          "label": "Explore or inspect first",
+          "when": "The intended behavior is unknown, appearance needs inspection, or the edit is small and easily reversed.",
+          "action": "Prototype the unknown behavior or inspect the actual rendered result.",
+          "gain": "Gets useful feedback before writing tests around an assumed answer.",
+          "cost": "Behavior that later becomes relied upon still needs suitable regression checks."
+        },
+        {
+          "label": "Write the behavioral test first",
+          "when": "The expected outcome is known and an example can clarify a rule that will be maintained.",
+          "action": "Write a failing example of the required behavior, then implement that behavior.",
+          "gain": "Clarifies the result before implementation and detects later regressions.",
+          "cost": "A test of the wrong requirement or internal implementation can constrain later improvements."
+        },
+        {
+          "label": "Explore, then add regression checks",
+          "when": "An experiment has established behavior that the product will now maintain.",
+          "action": "Add tests of that observed, intended behavior before more code or users depend on it.",
+          "gain": "Preserves what the experiment established without pretending it was known in advance.",
+          "cost": "Code written for exploration may need changes before its behavior can be tested reliably."
+        }
+      ],
+      "short": "Choose when to write tests and when to explore first",
+      "sources": [
+        {
+          "date_and_scope": "March 6, 2013. Strong testing discipline with explicit exceptions.",
+          "id": "M4",
+          "locator": "I don’t write tests for getters",
+          "title": "The Pragmatics of TDD",
+          "url": "https://blog.cleancoder.com/uncle-bob/2013/03/06/ThePragmaticsOfTDD.html"
+        },
+        {
+          "date_and_scope": "September 23, 2009. Pragmatism, delivery, and the limits of overengineering.",
+          "id": "J6",
+          "locator": "Duct tape programmers are pragmatic",
+          "title": "The Duct Tape Programmer",
+          "url": "https://www.joelonsoftware.com/2009/09/23/the-duct-tape-programmer/"
+        }
+      ],
+      "title": "Choose when to write tests and when to explore first",
+      "validation": [
+        "Checks would detect a plausible consequential defect or regression.",
+        "Refactoring internal structure does not require changing tests that describe unchanged behavior."
+      ],
+      "statement": "For lasting or consequential behavior, write meaningful tests before or alongside implementation when expected outcomes are known, and explore first when they are not."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "The change moves from pure logic to an external adapter.",
+          "response": "Add evidence at the real boundary; existing logic tests remain useful but no longer establish the full claim."
+        },
+        {
+          "change": "Only a reversible text label changes.",
+          "response": "Inspect the rendered label and relevant interaction; skip unrelated system-wide checks unless required by the repository."
+        }
+      ],
+      "apply_when": "Selecting validation for logic, adapters, integration, visible UI, packaging, installation, or deployment.",
+      "assumptions": [
+        "The claimed completion boundary is explicit.",
+        "The chosen check observes the behavior relevant to that claim."
+      ],
+      "avoid_when": "Do not run every available check for every small change, or claim runtime success from source inspection or a build alone.",
+      "axis": [
+        "Pure local claim",
+        "Integration, visual, or delivery claim"
+      ],
+      "counterexample": "A successful build does not establish that an installed application opens the user's migrated files correctly.",
+      "example": "A database error-mapping change is checked against representative actual driver errors.",
+      "goal": "Support each completion claim with evidence at its actual boundary.",
+      "id": "P23",
+      "mechanism": "A deliberate claim-to-evidence match exposes modeled assumptions and verifies the actual changed operation where necessary.",
+      "options": [
+        {
+          "label": "Check the isolated rule",
+          "when": "The claim concerns a deterministic calculation, transformation, or state rule.",
+          "action": "Check representative inputs, expected outputs, and the edge cases that could change the result.",
+          "gain": "Provides fast feedback about that rule's correctness.",
+          "cost": "Does not prove the rule is connected correctly to real dependencies or the delivered product."
+        },
+        {
+          "label": "Exercise the real integration or UI",
+          "when": "The change depends on a provider, configuration, adapter, or visible interface.",
+          "action": "Run the operation through the relevant real connection or inspect and exercise the rendered UI.",
+          "gain": "Checks assumptions that an isolated unit test cannot observe.",
+          "cost": "Requires more setup and may introduce slower or less predictable checks."
+        },
+        {
+          "label": "Verify the delivered state",
+          "when": "The claim is that a change is installed, deployed, migrated, or working for users.",
+          "action": "Verify that specific delivered version or state and exercise representative behavior there.",
+          "gain": "Supports the actual delivery claim instead of inferring it from a successful build.",
+          "cost": "Requires access to the delivered environment and checks appropriate to that environment."
+        }
+      ],
+      "short": "Verify the actual outcome before claiming the change works",
+      "sources": [
+        {
+          "date_and_scope": "August 9, 2000. Engineering conditions and feedback practices.",
+          "id": "J1",
+          "locator": "Checklist",
+          "title": "The Joel Test: 12 Steps to Better Code",
+          "url": "https://www.joelonsoftware.com/2000/08/09/the-joel-test-12-steps-to-better-code/"
+        },
+        {
+          "date_and_scope": "March 6, 2013. Strong testing discipline with explicit exceptions.",
+          "id": "M4",
+          "locator": "I don’t write tests for getters",
+          "title": "The Pragmatics of TDD",
+          "url": "https://blog.cleancoder.com/uncle-bob/2013/03/06/ThePragmaticsOfTDD.html"
+        },
+        {
+          "date_and_scope": "May 10, 2014. Isolation without excessive internal coupling.",
+          "id": "M5",
+          "locator": "Mock across architecturally",
+          "title": "When to Mock",
+          "url": "https://blog.cleancoder.com/uncle-bob/2014/05/10/WhenToMock.html"
+        }
+      ],
+      "title": "Verify the actual outcome before claiming the change works",
+      "validation": [
+        "The evidence directly observes the claimed outcome.",
+        "A plausible defect at the changed boundary would fail or be visible in the selected check."
+      ],
+      "statement": "Before claiming a change works, run a check that observes the behavior at the claimed boundary, whether that is logic, integration, rendered UI, installation, or deployment."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "The provider changes error mapping or retry behavior.",
+          "response": "Update and revalidate the adapter contract and its doubles together."
+        },
+        {
+          "change": "A dependency becomes cheap and deterministic to run locally.",
+          "response": "Consider using the real component when that reduces modeling complexity without sacrificing useful control."
+        }
+      ],
+      "apply_when": "Testing time, remote failures, expensive I/O, or specific boundary outcomes that are otherwise difficult to reproduce.",
+      "assumptions": [
+        "Controlling the dependency improves a meaningful test.",
+        "The double's behavior is sufficiently faithful for the asserted contract."
+      ],
+      "avoid_when": "Do not mock every internal collaborator or treat a fake's successful behavior as proof that the actual dependency behaves the same way.",
+      "axis": [
+        "Deterministic test control",
+        "Real dependency fidelity"
+      ],
+      "counterexample": "Asserting every private helper call does not establish the user's outcome and can make routine refactoring expensive.",
+      "example": "A fake clock exercises expiry behavior while an adapter check verifies the stored timestamp format.",
+      "goal": "Control difficult tests while retaining accurate dependency assumptions.",
+      "id": "P24",
+      "mechanism": "A fake or mock at a meaningful boundary controls a difficult condition while complementary real-boundary checks validate the modeled contract.",
+      "options": [
+        {
+          "label": "Use a focused fake",
+          "when": "A test needs control over time, a rare error, or an expensive external operation.",
+          "action": "Replace that dependency with a small implementation that supplies the required test conditions.",
+          "gain": "Makes difficult cases fast and repeatable.",
+          "cost": "The fake can behave differently from the real dependency."
+        },
+        {
+          "label": "Check the fake against the real contract",
+          "when": "Controlled tests are useful and assumptions about the provider may change.",
+          "action": "Use the fake for controlled cases and separately verify the relevant behavior of the real adapter.",
+          "gain": "Combines repeatable tests with evidence that their dependency model still fits.",
+          "cost": "The fake, real adapter, and shared contract checks all need maintenance."
+        },
+        {
+          "label": "Use the real local dependency",
+          "when": "The dependency is inexpensive, predictable, and easy to run in tests.",
+          "action": "Use it directly for the tests that depend on its behavior.",
+          "gain": "Tests actual behavior and removes a fake that could become inaccurate.",
+          "cost": "Tests may take longer, and rare failures can be harder to reproduce."
+        }
+      ],
+      "short": "Simulate difficult test conditions and verify assumptions against real systems",
+      "sources": [
+        {
+          "date_and_scope": "May 10, 2014. Isolation without excessive internal coupling.",
+          "id": "M5",
+          "locator": "Mock across architecturally",
+          "title": "When to Mock",
+          "url": "https://blog.cleancoder.com/uncle-bob/2014/05/10/WhenToMock.html"
+        },
+        {
+          "date_and_scope": "August 13, 2012. Policy, mechanisms, and source dependency direction.",
+          "id": "M2",
+          "locator": "This rule says",
+          "title": "The Clean Architecture",
+          "url": "https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html"
+        }
+      ],
+      "title": "Simulate difficult test conditions and verify assumptions against real systems",
+      "validation": [
+        "A boundary failure can be reproduced deterministically.",
+        "The real adapter matches the assumptions the application test relies on."
+      ],
+      "statement": "Use a fake or mock when controlled dependency behavior makes a meaningful test practical, and check its assumptions against the real dependency when integration behavior matters."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A stronger type or API now expresses the previously hidden invariant.",
+          "response": "Remove redundant commentary while preserving any rationale the code still cannot express."
+        },
+        {
+          "change": "The historical dependency restriction no longer holds.",
+          "response": "Reassess the implementation and update the explanation; do not retain an obsolete workaround by habit."
+        }
+      ],
+      "apply_when": "Ordering, ownership, units, asynchronous timing, external guarantees, or historical constraints are necessary to understand a correct change.",
+      "assumptions": [
+        "The explanation adds information beyond names, types, and obvious control flow.",
+        "It can be kept consistent with the relevant code or contract."
+      ],
+      "avoid_when": "Do not restate syntax, impose a comment quota, or keep an obsolete explanation merely because it once justified the design.",
+      "axis": [
+        "Code can express the fact",
+        "Rationale lives outside the code"
+      ],
+      "counterexample": "An increment statement does not need a comment saying that the counter is incremented.",
+      "example": "Explain why publishing must occur after a callback-sensitive initialization step.",
+      "goal": "Preserve non-obvious knowledge required for future correct changes.",
+      "id": "P25",
+      "mechanism": "A nearby explanation preserves non-obvious knowledge so later changes do not erase the reason for the design.",
+      "options": [
+        {
+          "label": "Explain through names and types",
+          "when": "The information is simply what the implementation does.",
+          "action": "Use expressive names and types instead of comments that repeat the code.",
+          "gain": "Reduces reading clutter and explanations that become inconsistent with code.",
+          "cost": "Names cannot explain past failures, external constraints, or why alternatives were rejected."
+        },
+        {
+          "label": "Explain the nearby constraint",
+          "when": "A workaround, ordering rule, or safety condition would otherwise look unnecessary.",
+          "action": "Explain why the code is needed and what change would make the explanation obsolete.",
+          "gain": "Helps prevent a future cleanup from reintroducing the original defect.",
+          "cost": "The explanation must be revised when its underlying assumption changes."
+        },
+        {
+          "label": "Link a decision record",
+          "when": "The design depends on several alternatives, assumptions, or consequences that exceed a short local comment.",
+          "action": "Record the evidence, options, chosen tradeoff, and conditions for reconsideration, then link it from the relevant code.",
+          "gain": "Preserves the context needed to evaluate a future design change.",
+          "cost": "The record can become stale or hard to find unless its links and assumptions are maintained."
+        }
+      ],
+      "short": "Explain why code exists when the reason is not obvious",
+      "sources": [
+        {
+          "date_and_scope": "February 23, 2017. Preserving difficult intent and rationale.",
+          "id": "M6",
+          "locator": "Had we left the comments out",
+          "title": "Necessary Comments",
+          "url": "https://blog.cleancoder.com/uncle-bob/2017/02/23/NecessaryComments.html"
+        },
+        {
+          "date_and_scope": "Spring 2015 course. Non-obvious information and contracts.",
+          "id": "O3",
+          "locator": "Comments should describe",
+          "title": "Stanford CS190: Writing Comments",
+          "url": "https://web.stanford.edu/~ouster/cgi-bin/cs190-spring15/lecture.php?topic=comments"
+        }
+      ],
+      "title": "Explain why code exists when the reason is not obvious",
+      "validation": [
+        "A reader can explain why the unusual code exists and when it may change.",
+        "The explanation matches the current implementation and cited dependency behavior."
+      ],
+      "statement": "Document a design's rationale when future changes depend on constraints or tradeoffs the code cannot explain, including what would invalidate the decision."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "The old platform cannot meet a material requirement and its consumers are understood.",
+          "response": "Consider bounded replacement with explicit behavioral acceptance and migration, rather than extending an unusable foundation indefinitely."
+        },
+        {
+          "change": "The behavior is disposable, unshipped, and has no valuable data or consumers.",
+          "response": "Simplify or replace it without manufacturing legacy preservation work."
+        }
+      ],
+      "apply_when": "Changing a legacy subsystem, save format, protocol, or central architecture.",
+      "assumptions": [
+        "Some existing behavior or data has value that must survive.",
+        "The proposed route is evaluated against actual requirements and migration cost."
+      ],
+      "avoid_when": "Do not interpret rewrite warnings as a permanent ban on replacement, or unreadable code as sufficient proof that replacement is cheaper.",
+      "axis": [
+        "Valuable existing behavior",
+        "Foundation cannot meet requirements"
+      ],
+      "counterexample": "Rewriting a stable subsystem merely because its style differs from a new preference does not demonstrate a user benefit.",
+      "example": "Replace a parser behind fixtures drawn from real supported files and a staged rollout path.",
+      "goal": "Improve unsuitable code while preserving valuable behavior and data.",
+      "id": "P26",
+      "mechanism": "Behavioral evidence and staged migration preserve useful knowledge while allowing an unsuitable mechanism to be replaced deliberately.",
+      "options": [
+        {
+          "label": "Improve the existing code in stages",
+          "when": "The system has useful behavior and local changes can meet the requirement.",
+          "action": "Establish the important existing behavior and change bounded parts while checking that behavior.",
+          "gain": "Preserves accumulated behavior and limits migration risk.",
+          "cost": "Existing constraints can make each improvement slower or less complete."
+        },
+        {
+          "label": "Replace one defined subsystem",
+          "when": "One subsystem is unsuitable, but its required behavior and integration interface are understood.",
+          "action": "Build a replacement behind that interface and migrate gradually with compatibility checks.",
+          "gain": "Changes the foundation while limiting how much of the system is exposed at once.",
+          "cost": "Both implementations may need support during migration."
+        },
+        {
+          "label": "Replace the unsuitable foundation",
+          "when": "The platform blocks required behavior, or the existing code is disposable and has little behavior to preserve.",
+          "action": "Define acceptance checks and plan migration around the actual users, integrations, and data.",
+          "gain": "Removes constraints that incremental changes cannot economically resolve.",
+          "cost": "Hidden behavior may be lost, and a broad rewrite can postpone usable feedback."
+        }
+      ],
+      "short": "Choose gradual improvement or replacement without losing required behavior",
+      "sources": [
+        {
+          "date_and_scope": "April 6, 2000. Rewrite risks and accumulated knowledge.",
+          "id": "J2",
+          "locator": "When you throw away code",
+          "title": "Things You Should Never Do, Part I",
+          "url": "https://www.joelonsoftware.com/2000/04/06/things-you-should-never-do-part-i/"
+        },
+        {
+          "date_and_scope": "November 3, 2010. Accidental dependencies and compatibility.",
+          "id": "C4",
+          "locator": "including the information merely encourages",
+          "title": "The quiet fading away of the CtlPanelClass",
+          "url": "https://devblogs.microsoft.com/oldnewthing/20101103-00/?p=12363"
+        }
+      ],
+      "title": "Choose gradual improvement or replacement without losing required behavior",
+      "validation": [
+        "Required old behavior and new requirements are checked explicitly.",
+        "Migration interruption and recovery are covered when persistent state is involved.",
+        "Remaining unknown behavior is disclosed rather than assumed absent."
+      ],
+      "statement": "Improve existing code incrementally when that preserves useful behavior at lower risk, and replace it when required benefits justify the migration and verification costs."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A historical dependency is removed and the workaround has no remaining supported consumer.",
+          "response": "Retire it after checking the evidence and the cost of being wrong."
+        },
+        {
+          "change": "Preserving behavior now conflicts with an explicit integrity or security requirement.",
+          "response": "Prioritize that requirement and design a deliberate transition instead of silently retaining the harmful behavior."
+        }
+      ],
+      "apply_when": "Changing public APIs, identifiers, formats, callback order, command flags, or historical platform workarounds.",
+      "assumptions": [
+        "Consumers or persisted data may rely on current behavior.",
+        "The preservation cost and consequences are assessed rather than treated as zero."
+      ],
+      "avoid_when": "Do not preserve every bug indefinitely, apply compatibility shims speculatively, or interpret missing usage evidence as proof of no consumers.",
+      "axis": [
+        "Consumers rely on valuable behavior",
+        "Preservation is harmful or uneconomic"
+      ],
+      "counterexample": "Turning on an old compatibility mode for every application can reintroduce behavior that was intentionally changed.",
+      "example": "Maintain an old file reader while new writes use a revised format and users migrate.",
+      "goal": "Balance consumer continuity with explicit correctness and integrity needs.",
+      "id": "P27",
+      "mechanism": "Consumer evidence and an explicit support policy distinguish valuable contracts from behavior that should be migrated or retired.",
+      "options": [
+        {
+          "label": "Preserve relied-on behavior",
+          "when": "Supported callers depend on the behavior and preserving it has an acceptable cost.",
+          "action": "Keep the required behavior and document any quirks that future changes must preserve.",
+          "gain": "Avoids disrupting callers or forcing immediate migration.",
+          "cost": "Historical constraints and compatibility work continue to accumulate."
+        },
+        {
+          "label": "Provide a transition period",
+          "when": "Callers need time to move, but the old behavior should eventually be retired.",
+          "action": "Offer a version or adapter with a stated migration path and retirement conditions.",
+          "gain": "Allows the system to improve while callers migrate deliberately.",
+          "cost": "Supporting old and new behavior increases testing and support work."
+        },
+        {
+          "label": "Make an explicit breaking change",
+          "when": "Correctness or integrity requires a break, or evidence supports retiring a dependency that no longer has value.",
+          "action": "Explain what changes, why the break is justified, and how affected callers or data must migrate.",
+          "gain": "Removes harmful behavior or costly constraints that no longer justify preservation.",
+          "cost": "Callers can face disruption, migration work, and loss of trust if the change is poorly handled."
+        }
+      ],
+      "short": "Plan transitions when existing users depend on old behavior",
+      "sources": [
+        {
+          "date_and_scope": "November 3, 2010. Accidental dependencies and compatibility.",
+          "id": "C4",
+          "locator": "including the information merely encourages",
+          "title": "The quiet fading away of the CtlPanelClass",
+          "url": "https://devblogs.microsoft.com/oldnewthing/20101103-00/?p=12363"
+        },
+        {
+          "date_and_scope": "September 11, 2017. The cost of restoring old behavior.",
+          "id": "C5",
+          "locator": "Compatibility shims should",
+          "title": "If you configure a program to run in Windows 2000 compatibility mode, then it is also vulnerable to Windows 2000 security issues",
+          "url": "https://devblogs.microsoft.com/oldnewthing/?p=96995"
+        },
+        {
+          "date_and_scope": "Book chapter 3, printed pages 41–46. API behavior and conflicting constraints.",
+          "id": "C8",
+          "locator": "Chapter 3, conflicting goals",
+          "title": "Authorized sample: The Secret Life of GetWindowText",
+          "url": "https://www.informit.com/content/images/9780321440303/samplechapter/chen_ch03.pdf"
+        }
+      ],
+      "title": "Plan transitions when existing users depend on old behavior",
+      "validation": [
+        "Representative supported consumers still work or can migrate.",
+        "Any deliberate break has an explicit acceptance decision and a tested transition path."
+      ],
+      "statement": "When changing a public contract or stored format, preserve behavior that supported consumers need unless correctness, safety, or a justified retirement requires an explicit break or migration."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "Workload scale or access patterns change.",
+          "response": "Measure the new bottleneck before continuing the old optimization strategy."
+        },
+        {
+          "change": "An optimization no longer materially affects the objective.",
+          "response": "Consider removing its maintenance cost while preserving a useful performance baseline."
+        }
+      ],
+      "apply_when": "Latency, throughput, memory, contention, or resource use prevents the required outcome or creates a material operating cost.",
+      "assumptions": [
+        "A performance or resource objective matters to the user or operation.",
+        "The measurement represents the relevant workload and preserves correctness requirements."
+      ],
+      "avoid_when": "Do not remove safety or clarity for an unmeasured hypothetical gain, or assume native/managed language choice determines the result.",
+      "axis": [
+        "Already meets the objective",
+        "Measured resource limit is exceeded"
+      ],
+      "counterexample": "A historical whole-system performance result does not establish that rewriting an application in another language will make its user workflow faster.",
+      "example": "Eliminate repeated remote requests when they dominate latency before tuning a small local loop.",
+      "goal": "Meet the actual resource objective without sacrificing required behavior.",
+      "id": "P28",
+      "mechanism": "Measurement identifies the limiting resource; comparing designs under the required workload directs effort toward changes that affect the actual objective.",
+      "options": [
+        {
+          "label": "Keep the clear implementation",
+          "when": "Representative workloads already meet the required latency, throughput, memory, or cost target.",
+          "action": "Retain the readable implementation and a useful measurement baseline.",
+          "gain": "Avoids complexity and fragile optimizations with no demonstrated current benefit.",
+          "cost": "A different workload may later expose a bottleneck."
+        },
+        {
+          "label": "Remove measured expensive work",
+          "when": "Measurements identify avoidable calls, allocations, repeated computation, or similar waste.",
+          "action": "Change that work and measure the effect on the actual end-to-end objective.",
+          "gain": "Targets a known cost and lets the result be checked.",
+          "cost": "Caching, batching, or reordered work can change freshness, ordering, or failure behavior."
+        },
+        {
+          "label": "Change the underlying design",
+          "when": "Local improvements cannot meet a demonstrated resource requirement.",
+          "action": "Reconsider data structures, work ownership, or deployment while preserving required behavior.",
+          "gain": "Can remove a bottleneck caused by the structure of the system.",
+          "cost": "Migration adds risk and may shift resource use or complexity to another part of the system."
+        }
+      ],
+      "short": "Improve performance only where measurements show a real problem",
+      "sources": [
+        {
+          "date_and_scope": "November 11, 2002. Constraints that remain beneath abstractions.",
+          "id": "J3",
+          "locator": "All non-trivial abstractions",
+          "title": "The Law of Leaky Abstractions",
+          "url": "https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/"
+        },
+        {
+          "date_and_scope": "December 19, 2015. Safety and performance through system co-design.",
+          "id": "D2",
+          "locator": "The ability to co-design",
+          "title": "Safe Native Code",
+          "url": "https://joeduffyblog.com/2015/12/19/safe-native-code/"
+        }
+      ],
+      "title": "Improve performance only where measurements show a real problem",
+      "validation": [
+        "The target outcome improves under a relevant workload.",
+        "Required semantics, failure behavior, and resource bounds remain acceptable."
+      ],
+      "statement": "Optimize only when representative measurements show a meaningful resource problem, and keep a change only if it improves the relevant result while preserving required behavior."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "A workload now needs independent scaling or a credible containment boundary.",
+          "response": "Reassess deployment separation and its state ownership rather than assuming the original shared process remains adequate."
+        },
+        {
+          "change": "Independent deployment has no remaining benefit and operations dominate cost.",
+          "response": "Consider consolidation while retaining useful code contracts."
+        }
+      ],
+      "apply_when": "Deciding whether a component needs its own process or service.",
+      "assumptions": [
+        "The deployment requirement is distinguishable from code organization.",
+        "The team can operate any new failure and ownership boundaries."
+      ],
+      "avoid_when": "Do not infer microservices from Clean Architecture or presume an in-process module supplies process-level failure isolation.",
+      "axis": [
+        "One lifecycle is sufficient",
+        "Independent lifecycle or isolation matters"
+      ],
+      "counterexample": "Creating a network service solely to make a small class independently testable adds unnecessary failure modes.",
+      "example": "Use an isolated local parser process when untrusted parsing needs containment but remote deployment offers no benefit.",
+      "goal": "Choose a deployment boundary that supplies a real lifecycle or isolation benefit.",
+      "id": "P29",
+      "mechanism": "Keeping code modular locally captures many change benefits; process or service separation is added when independent lifecycle, scaling, or isolation warrants its distinct costs.",
+      "options": [
+        {
+          "label": "Keep it in the same process",
+          "when": "Code separation is sufficient and the components can share a deployment and failure boundary.",
+          "action": "Use clear modules within the existing process.",
+          "gain": "Keeps calls, shared state, and operations simpler.",
+          "cost": "A process failure or resource problem can affect all components in that process."
+        },
+        {
+          "label": "Use a separate local worker",
+          "when": "A local component needs real failure isolation or a separate resource limit.",
+          "action": "Move its work into a supervised process and define messages, state ownership, and restart behavior.",
+          "gain": "Can contain failures without creating a remote service fleet.",
+          "cost": "Adds serialization, process management, coordination, and handling of in-flight work."
+        },
+        {
+          "label": "Use a separate service",
+          "when": "Independent scaling, deployment, or ownership provides a concrete benefit that justifies distribution.",
+          "action": "Define the remote contract, data ownership, and behavior for timeouts, partial failure, and recovery.",
+          "gain": "Lets the component scale or deploy independently.",
+          "cost": "Adds network latency, uncertain outcomes, retries, monitoring, and operating responsibility."
+        }
+      ],
+      "short": "Separate processes or services only when isolation, scaling, or independent releases justify the cost",
+      "sources": [
+        {
+          "date_and_scope": "August 13, 2012. Policy, mechanisms, and source dependency direction.",
+          "id": "M2",
+          "locator": "This rule says",
+          "title": "The Clean Architecture",
+          "url": "https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html"
+        },
+        {
+          "date_and_scope": "October 18, 2020. Dependency principles across programming styles.",
+          "id": "M3",
+          "locator": "Keep interfaces small",
+          "title": "Solid Relevance",
+          "url": "https://blog.cleancoder.com/uncle-bob/2020/10/18/Solid-Relevance.html"
+        },
+        {
+          "date_and_scope": "June 23, 2009; discusses an October 2006 memo. Concurrent failure composition.",
+          "id": "D3",
+          "locator": "Failures can happen concurrently",
+          "title": "Concurrency and exceptions",
+          "url": "https://joeduffyblog.com/2009/06/23/concurrency-and-exceptions/"
+        }
+      ],
+      "title": "Separate processes or services only when isolation, scaling, or independent releases justify the cost",
+      "validation": [
+        "The selected boundary provides the actual required lifecycle or isolation benefit.",
+        "Its new operational and failure behaviors are tested at the appropriate boundary."
+      ],
+      "statement": "Give a component its own process or service only when the isolation, scaling, ownership, or deployment benefit justifies the new communication and operating costs."
+    },
+    {
+      "adaptations": [
+        {
+          "change": "The capability expands into a specialist standard or a broad interoperability problem.",
+          "response": "Reassess whether maintaining custom code remains cheaper and credible."
+        },
+        {
+          "change": "An adopted dependency grows costly while only a tiny stable feature is used.",
+          "response": "Consider replacing that bounded feature after validating all relied-on behavior."
+        }
+      ],
+      "apply_when": "Selecting a library, framework, external service, or custom helper.",
+      "assumptions": [
+        "The requirement and acceptance boundary are understood.",
+        "The team can maintain the chosen implementation and its relevant guarantees."
+      ],
+      "avoid_when": "Do not generalize pragmatic shipping into always build it yourself, or assume package popularity establishes correctness for the use case.",
+      "axis": [
+        "Tiny stable capability",
+        "Specialist or broad capability"
+      ],
+      "counterexample": "A short custom implementation is not economical if its apparent simplicity excludes the difficult correctness cases.",
+      "example": "Use a platform primitive for a simple local operation when it satisfies the needed contract.",
+      "goal": "Satisfy the required capability with a maintainable lifecycle commitment.",
+      "id": "P30",
+      "mechanism": "Comparing the actual required capability, failure behavior, ownership, and update burden avoids choosing by line count or novelty alone.",
+      "options": [
+        {
+          "label": "Build a small local implementation",
+          "when": "The requirement is bounded and the team can correctly implement and maintain its edge cases.",
+          "action": "Implement the required behavior and verify its normal and failure cases.",
+          "gain": "Provides direct control with little dependency overhead.",
+          "cost": "The team owns every defect, edge case, and future requirement."
+        },
+        {
+          "label": "Use a platform feature or library",
+          "when": "An established component provides the required behavior and guarantees.",
+          "action": "Check its fit, failure behavior, integration needs, and update burden before adopting it.",
+          "gain": "Reuses existing implementation and specialist knowledge.",
+          "cost": "The team still owns integration defects, updates, and dependency constraints."
+        },
+        {
+          "label": "Use a managed service",
+          "when": "A service meets the requirement at a justified total cost compared with building and operating it locally.",
+          "action": "Check its guarantees, data handling, recovery behavior, pricing, and exit or replacement path.",
+          "gain": "Transfers some implementation and operating work to the provider.",
+          "cost": "Creates dependence on the provider's availability, behavior, prices, and migration options."
+        }
+      ],
+      "short": "Choose custom code, libraries, or services by required behavior and ongoing cost",
+      "sources": [
+        {
+          "date_and_scope": "September 23, 2009. Pragmatism, delivery, and the limits of overengineering.",
+          "id": "J6",
+          "locator": "Duct tape programmers are pragmatic",
+          "title": "The Duct Tape Programmer",
+          "url": "https://www.joelonsoftware.com/2009/09/23/the-duct-tape-programmer/"
+        },
+        {
+          "date_and_scope": "December 19, 2015. Safety and performance through system co-design.",
+          "id": "D2",
+          "locator": "The ability to co-design",
+          "title": "Safe Native Code",
+          "url": "https://joeduffyblog.com/2015/12/19/safe-native-code/"
+        },
+        {
+          "date_and_scope": "November 11, 2002. Constraints that remain beneath abstractions.",
+          "id": "J3",
+          "locator": "All non-trivial abstractions",
+          "title": "The Law of Leaky Abstractions",
+          "url": "https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/"
+        }
+      ],
+      "title": "Choose custom code, libraries, or services by required behavior and ongoing cost",
+      "validation": [
+        "The chosen option satisfies representative edge cases and required failure behavior.",
+        "Ownership and the update or replacement path are clear."
+      ],
+      "statement": "Choose custom code, a library, or a service by whether it supplies the required guarantees at a lifecycle cost the team can maintain and justify."
+    }
+  ],
+  "source_hashes": {
+    "conditional-catalog-v2.json": "e4f641a67817e6aa1f11a02e987149670d7a8da0f896093dd0d2add3898d8dfe",
+    "visual-spectra.json": "ffbf8a1fccb00065687447a9d9244923f2d2310d73c1783c355239e4df5b968c"
+  },
+  "title": "Choose how to design and build software"
+}
