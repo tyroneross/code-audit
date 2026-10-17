@@ -30,6 +30,12 @@ Shared guidance covers simplicity, systems engineering, usability, human factors
 
 Python 3.10+ runs audit tools; Node.js 18+ runs memory. Compiled debugger code is included, so ordinary MCP use needs no dependency installation. No automatic mining hook is enabled.
 
+Clone the repository once:
+
+```sh
+git clone https://github.com/tyroneross/code-audit.git
+```
+
 Claude Code, from the project being inspected:
 
 ```sh
@@ -65,3 +71,7 @@ For runtime development use the bundled package lockfile, disable install script
 Internal file logging is off by default. Explicit `DEBUGGER_LOG_ENABLED=1` enables diagnostic writes and marks MCP tools as having side effects; logs can contain sensitive operation details. `read_logs` stays within the server working directory and refuses home, its ancestors and filesystem-root scopes, reads at most 16 files of 1 MiB each and returns at most 500 entries; rejected or skipped files are reported. Log tool responses stop at 32 KiB with an explicit truncation notice; narrow filters or use project tools for full logs. These are conservative interactive inspection budgets, not exhaustive log analysis.
 
 For distribution, use `git archive` from the validated commit; it excludes ignored local state and development dependencies. A direct `--plugin-dir` launch is local development use and does not filter ignored files. Confirm the server working directory in the host before relying on per-project memory or log scope.
+
+## License
+
+[Apache License 2.0](LICENSE). Source origins and adaptations are recorded in [source provenance](docs/source-provenance.json).

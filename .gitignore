@@ -7,3 +7,4 @@ __pycache__/
 .claude-code-debugger/
 .code-audit/
 .bookmark/
+releases/*.tar.gz
