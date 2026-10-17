@@ -72,3 +72,7 @@ Resume from pending files and referenced reports. Current-root comparison re-inv
 7. Record disposition: `verified` with before/after source evidence and actual checks; `implemented_unverified` when validation is missing; `blocked` with the exact external dependency; `rejected` with counterevidence; or `proposed` when repair is outside authorization. Report remaining findings and coverage honestly. Continue other authorized work when a dependency blocks one item.
 
 Use [the repair record template](../audit/references/repair-record-template.json). It is a working record, not a second executable build system or a proof checker. The host reviewer must judge scope, actual receipts and semantic resolution. No pattern matcher can certify an arbitrary fix.
+
+## Rank maintenance candidates
+
+For unused code and stale flags, use [removal evidence](../code-principles/references/removal-evidence.md). Compare observed CPU, CI time, artifact size or supported maintenance burden with review effort, implementation cost and regression risk. Reuse recommendation priorities and measurement fields; label unmeasured benefits expected or unknown. Missing telemetry warrants investigation, not invented savings.

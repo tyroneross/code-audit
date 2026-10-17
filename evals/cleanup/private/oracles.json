@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "oracles": {
+    "C01": [
+      {
+        "id": "unused-legacy",
+        "origin": "pre_existing",
+        "locations": [
+          "handlers.py"
+        ],
+        "mechanism": "legacy has no consumers in the complete inventory and may be removed; active is dynamically loaded and must remain."
+      }
+    ],
+    "C02": [
+      {
+        "id": "unused-retired",
+        "origin": "pre_existing",
+        "locations": [
+          "flags.py"
+        ],
+        "mechanism": "retired has no consumers and may be removed. parent is a prerequisite of child; deleting its entry alone breaks evaluation. A proven equivalent simplification of parent and its dependency edge is acceptable."
+      }
+    ],
+    "C03": [
+      {
+        "id": "unused-status",
+        "origin": "pre_existing",
+        "locations": [
+          "service.py"
+        ],
+        "mechanism": "retired_status may be removed; the emergency_stop branch is required despite zero observed activations."
+      }
+    ]
+  }
+}
