@@ -8,7 +8,7 @@ Reference for the debug-loop iteration phase. Load on demand when entering itera
 
 **What it means**: The hypothesis is likely wrong. More of the same fix won't help.
 
-**Action**: Escalate to user with this template:
+**Action**: Reject or revise the hypothesis, inspect the evidence and continue a viable alternative within the remaining budget. Ask the user only when missing context or a consequential scope/requirement choice blocks progress. If that applies, use this template:
 
 ```
 I've attempted to fix this issue twice with the same approach:
@@ -25,7 +25,7 @@ I'm not seeing. Options:
 3. Narrow the scope to a specific aspect of the problem
 ```
 
-**Do NOT**: Retry a third time with the same hypothesis. That's the definition of insanity.
+**Do NOT**: Retry the same failed hypothesis without new evidence or reset the budget by switching reviewers.
 
 ## Rule 2: Oscillation
 
@@ -33,7 +33,7 @@ I'm not seeing. Options:
 
 **What it means**: The two criteria have a shared dependency or conflicting requirements. The fixes are fighting each other.
 
-**Action**: Flag as coupled issue:
+**Action**: Trace the shared dependency and check whether both requirements are valid. Repair the common mechanism when authorized; surface a choice only when a real requirement conflict remains:
 
 ```
 I've detected oscillation between two criteria:
@@ -141,3 +141,7 @@ Not every failure needs another loop. Exit early if:
 - The root cause is confirmed as external (library bug, infrastructure) → report and recommend workaround, don't iterate on code
 - The issue is a known limitation, not a bug → document and close
 - The user says to stop → respect it immediately
+
+## Repeated critique is not new causal evidence
+
+Reconcile finding identity and closure premises with the [review feedback contract](../../code-principles/references/review-feedback.md). Focus later passes on changed and affected behavior; inspect unchanged callers when contracts change. Do not repeat resolved advice, suppress justified reopening, or call an unresolved budget stop clean. Use one budget across these review and repair steps.

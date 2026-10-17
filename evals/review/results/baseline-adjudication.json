@@ -1,0 +1,76 @@
+{
+  "judgments": [
+    {
+      "case_id": "R01",
+      "finding_id": "F1",
+      "oracle_id": "stale-poll",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "This is the same valid defect: the unguarded poll path writes through a store with no revision admission. Putting the strict > check in store.apply and dropping the duplicate check in live.py is correct. The added equal-revision test is consistent with the existing strict guard. This matches the oracle."
+    },
+    {
+      "case_id": "R04",
+      "finding_id": "F1",
+      "oracle_id": "timeout-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The unchanged caller passes milliseconds to a parameter that now expects seconds. Converting in client.request preserves timeout_ms, and passing timeout_seconds by keyword makes the unit explicit without harm. The boundary and zero checks are reasonable. This matches the oracle."
+    },
+    {
+      "case_id": "R06",
+      "finding_id": "F-ready",
+      "oracle_id": "reopen-ready",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "This correctly identifies that the closure premise (synchronous start) changed. The un-awaited coroutine lets ready publish before initialization, so reopening is legitimate rather than duplicative. Awaiting start and checking other synchronous callers is correct. The gated test is sound."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F1",
+      "oracle_id": "operation-identity",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The fresh new_uuid key per outer attempt defeats provider deduplication across lost-response retries and repeated invocations. Using operation_id and removing new_uuid is correct. This matches the oracle."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F2",
+      "oracle_id": "retry-owner",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Nested loops allow up to 3*max_attempts sends, which exceeds the stated upper bound. A single retry layer bounded by max_attempts is correct. This matches the oracle."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F3",
+      "oracle_id": "total-deadline",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The full total budget is reused as each attempt's timeout, and attempts never stop when the budget is exhausted. Computing the remaining budget from a monotonic start and stopping at <= 0 is correct. Asserting that the sum of per-attempt timeouts is <= deadline is a valid check. This matches the oracle."
+    },
+    {
+      "case_id": "R08",
+      "finding_id": "F1",
+      "oracle_id": "unwired-handler",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The handler is not registered because bootstrap supplies an empty handler list, so audit is invoked zero times. Registering it once at composition is correct. This matches the oracle."
+    },
+    {
+      "case_id": "R09",
+      "finding_id": "F1",
+      "oracle_id": "missing-owner-check",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The missing owner authorization in read_doc is identical before and after the change, so the pre_existing origin is correct. The suggested ownership check is hedged appropriately to the project's owner field and error, and it is kept separate from the rename. This matches the oracle."
+    }
+  ]
+}

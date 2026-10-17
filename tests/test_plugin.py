@@ -56,6 +56,15 @@ class Package(unittest.TestCase):
                     self.assertIn(symptom,tool('detail',{'id':incident}))
                     self.assertIn('INC_',tool('search',{'symptom':symptom}))
                     tool('outcome',{'incident_id':incident,'result':'worked','notes':'Synthetic roundtrip only; not production acceptance.'})
+                    self.assertIn(str(project),tool('status'))
+                    invalidated=tool('store',{
+                        'symptom':f'Superseded {incident}: {symptom}',
+                        'root_cause':f'The assumptions behind {incident} changed in this synthetic fixture.',
+                        'fix':f'Do not reuse {incident}; inspect the new contract. Invalidation record, not a performed repair.',
+                        'category':'logic','tags':['invalidation',incident]})
+                    invalidation_id=re.search(r'INC_[\w-]+',invalidated).group()
+                    self.assertIn(invalidation_id,tool('search',{'symptom':incident}))
+                    self.assertIn(f'Do not reuse {incident}',tool('detail',{'id':invalidation_id}))
                     self.assertIn('logic',tool('list'))
                     self.assertTrue(list((project/'memory').rglob('*.json')))
                     self.assertFalse((plugin/'.claude').exists())

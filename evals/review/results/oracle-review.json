@@ -1,0 +1,16 @@
+{
+  "initial_issues": [
+    {
+      "case_id": "R07",
+      "oracle_id": "total-deadline",
+      "issue": "The contract does not say whether 'deadline' is a relative duration or an absolute time. The oracle assumes a duration budget. If it were an absolute timestamp, passing it as timeout would be a unit/type defect instead. The mechanism (no elapsed-time subtraction, no stop when the budget is spent) still holds under the duration reading. The fit is acceptable but underspecified."
+    },
+    {
+      "case_id": "R06",
+      "oracle_id": "reopen-ready",
+      "issue": "The oracle links prior_finding_id F-ready but does not say whether a reopening should reuse that ID or reference it from a new ID. Both styles should count as legitimate reopening, not duplication. The mechanism itself is sound: the un-awaited coroutine means initialize has not run when publish('ready') executes."
+    }
+  ],
+  "resolution": "Clarified R07 total duration, removed strict ID-spelling scoring, preserved v1 records locally and reran both arms and blinded adjudication on version 2.",
+  "final_oracle_issues": []
+}

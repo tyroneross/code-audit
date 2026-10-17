@@ -1,0 +1,158 @@
+{
+  "cases": [
+    {
+      "case_id": "R01",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The new polling path calls apply() unconditionally. The only revision guard lives in the live.py caller, not in the state owner. A delayed poll result carrying an older per-job revision therefore overwrites a newer live event, which violates the contract that all event sources reject older revisions.",
+          "locations": [
+            "poll.py:2",
+            "store.py:1",
+            "live.py:3"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Move the stale-revision check into store.apply, so the state owner enforces it for every source: if there is no existing entry or event.revision > existing.revision, assign it; otherwise ignore the event. Then remove the duplicated check from live.py so that on_live and on_poll both rely on it.",
+          "verification": "Apply a live event with revision 5 and then a poll event with revision 4 for the same job, and assert that the state still holds revision 5. Repeat with the order of sources reversed, and add an equal-revision case. This check fails on the current code and should pass after the fix."
+        }
+      ]
+    },
+    {
+      "case_id": "R02",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R03",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R04",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "provider.send now interprets its second argument as seconds and passes it to transport.send(timeout=...). The unchanged caller client.request still forwards timeout_ms unconverted, so every request gets a timeout 1000x longer than intended (for example, 500 ms becomes 500 s). This defeats the deadline and lets stuck calls hold resources.",
+          "locations": [
+            "client.py:2",
+            "provider.py:1-2"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Keep the public timeout_ms parameter and convert it at the boundary in client.request by calling provider.send(payload, timeout_ms / 1000). Pass the argument by keyword (timeout_seconds=...) so the unit is explicit at the call site.",
+          "verification": "Call client.request(payload, 500) with a fake transport that records its timeout, and assert it receives 0.5. This check fails on the current code, which records 500. Also check the zero and boundary values that the old behavior handled."
+        }
+      ]
+    },
+    {
+      "case_id": "R05",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R06",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F-ready",
+          "cause": "F-ready was closed on the premise that start() was synchronous. That premise no longer holds: start() is now async. owner.launch calls handler.start() without await, which only creates a coroutine. Initialization therefore has not run (and may never run) when publish(\"ready\") executes, so ready is published before initialization completes.",
+          "locations": [
+            "owner.py:2-3",
+            "handler.py:1-2"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "reopened",
+          "suggested_change": "In owner.launch, replace the call with await handler.start() before publish(\"ready\"). Then search for other callers of Handler.start that still call it synchronously and update them the same way.",
+          "verification": "Use a fake initialize that awaits a gate and records completion, run launch, and assert that publish is not called until the gate is released and initialization has been recorded. The current code fails this check: publish is called immediately and a 'coroutine never awaited' warning appears."
+        }
+      ]
+    },
+    {
+      "case_id": "R07",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "checkout generates a new_uuid() key for each outer attempt instead of using the caller-supplied operation_id. When a response is lost, the provider receives the same logical checkout under a different key and cannot deduplicate it, so the non-idempotent write can be applied more than once (for example, a double charge). Repeated checkout invocations also never share a key.",
+          "locations": [
+            "checkout.py:4"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Pass operation_id as the provider key on every attempt and in every invocation, and remove new_uuid() from this path.",
+          "verification": "Use a fake provider that commits the write and then raises TimeoutError on the first call. Assert that every send call receives key == operation_id and that the fake records only one committed effect."
+        },
+        {
+          "id": "F2",
+          "cause": "Retries happen at two layers. checkout retries max_attempts times, and on each of those attempts gateway retries up to 3 times. This allows up to 3 \u00d7 max_attempts provider.send calls, which exceeds the supplied max_attempts upper bound and multiplies load during an outage.",
+          "locations": [
+            "checkout.py:2-6",
+            "gateway.py:2-6"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Keep a single retry layer. Make gateway perform exactly one send (or remove gateway's loop), and let checkout own a loop bounded by max_attempts.",
+          "verification": "Use a fake provider that always times out, call checkout with max_attempts=2, and assert that send is called at most 2 times. The current code makes 6 calls."
+        },
+        {
+          "id": "F3",
+          "cause": "deadline is a total budget measured from checkout entry, but the code passes it unchanged as the timeout for every attempt. With repeated attempts, the total elapsed time can reach about attempts \u00d7 deadline. The loop also never stops when the budget is exhausted.",
+          "locations": [
+            "gateway.py:4",
+            "checkout.py:2-4"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Record a monotonic start time at checkout entry. Before each attempt, compute remaining = deadline - elapsed, and stop with TimeoutError if remaining <= 0. Otherwise call send with timeout=remaining.",
+          "verification": "Use a fake clock and a provider that consumes its full timeout and then raises. Assert that the sum of the per-attempt timeouts is at most deadline, and that no attempt starts after the budget is spent."
+        }
+      ]
+    },
+    {
+      "case_id": "R08",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The change adds audit.handle but never registers it. bootstrap.build constructs App(handlers=[]), so App.run iterates over no handlers and the audit handler is invoked zero times. This fails the requirement that run(event) invoke it exactly once.",
+          "locations": [
+            "bootstrap.py:3",
+            "audit.py:1"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Register the handler once at composition by importing audit in bootstrap.py and returning App(handlers=[audit.handle]).",
+          "verification": "Build the application with build(), replace audit_store with a fake, call run(event) once, and assert that the fake store contains exactly one entry equal to event. The current code records zero entries."
+        }
+      ]
+    },
+    {
+      "case_id": "R09",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "read_doc returns doc.body without checking that actor owns doc, so any actor can read any document, which violates the owner-only contract. The before revision has the identical logic and the change only renames HEADING, so this defect predates the change.",
+          "locations": [
+            "page.py:3"
+          ],
+          "severity": "high",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Add an ownership check before returning: if actor is not doc's owner (for example, actor.id != doc.owner_id, using the project's owner field), raise the project's authorization error. Make this a separate change from the heading rename.",
+          "verification": "Call read_doc as the owner and assert that it returns the body. Call it as a non-owner and assert that it raises the authorization error and returns no body. The current code returns the body to the non-owner."
+        }
+      ]
+    }
+  ]
+}

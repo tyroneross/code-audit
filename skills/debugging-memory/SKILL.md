@@ -10,14 +10,17 @@ user-invocable: false
 if memory unavailable: disclose the gap and continue source investigation
 search the current symptom
 load details only for plausible matches
-validate each candidate cause, constraints and fix against current code
+before reuse: search candidate ID for linked invalidation/supersession records (best-effort)
+validate lifecycle, cause, applicability, failed approaches and fix against current code
 if a known fix fits: adapt it and verify current behavior
 else: use ../debug/SKILL.md and investigate fresh
-store the resulting incident when authorized and available
-record whether an actually attempted retrieved fix worked, failed or changed
+store trigger, cause, tried/rejected approaches, repair, evidence and limits when authorized
+record whether an actually attempted retrieved fix worked, failed or modified
 ```
 
 Resolve references from this skill's installed location. Use the actual host-exposed names for tools on `code-audit-debugger`.
+
+Read [incident learning](../code-principles/references/incident-learning.md) when using or recording a lesson. Use existing MCP fields and narrative; do not invent lifecycle/verification update arguments.
 
 ## Retrieval is evidence
 
@@ -27,7 +30,7 @@ Use `status`, `list` and `patterns` to inspect the existing corpus as needed. Us
 
 ## Storage and outcomes
 
-Before storing, check `status` for the actual server working directory and configured memory path. They must match the authorized project or an explicitly selected shared corpus. If the host starts in an unintended directory, disclose the storage gap and correct host configuration within authorization; do not write incidents into an assumed project.
+Before any `store` or `outcome` write, check `status` for the actual server working directory and configured memory path. They must match the authorized project or an explicitly selected shared corpus. If the host starts in an unintended directory, disclose the storage gap and correct host configuration within authorization; do not write incidents into an assumed project.
 
 `store` accepts required strings `symptom`, `root_cause`, `fix`; optional `category`, `tags`, `files_changed`, `file`. Describe the triggering conditions, causal evidence, actual changes and checks in these fields. Distinguish hypotheses and recommendations from verified repairs. Do not invent findings merely to populate memory.
 

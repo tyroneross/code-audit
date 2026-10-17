@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-17",
+  "model": "claude-opus-5-5",
+  "provider": "firstParty",
+  "initial_verdict": "revise",
+  "second_verdict": "revise",
+  "final_verdict": "approve",
+  "final_findings": [],
+  "review_boundary": "Initial broad source critique followed by targeted closure of concrete findings; none executed tests. Host execution is separate.",
+  "closed_issues": [
+    "linked historical invalidation and uncertain-outcome wording",
+    "all debug/router memory writes check authorized destination",
+    "causal depth routing",
+    "clean-control accounting permits valid unseeded findings",
+    "case-only isolation instructions",
+    "case/oracle version and canonical-hash identity",
+    "test responsibility and root-path wording",
+    "explicit selected-guidance snapshot and post-freeze delta limits"
+  ],
+  "final_review_sha256": "d0fe37c9804aab5bff6e58f0e67f4a84588d564881f61538d24f71e1853e12f9",
+  "final_model_usage": {
+    "claude-opus-5-5": {
+      "inputTokens": 2,
+      "outputTokens": 1925,
+      "cacheReadInputTokens": 1568,
+      "cacheCreationInputTokens": 7298,
+      "webSearchRequests": 0,
+      "costUSD": 0.0972056,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 1234,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "remaining_limits": [
+    "Synthetic review cases, not population recall or measured benefit.",
+    "Linked-invalidation retrieval was tested in a small temporary corpus, not ranking effectiveness on real corpora.",
+    "Three final routing clarifications and deep-debug paths were source-reviewed, not measured in the selected-guidance model comparison."
+  ]
+}
