@@ -21,3 +21,7 @@ Use when people operate commands, recover failures or authorize persistent effec
 ## Timeouts, deadlines and retries
 
 For missing, arbitrary or repeatedly increased limits, read [timeout guidance](timeouts.md). Select a value from relevant observations or a stated assumption, budget the whole operation, and verify cancellation and uncertain effects. Raising the limit is not a repair for duplicate work, a stalled dependency or incorrect ownership.
+
+## Unused code and stale configuration
+
+For removal decisions, read [removal evidence](removal-evidence.md). Trace indirect consumers and operational safeguards; distinguish missing observations from evidence that removal preserves supported behavior.

@@ -20,3 +20,7 @@ Record the problem, source title/URL and retrieval date, supported claim, applic
 ## Review and incident learning
 
 Read [learning evidence](learning-evidence.md) for convergence, execution-grounded critique, test-oracle quality, context limits, incident applicability and measured-versus-unmeasured memory benefit. The [review contract](../skills/code-principles/references/review-feedback.md) and [incident contract](../skills/code-principles/references/incident-learning.md) apply these lessons. Use the [review evaluation](../evals/review/README.md) to test changes; do not adopt model rankings, numeric caps or infrastructure from an unrelated study.
+
+## Maintenance cleanup
+
+[Maintaining software with the GPT-6 family](https://developers.openai.com/blog/maintaining-software-with-the-gpt-6-family), OpenAI, published 2026-10-14, consulted 2026-10-17. Supports investigating cleanup with operational context, indirect dependencies and review. Applied in [removal evidence](../skills/code-principles/references/removal-evidence.md). Internal case-study results do not establish Code Audit performance or transfer model rankings to other repositories. Limited telemetry and intentional emergency paths are counterevidence to simple unused-code claims. No execution authority is derived from the source.

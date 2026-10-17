@@ -1746,8 +1746,8 @@
       "path": "skills/code-principles/references/challenge-guidance.md",
       "source": "code-principles-audit",
       "source_sha256": "78ac53a0dafd61c97d50024d9d3eedb1abf5940e6daa96c9c75a675019962e85",
-      "current_sha256": "78ac53a0dafd61c97d50024d9d3eedb1abf5940e6daa96c9c75a675019962e85",
-      "modified_from_import": false
+      "current_sha256": "202797c2b3c7161f4626ed109cdde085641c6d31bd592ccbfe35ed35f4cbda22",
+      "modified_from_import": true
     },
     {
       "path": "skills/code-principles/references/change-isolation.md",
@@ -1851,8 +1851,8 @@
       "path": "skills/improve/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "bb2bfb901d83b200bd1c94bcf73edd85682452f96fa87ac54c940146525bff77",
-      "current_sha256": "bb2bfb901d83b200bd1c94bcf73edd85682452f96fa87ac54c940146525bff77",
-      "modified_from_import": false
+      "current_sha256": "266c9130c80759fa9552c2706293a81db8727d6521af022372b75e71a5b4fa22",
+      "modified_from_import": true
     },
     {
       "path": "skills/logging-tracer/SKILL.md",

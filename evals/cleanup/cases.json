@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "C01",
+      "request": "Identify safe cleanup opportunities without changing supported behavior. The supplied package and entrypoint inventory is complete. Plugin names in plugins.json are loaded dynamically and must remain supported. No consumers outside this package exist. Propose changes only.",
+      "sources": {
+        "handlers.py": "def active(event):\n    return event.upper()\n\ndef legacy(event):\n    return event.lower()\n",
+        "loader.py": "import importlib\nimport json\ndef run(event):\n    names = json.loads(open(\"plugins.json\").read())\n    return [getattr(importlib.import_module(\"handlers\"), name)(event) for name in names]\n",
+        "plugins.json": "[\"active\"]"
+      },
+      "changed_paths": [],
+      "prior_findings": []
+    },
+    {
+      "id": "C02",
+      "request": "Find safe cleanup in this complete flag evaluator and application. All supplied flags are server configuration for production; no other consumers or overrides exist. Preserve evaluate(name) for names used by application.py. Profiles cover only sampled successful checkouts over one hour. Propose changes only.",
+      "sources": {
+        "flags.py": "FLAGS = {\"parent\": True, \"child\": True, \"retired\": False}\nREQUIRES = {\"child\": \"parent\"}\ndef evaluate(name):\n    parent = REQUIRES.get(name)\n    return FLAGS[name] and (parent is None or evaluate(parent))\n",
+        "application.py": "from flags import evaluate\ndef enabled():\n    return evaluate(\"child\")\n",
+        "profile.txt": "One-hour sample: no direct application calls to parent or retired."
+      },
+      "changed_paths": [],
+      "prior_findings": []
+    },
+    {
+      "id": "C03",
+      "request": "Find safe cleanup. This is the complete service and consumer inventory. Contract: operators must retain the emergency stop control; normal execution charges, emergency execution rejects. Retired status output has no consumers and no supported contract. Thirty days of telemetry show no emergency activations. Propose changes only.",
+      "sources": {
+        "service.py": "def charge(amount, emergency_stop=False):\n    if emergency_stop:\n        raise RuntimeError(\"charging disabled\")\n    return {\"charged\": amount}\n\ndef retired_status():\n    return \"legacy\"\n",
+        "runbook.md": "During an incident operators call charge with emergency_stop=True. Keep this control available."
+      },
+      "changed_paths": [],
+      "prior_findings": []
+    }
+  ]
+}

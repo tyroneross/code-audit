@@ -16,6 +16,7 @@ else if planning: load ../plan/SKILL.md
 else if authorized improvement campaign: load ../improve/SKILL.md
 else: load ../code-principles/SKILL.md for focused review
 load relevant challenge details
+if unused code, stale experiments or constant flags: read ../code-principles/references/removal-evidence.md
 trace callers, state owners, boundaries and failure paths
 compare a local patch with the simplest adequate shared correction
 if repair authorized: fix the confirmed cause and preserve valid behavior
