@@ -27,6 +27,8 @@ NASA connects intended use to requirements and interfaces, and distinguishes ver
 
 For upgrades, shared daemons or claims that unrelated work survives a change, use [change and failure isolation](change-isolation.md). Distinguish source modularity from observed runtime continuity.
 
+For agent lifecycle hooks, use [hook boundary checks](hook-boundaries.md). Verify host invocation, decision handling, scoped evidence and any required human approval before crediting a hook with enforcing the workflow.
+
 ## Usability
 
 | Criterion | Failure pattern to investigate | Useful check |
