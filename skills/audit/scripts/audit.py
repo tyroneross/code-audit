@@ -523,6 +523,14 @@ def recommendation_api():
                            nonempty=nonempty, string_list=string_list, check_evidence=check_evidence, md=md)
 
 
+def architect_api():
+    """Explicit adapter boundary also supports unregistered importlib callers."""
+    return SimpleNamespace(AuditError=AuditError, snapshot_files=snapshot_files,
+                           directory=directory, load_json=load_json, nonempty=nonempty,
+                           relative_path=relative_path, HEX=HEX, safe_read=safe_read,
+                           digest=digest, canonical=canonical, template=template)
+
+
 def render_report(snapshot, report, require_complete=False, current_root=None, require_outcomes=False):
     checked = validate_report(snapshot, report, require_complete, current_root, require_outcomes)
     if not checked["valid"]:
@@ -602,9 +610,10 @@ def main(argv=None):
             spec = importlib.util.spec_from_file_location("architect_context", Path(__file__).with_name("architect_context.py"))
             adapter = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(adapter)
-            report = adapter.prepare_context(sys.modules[__name__], args.snapshot, args.packet, args.root, args.expected_revision)
+            report = adapter.prepare_context(architect_api(), args.snapshot, args.packet, args.root, args.expected_revision)
             output = directory(Path(args.out).absolute().parent) / Path(args.out).name
-            if output.is_relative_to(directory(args.root)):
+            audited_root = directory(args.root)
+            if any(os.path.samefile(parent, audited_root) for parent in (output.parent, *output.parent.parents)):
                 raise AuditError("Context report must be outside audited root")
             write_json(output, report)
             result = {"report": str(output), "snapshot_id": report["snapshot_id"], "semantic_review": "not_run", "runtime": "not_checked"}

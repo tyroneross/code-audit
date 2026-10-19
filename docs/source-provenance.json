@@ -1396,7 +1396,7 @@
       "path": "skills/audit/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "bc2da6a65ac686306119043f302dddc32d4d985a79e2eedab3c39ffde95b9e1d",
-      "current_sha256": "2f42a6c5b61ce2c38e58851a84a99325068b9ef1adfa5e2fa852b31dad44495f",
+      "current_sha256": "064083135e64d20e4f757e07eaeaa140a6627503e27b11f082258ecbe4afa5e8",
       "modified_from_import": true
     },
     {
@@ -1690,7 +1690,7 @@
       "path": "skills/audit/scripts/audit.py",
       "source": "code-principles-audit",
       "source_sha256": "8319c32dc30eeeb40341d75e07100be1d87e2e51d1f694ec09821855d053f7c8",
-      "current_sha256": "c9218f35b301b35b89159f5f0034dbb36ec9bed3434a6cbd389e219db4413f70",
+      "current_sha256": "75afb895ef83a20d6c2ecb42fdffe088d8c471933f63e039439e92259eb65abd",
       "modified_from_import": true
     },
     {

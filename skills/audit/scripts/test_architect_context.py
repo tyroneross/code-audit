@@ -1,5 +1,8 @@
 """Source-only Architect import boundaries; no scanner or audited script executes."""
 import copy
+from contextlib import redirect_stdout, redirect_stderr
+import io
+import os
 import importlib.util
 import json
 from pathlib import Path
@@ -143,6 +146,33 @@ class ArchitectContextTests(unittest.TestCase):
         result = subprocess.run(command, capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
         self.assertFalse((self.root / 'forbidden.json').exists())
+
+    def test_unregistered_import_main_uses_explicit_api(self):
+        self.packet_path.write_text(json.dumps(self.packet))
+        output = self.base / 'inprocess.json'
+        stream = io.StringIO()
+        module_name = 'audit_unregistered_architect_context'
+        spec = importlib.util.spec_from_file_location(module_name, HERE / 'audit.py')
+        embedded = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(embedded)
+        self.assertNotIn(module_name, sys.modules)
+        with redirect_stdout(stream), redirect_stderr(stream):
+            status = embedded.main(['architect-context', '--snapshot', str(self.snapshot), '--packet', str(self.packet_path), '--root', str(self.root), '--out', str(output)])
+        self.assertEqual(status, 0, stream.getvalue())
+        self.assertTrue(audit.validate_report(self.snapshot, json.loads(output.read_text()))['valid'])
+        self.assertIn('"repository_identity": "not_checked"', json.loads(output.read_text())['context'][0]['fact'])
+
+    def test_case_alias_cannot_write_into_audited_root(self):
+        alias = self.root.with_name(self.root.name.upper())
+        if not alias.exists() or not os.path.samefile(alias, self.root):
+            self.skipTest('Requires a case-insensitive filesystem')
+        self.packet_path.write_text(json.dumps(self.packet))
+        output = alias / 'forbidden.json'
+        stream = io.StringIO()
+        with redirect_stdout(stream), redirect_stderr(stream):
+            status = audit.main(['architect-context', '--snapshot', str(self.snapshot), '--packet', str(self.packet_path), '--root', str(self.root), '--out', str(output)])
+        self.assertEqual(status, 2, stream.getvalue())
+        self.assertFalse(output.exists())
 
 
 if __name__ == '__main__':

@@ -1,6 +1,5 @@
 """Opt-in Architect metadata context; no graph judgment, scanner or process execution."""
 import json
-from pathlib import Path
 
 
 COVERAGE_FIELDS = {
@@ -77,6 +76,7 @@ def prepare_context(audit, snapshot, packet_path, root, expected_revision=None):
         'packet_canonical_sha256': audit.digest(audit.canonical(packet)),
         'snapshot_id': manifest['snapshot_id'],
         'reported_revision': revision,
+        'repository_identity': 'not_checked',
         'reported_scanner_unverified': {'name': scanner['name'], 'version': version},
         'revision_check': 'matched_caller_assertion' if expected_revision is not None else 'not_checked',
         'source_freshness': 'matched_snapshot_files_only',
