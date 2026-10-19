@@ -580,6 +580,10 @@ def main(argv=None):
     evidence.add_argument("--path", required=True)
     evidence.add_argument("--start", type=int, required=True)
     evidence.add_argument("--end", type=int, required=True)
+    architecture = sub.add_parser("architect-context", help="Create an unfinished report with opt-in, untrusted Architect metadata context")
+    for name in ("snapshot", "packet", "root", "out"):
+        architecture.add_argument("--" + name, required=True)
+    architecture.add_argument("--expected-revision", help="Compare a caller-supplied revision assertion; does not run Git")
     for command in ("validate", "render"):
         p = sub.add_parser(command)
         p.add_argument("--snapshot", required=True)
@@ -593,6 +597,17 @@ def main(argv=None):
     try:
         if args.command == "prepare":
             result = prepare(args.root, args.out, args.mode, args.path, args.max_files, args.max_file_bytes, args.max_total_bytes, args.max_entries)
+        elif args.command == "architect-context":
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("architect_context", Path(__file__).with_name("architect_context.py"))
+            adapter = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(adapter)
+            report = adapter.prepare_context(sys.modules[__name__], args.snapshot, args.packet, args.root, args.expected_revision)
+            output = directory(Path(args.out).absolute().parent) / Path(args.out).name
+            if output.is_relative_to(directory(args.root)):
+                raise AuditError("Context report must be outside audited root")
+            write_json(output, report)
+            result = {"report": str(output), "snapshot_id": report["snapshot_id"], "semantic_review": "not_run", "runtime": "not_checked"}
         elif args.command == "evidence":
             _, data = snapshot_files(args.snapshot)
             result = locator(data, args.path, args.start, args.end)
