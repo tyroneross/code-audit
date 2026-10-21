@@ -252,8 +252,3 @@ class ClosureRegressions(unittest.TestCase):
             self.assertLess(time.monotonic()-start,10)
 
 if __name__=='__main__':unittest.main()
-
-
-
-
-
