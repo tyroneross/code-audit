@@ -4,7 +4,7 @@
  * Finds similar incidents and patterns based on symptom description.
  * Uses multi-strategy search: exact → tag → fuzzy → semantic (optional).
  */
-import type { Incident, Pattern, RetrievalConfig, RetrievalResult, MemoryConfig } from './types';
+import type { Incident, Pattern, RetrievalConfig, RetrievalResult, MemoryConfig, RetrievalCoverage } from './types';
 /**
  * Enhanced search result with match type and highlights
  */
@@ -54,7 +54,7 @@ import type { TieredRetrievalConfig, TieredRetrievalResult, SearchVerdict, Verdi
  * - 'compact': Short keys, truncated fields (~200 tokens/incident) - DEFAULT
  * - 'full': Complete incident data (~550 tokens/incident) for detailed analysis
  *
- * Token budget enforcement ensures context doesn't exceed limits.
+ * Serialized-size estimates limit selected records; they do not measure tokenizer or protocol overhead.
  */
 export declare function checkMemoryTiered(symptom: string, config?: Partial<TieredRetrievalConfig> & {
     memoryConfig?: MemoryConfig;
@@ -70,6 +70,8 @@ export declare function quickMemoryCheck(symptom: string, config?: {
     maxResults?: number;
 }): Promise<{
     hasMatches: boolean;
+    coverage?: RetrievalCoverage;
+    inconclusive?: boolean;
     matchCount: number;
     topMatch?: {
         id: string;
@@ -115,7 +117,7 @@ export declare function checkMemoryWithVerdict(symptom: string, config?: Partial
 /**
  * Check memory with progressive depth — returns one-liner matches with drill-down commands
  *
- * Total output stays under 500 tokens even with 10 matches.
+ * Output size is estimated from serialized matches; details are fetched separately.
  * Use /debugger-detail <ID> to get full incident data on demand.
  */
 export declare function checkMemoryProgressive(symptom: string, config?: Partial<RetrievalConfig> & {

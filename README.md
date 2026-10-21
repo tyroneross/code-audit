@@ -86,3 +86,5 @@ For distribution, use `git archive` from the validated commit; it excludes ignor
 ## License
 
 [Apache License 2.0](LICENSE). Source origins and adaptations are recorded in [source provenance](docs/source-provenance.json).
+
+Programmatic debugger APIs and storage boundaries are described in [retrieval contracts](docs/retrieval-contracts.md). Larger source-backed instruction and temporary-corpus comparisons can be run explicitly with the [repository evaluation harness](evals/repository/README.md).

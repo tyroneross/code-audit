@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "oracles": {
+    "P01": [
+      {
+        "id": "D1",
+        "origin": "pre_existing",
+        "cause": "Both recency paths compare an age duration with an epoch cutoff, boosting old and future timestamps."
+      },
+      {
+        "id": "D2",
+        "origin": "pre_existing",
+        "cause": "Corpus read/JSON failures are silently skipped; empty and unreadable corpora become indistinguishable."
+      },
+      {
+        "id": "D3",
+        "origin": "pre_existing",
+        "cause": "Falsy ||90 replaces explicit zero-day temporal preference."
+      },
+      {
+        "id": "D4",
+        "origin": "pre_existing",
+        "cause": "Indexed retrieval does not preserve include_unvalidated:false filtering, including threshold zero."
+      }
+    ],
+    "P02": []
+  }
+}

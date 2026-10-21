@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "P01",
+      "revision": "91c2520a7fcd4ae58f6d56e6c9436d851779ffa0",
+      "files": {
+        "runtime/debugger/src/retrieval.ts": {
+          "sha256": "58f1c2c93bd6ac4841f80141d0afa72e6024ff98047cbb267e5b09e8cd9135f8",
+          "lines": 903
+        },
+        "runtime/debugger/src/storage.ts": {
+          "sha256": "a384fde223a93df9ae02596cd74f50e7e041f191b6c201c089194224ea59d3dc",
+          "lines": 1229
+        },
+        "runtime/debugger/src/types.ts": {
+          "sha256": "84cabdef49750eac9b1aa299631aee3e3bb383ab09c5ebd49c76a0270f1ad47a",
+          "lines": 593
+        },
+        "runtime/debugger/src/config.ts": {
+          "sha256": "305bdedbb121b768d0a066e9d51bbc468b47b3a3277cf1b92bf720509b8519a3",
+          "lines": 183
+        }
+      }
+    },
+    {
+      "id": "P02",
+      "revision": "082621dbfffe18a8cf8f2bf3a656a2ff0facabaf",
+      "files": {
+        "runtime/debugger/src/retrieval.ts": {
+          "sha256": "bd684b6acd835a8794d3057cdc5a4a6c1aa45babfbb665dd60105ec416ba0feb",
+          "lines": 924
+        },
+        "runtime/debugger/src/storage.ts": {
+          "sha256": "e45f7a65fe5880261bd0bd3e0108c9cf5e69a27d5a8c96f9c46d529d9ae867c2",
+          "lines": 1221
+        },
+        "runtime/debugger/src/types.ts": {
+          "sha256": "98f287c9522d4ffb2220e1bd44df2cebaf76adbfdccdcad7e950bd0d6dc8390e",
+          "lines": 609
+        },
+        "runtime/debugger/src/config.ts": {
+          "sha256": "305bdedbb121b768d0a066e9d51bbc468b47b3a3277cf1b92bf720509b8519a3",
+          "lines": 183
+        }
+      }
+    }
+  ],
+  "contract": "Review the complete supplied modules and traced callers. Report only material defects supported by source. Temporal preference uses the last N days, including explicit zero and no future boost. include_unvalidated:false excludes unvalidated incidents in standard and indexed retrieval, even at zero similarity threshold. Unreadable/invalid corpus records must be distinguished from an empty inspected corpus while retaining usable records. Preserve pattern-first retrieval, existing valid records, explicit configuration and bounded result budgets. Treat ranking scores as weighted ranks, never calibrated repair confidence. Dependencies not shown are ordinary boundaries; mark missing evidence and do not invent findings. No execution or production claims.",
+  "limits": [
+    "Two historical states of one repository, not independent repositories or unlabeled production incidents.",
+    "Review rework measures model revision effort; human effort and production recurrence remain unmeasured.",
+    "Historical good state is a protected control for named defect classes, not certified globally defect-free."
+  ]
+}
