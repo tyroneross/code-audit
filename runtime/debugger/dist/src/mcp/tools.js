@@ -6,6 +6,9 @@
  * Each calls existing programmatic APIs from storage.ts and retrieval.ts.
  * Responses are formatted as concise text for LLM consumption.
  */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TOOLS = void 0;
 exports.handleToolCall = handleToolCall;
@@ -14,6 +17,9 @@ const retrieval_1 = require("../retrieval");
 const log_reader_1 = require("../log-reader");
 const logger_1 = require("../logger");
 const config_1 = require("../config");
+const path_1 = __importDefault(require("path"));
+const os_1 = __importDefault(require("os"));
+const promises_1 = __importDefault(require("fs/promises"));
 // --- Console safety ---
 // Console routing belongs to the stdio server, not individual concurrent calls.
 // --- Response helpers ---
@@ -27,7 +33,7 @@ function errorResponse(text) {
 exports.TOOLS = [
     {
         name: 'search',
-        description: 'Check debugging memory for similar past issues. Returns a verdict (KNOWN_FIX, LIKELY_MATCH, WEAK_SIGNAL, NO_MATCH) with matching incidents and patterns. Consult when available; validate matches against current cause and contracts.',
+        description: 'Check debugging memory for similar past issues. Returns historical candidates with KNOWN_FIX, LIKELY_MATCH or NO_MATCH on the default search path, verification labels and corpus coverage. Consult when available; validate matches against current cause and contracts.',
         inputSchema: {
             type: 'object',
             properties: {
@@ -256,24 +262,60 @@ exports.TOOLS = [
         },
     },
 ];
+// Project selection is per call: concurrent requests never change process cwd or shared config.
+for (const tool of exports.TOOLS) {
+    if (tool.name !== 'read_logs')
+        Object.assign(tool.inputSchema.properties, {
+            project_root: { type: 'string', description: 'Optional absolute project directory. Required when the host starts this server in its installed plugin directory. Pass the same root to status and every memory operation; selects that project local .claude/memory corpus.' },
+        });
+}
+async function checkedProjectRoot(value) {
+    if (typeof value !== 'string' || !path_1.default.isAbsolute(value))
+        throw new Error('project_root must be an absolute existing project directory');
+    const root = await promises_1.default.realpath(value);
+    if (!(await promises_1.default.stat(root)).isDirectory())
+        throw new Error('project_root must be a directory');
+    const home = await promises_1.default.realpath(os_1.default.homedir());
+    const homeRelative = path_1.default.relative(root, home);
+    if (homeRelative === '' || (!homeRelative.startsWith('..' + path_1.default.sep) && homeRelative !== '..' && !path_1.default.isAbsolute(homeRelative)))
+        throw new Error('Project scope unavailable: choose a specific project, not home or its ancestors; pass project_root.');
+    for (const installed of [process.env.PLUGIN_ROOT, process.env.CLAUDE_PLUGIN_ROOT].filter((value) => Boolean(value))) {
+        const relative = path_1.default.relative(await promises_1.default.realpath(installed), root);
+        if (relative === '' || (!relative.startsWith('..' + path_1.default.sep) && relative !== '..' && !path_1.default.isAbsolute(relative)))
+            throw new Error('Project scope unavailable: host started MCP in the installed plugin directory. Call status and every memory tool with the authorized project_root. No project memory was accessed.');
+    }
+    return root;
+}
+async function memoryConfigFor(args) {
+    if (args.project_root !== undefined) {
+        const root = await checkedProjectRoot(args.project_root);
+        return (0, config_1.getConfig)({ storageMode: 'local', memoryPath: path_1.default.join(root, '.claude/memory') });
+    }
+    const config = (0, config_1.getConfig)();
+    // Explicit legacy corpus configuration, including opt-in shared mode, retains its semantics.
+    if (config.storageMode === 'local' && !process.env.CLAUDE_MEMORY_PATH)
+        await checkedProjectRoot(process.cwd());
+    return config;
+}
 // --- Tool handlers ---
 async function handleToolCall(name, args) {
     try {
+        const config = name === 'read_logs' ? undefined : await memoryConfigFor(args);
         switch (name) {
             case 'search':
-                return await (0, logger_1.traced)('mcp:search', args, () => handleSearch(args));
+                return await (0, logger_1.traced)('mcp:search', args, () => handleSearch(args, config));
             case 'store':
-                return await (0, logger_1.traced)('mcp:store', args, () => handleStore(args));
+                return await (0, logger_1.traced)('mcp:store', args, () => handleStore(args, config));
             case 'detail':
-                return await (0, logger_1.traced)('mcp:detail', args, () => handleDetail(args));
+                return await (0, logger_1.traced)('mcp:detail', args, () => handleDetail(args, config));
             case 'status':
-                return await (0, logger_1.traced)('mcp:status', undefined, () => handleStatus());
+                return await (0, logger_1.traced)('mcp:status', undefined, () => handleStatus(config));
             case 'list':
-                return await (0, logger_1.traced)('mcp:list', args, () => handleList(args));
+                return await (0, logger_1.traced)('mcp:list', args, () => handleList(args, config));
             case 'patterns':
-                return await (0, logger_1.traced)('mcp:patterns', args, () => handlePatterns(args));
+                return await (0, logger_1.traced)('mcp:patterns', args, () => handlePatterns(args, config));
             case 'outcome':
-                return await (0, logger_1.traced)('mcp:outcome', args, () => handleOutcome(args));
+                return await (0, logger_1.traced)('mcp:outcome', args, () => handleOutcome(args, config));
             case 'read_logs':
                 return await (0, logger_1.traced)('mcp:read_logs', args, () => handleReadLogs(args));
             default:
@@ -285,12 +327,23 @@ async function handleToolCall(name, args) {
     }
 }
 // --- Individual handlers ---
-async function handleSearch(args) {
+function corpusCoverageLines(name, coverage) {
+    const lines = [`Coverage ${name}: checked ${coverage.checked}, loaded ${coverage.loaded}, skipped ${coverage.skipped}`];
+    if (coverage.skipped) {
+        lines.push(`PARTIAL COVERAGE: skipped ${coverage.skipped} ${name} records; absence of matches is inconclusive.`);
+        for (const example of coverage.examples)
+            lines.push(`  ${JSON.stringify(example.file)}: ${example.reason}`);
+        if (coverage.skipped > coverage.examples.length)
+            lines.push('  Additional skip details omitted.');
+    }
+    return lines;
+}
+async function handleSearch(args, config) {
     const symptom = String(args.symptom || '');
     if (!symptom.trim()) {
         return errorResponse('symptom is required');
     }
-    const result = await (0, retrieval_1.checkMemoryWithVerdict)(symptom);
+    const result = await (0, retrieval_1.checkMemoryWithVerdict)(symptom, { memoryConfig: config });
     const lines = [
         `Verdict: ${result.verdict}`,
         `${result.summary}`,
@@ -306,16 +359,25 @@ async function handleSearch(args) {
     if (result.incidents.length > 0) {
         lines.push(`\nIncidents (${result.incidents.length}):`);
         for (const inc of result.incidents) {
-            lines.push(`- ${inc.id}: ${inc.sym}`);
+            const verification = inc.v === 'V' ? 'verified (historical record)' : inc.v === 'P' ? 'partial' : 'unverified';
+            lines.push(`- ${inc.id}: ${inc.sym} [verification: ${verification}]`);
             if (inc.rc) {
                 lines.push(`  Root cause: ${inc.rc.d} (${inc.rc.cat})`);
             }
         }
     }
-    lines.push(`\nTokens used: ${result.tokens_used}`);
+    if (result.coverage) {
+        for (const [name, coverage] of Object.entries(result.coverage)) {
+            if (typeof coverage === 'object' && coverage)
+                lines.push(...corpusCoverageLines(name, coverage));
+        }
+        if (!result.coverage.incidents)
+            lines.push('Incident corpus not inspected: pattern-first retrieval.');
+    }
+    lines.push(`\nTokens used (match estimate): ${result.tokens_used}`);
     return textResponse(lines.join('\n'));
 }
-async function handleStore(args) {
+async function handleStore(args, config) {
     const symptom = String(args.symptom || '');
     const rootCause = String(args.root_cause || '');
     const fixApproach = String(args.fix || '');
@@ -376,15 +438,15 @@ async function handleStore(args) {
             quality_score: 0,
         },
     };
-    const result = await (0, storage_1.storeIncident)(incident);
+    const result = await (0, storage_1.storeIncident)(incident, { config });
     return textResponse(`Incident stored: ${result.incident_id}\nFile: ${result.file_path}`);
 }
-async function handleDetail(args) {
+async function handleDetail(args, config) {
     const id = String(args.id || '');
     if (!id.trim())
         return errorResponse('id is required');
     if (id.startsWith('PTN_')) {
-        const pattern = await (0, storage_1.loadPattern)(id);
+        const pattern = await (0, storage_1.loadPattern)(id, config);
         if (!pattern)
             return errorResponse(`Pattern not found: ${id}`);
         const lines = [
@@ -393,7 +455,7 @@ async function handleDetail(args) {
             `Description: ${pattern.description}`,
             `Success rate: ${(pattern.success_rate * 100).toFixed(0)}%`,
             `Uses: ${pattern.usage_history?.total_uses || 0}`,
-            `Tags: ${pattern.tags.join(', ')}`,
+            `Tags: ${(pattern.tags || []).join(', ')}`,
             `\nDetection signatures: ${pattern.detection_signature.join(', ')}`,
             `\nSolution:\n${pattern.solution_template}`,
         ];
@@ -403,39 +465,39 @@ async function handleDetail(args) {
         return textResponse(lines.join('\n'));
     }
     if (id.startsWith('INC_')) {
-        const incident = await (0, storage_1.loadIncident)(id);
+        const incident = await (0, storage_1.loadIncident)(id, config);
         if (!incident)
             return errorResponse(`Incident not found: ${id}`);
         const lines = [
             `Incident: ${incident.incident_id}`,
             `Date: ${new Date(incident.timestamp).toISOString()}`,
             `Symptom: ${incident.symptom}`,
-            `\nRoot cause: ${incident.root_cause.description}`,
-            `Category: ${incident.root_cause.category}`,
-            `Confidence: ${(incident.root_cause.confidence * 100).toFixed(0)}%`,
+            `\nRoot cause: ${incident.root_cause?.description || 'unknown'}`,
+            `Category: ${incident.root_cause?.category || 'unknown'}`,
+            `Diagnosis confidence: historical metadata, not independently calibrated`,
+            `Verification: ${incident.verification?.status || 'unverified'} (historical record)`,
         ];
-        if (incident.root_cause.file) {
+        if (incident.root_cause?.file) {
             lines.push(`File: ${incident.root_cause.file}`);
         }
-        lines.push(`\nFix: ${incident.fix.approach}`);
-        if (incident.fix.changes?.length) {
+        lines.push(`\nFix: ${incident.fix?.approach || 'unknown'}`);
+        if (incident.fix?.changes?.length) {
             lines.push('Changes:');
             for (const c of incident.fix.changes) {
                 lines.push(`- ${c.file}: ${c.summary || c.change_type} (${c.lines_changed} lines)`);
             }
         }
-        lines.push(`\nVerification: ${incident.verification.status}`);
-        lines.push(`Tags: ${incident.tags.join(', ')}`);
-        lines.push(`Files changed: ${incident.files_changed.join(', ')}`);
+        lines.push(`Tags: ${(incident.tags || []).join(', ')}`);
+        lines.push(`Files changed: ${(incident.files_changed || []).join(', ')}`);
         const quality = incident.completeness?.quality_score ?? incident.quality_score ?? 0;
         lines.push(`Quality: ${(quality * 100).toFixed(0)}%`);
         return textResponse(lines.join('\n'));
     }
     return errorResponse(`Invalid ID format. Expected INC_* or PTN_*, got: ${id}`);
 }
-async function handleStatus() {
-    const index = await (0, storage_1.loadIndex)();
-    const scope = `Server working directory: ${process.cwd()}\nMemory path: ${(0, config_1.getMemoryPaths)().root}`;
+async function handleStatus(config) {
+    const index = await (0, storage_1.loadIndex)(config);
+    const scope = `Server working directory: ${process.cwd()}\nMemory path: ${(0, config_1.getMemoryPaths)(config).root}`;
     if (!index) {
         return textResponse(`${scope}\nNo memory index available; existing incident files may still be searchable.`);
     }
@@ -483,16 +545,25 @@ async function handleStatus() {
     }
     return textResponse(lines.join('\n'));
 }
-async function handleList(args) {
-    const limit = typeof args.limit === 'number' ? args.limit : 10;
+function resultLimit(args) {
+    if (args.limit === undefined)
+        return 10;
+    if (typeof args.limit !== 'number' || !Number.isSafeInteger(args.limit) || args.limit <= 0)
+        throw new Error('limit must be a positive safe integer');
+    return args.limit;
+}
+async function handleList(args, config) {
+    const limit = resultLimit(args);
     const category = args.category ? String(args.category) : undefined;
-    const index = await (0, storage_1.loadIndex)();
+    const index = await (0, storage_1.loadIndex)(config);
     if (!index) {
-        return textResponse('No debugging memory found.');
+        return textResponse('Memory index unavailable; incident corpus not inspected. Use search for file-based retrieval.');
     }
     let incidentIds;
+    let indexedTotal;
     if (category) {
-        incidentIds = index.by_category[category] || [];
+        incidentIds = Object.prototype.hasOwnProperty.call(index.by_category, category) && Array.isArray(index.by_category[category]) ? index.by_category[category] : [];
+        indexedTotal = incidentIds.length;
         if (incidentIds.length === 0) {
             const available = Object.keys(index.by_category).join(', ');
             return textResponse(`No incidents in category "${category}". Available: ${available}`);
@@ -501,32 +572,54 @@ async function handleList(args) {
         incidentIds = incidentIds.slice().reverse().slice(0, limit);
     }
     else {
+        indexedTotal = index.recent.length;
         incidentIds = index.recent.slice(0, limit);
     }
     if (incidentIds.length === 0) {
         return textResponse('No incidents found.');
     }
-    const lines = [
-        category
-            ? `Recent incidents (${category}, showing ${incidentIds.length}):`
-            : `Recent incidents (showing ${incidentIds.length}):`,
-    ];
+    const lines = [];
+    const coverage = (0, storage_1.emptyCorpusCoverage)();
     for (const id of incidentIds) {
-        const incident = await (0, storage_1.loadIncident)(id);
-        if (!incident) {
-            lines.push(`- ${id}: (file missing)`);
+        coverage.checked++;
+        if (typeof id !== 'string' || !/^INC_[\w\-]+$/.test(id)) {
+            (0, storage_1.recordCorpusSkip)(coverage, String(id), 'invalid_record');
             continue;
         }
-        const date = new Date(incident.timestamp).toISOString().slice(0, 10);
-        const cat = incident.root_cause?.category || 'unknown';
-        const sym = incident.symptom.substring(0, 60);
-        lines.push(`- ${id} [${date}] ${cat}: ${sym}`);
+        try {
+            const incident = await (0, storage_1.loadIncident)(id, config);
+            if (!incident) {
+                (0, storage_1.recordCorpusSkip)(coverage, id, 'read_failed');
+                continue;
+            }
+            if (!(0, storage_1.validIncidentRecord)(incident) || incident.incident_id !== id) {
+                (0, storage_1.recordCorpusSkip)(coverage, id, 'invalid_record');
+                continue;
+            }
+            const parsedDate = new Date(incident.timestamp);
+            if (!Number.isFinite(parsedDate.getTime())) {
+                (0, storage_1.recordCorpusSkip)(coverage, id, 'invalid_record');
+                continue;
+            }
+            const date = parsedDate.toISOString().slice(0, 10);
+            const cat = incident.root_cause?.category || 'unknown';
+            lines.push(`- ${id} [${date}] ${cat}: ${incident.symptom.substring(0, 60)}`);
+            coverage.loaded++;
+        }
+        catch (error) {
+            (0, storage_1.recordCorpusSkip)(coverage, id, error instanceof SyntaxError ? 'invalid_json' : 'read_failed');
+        }
     }
+    lines.unshift(`Recent incidents${category ? ' (' + category + ')' : ''}: showing ${coverage.loaded} of ${incidentIds.length} indexed requested (${indexedTotal} total indexed)`);
+    lines.push(...corpusCoverageLines('indexed incidents', coverage));
     return textResponse(lines.join('\n'));
 }
-async function handlePatterns(args) {
-    const limit = typeof args.limit === 'number' ? args.limit : 10;
-    const patterns = await (0, storage_1.loadAllPatterns)();
+async function handlePatterns(args, config) {
+    const limit = resultLimit(args);
+    const coverage = (0, storage_1.emptyCorpusCoverage)();
+    const patterns = await (0, storage_1.loadAllPatterns)(config, coverage);
+    if (patterns.length === 0 && coverage.skipped)
+        return textResponse(corpusCoverageLines('patterns', coverage).join('\n'));
     if (patterns.length === 0) {
         return textResponse('No patterns found. Patterns are extracted when 3+ similar incidents exist.');
     }
@@ -541,9 +634,10 @@ async function handlePatterns(args) {
             lines.push(`  Signatures: ${p.detection_signature.slice(0, 3).join(', ')}`);
         }
     }
+    lines.push(...corpusCoverageLines('patterns', coverage));
     return textResponse(lines.join('\n'));
 }
-async function handleOutcome(args) {
+async function handleOutcome(args, config) {
     const incidentId = String(args.incident_id || '');
     const result = String(args.result || '');
     const notes = args.notes ? String(args.notes) : undefined;
@@ -552,8 +646,11 @@ async function handleOutcome(args) {
     if (!['worked', 'failed', 'modified'].includes(result)) {
         return errorResponse('result must be one of: worked, failed, modified');
     }
-    if (!await (0, storage_1.loadIncident)(incidentId))
+    const stored = await (0, storage_1.loadIncident)(incidentId, config);
+    if (!stored)
         return errorResponse('incident_id does not identify a stored incident');
+    if (!(0, storage_1.validIncidentRecord)(stored) || stored.incident_id !== incidentId)
+        return errorResponse('Invalid stored incident record; outcome was not recorded');
     const verdict = args.verdict_given;
     if (verdict !== undefined && !['KNOWN_FIX', 'LIKELY_MATCH', 'WEAK_SIGNAL', 'NO_MATCH'].includes(String(verdict))) {
         return errorResponse('verdict_given must be a known search verdict when provided');
@@ -565,7 +662,7 @@ async function handleOutcome(args) {
         recorded_at: Date.now(),
         notes,
     };
-    await (0, storage_1.recordOutcome)(outcome);
+    await (0, storage_1.recordOutcome)(outcome, config);
     return textResponse(`Outcome recorded for ${incidentId}: ${result}`);
 }
 async function handleReadLogs(args) {

@@ -9,7 +9,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { randomBytes } from 'crypto';
-import type { Incident, Pattern, StorageOptions, VerificationResult, MemoryConfig, MemoryIndex, IncidentLogEntry, KeywordIndex, VerdictOutcome } from './types';
+import type { CorpusCoverage, Incident, Pattern, StorageOptions, VerificationResult, MemoryConfig, MemoryIndex, IncidentLogEntry, KeywordIndex, VerdictOutcome } from './types';
 import { getMemoryPaths } from './config';
 import { calculateQualityScore } from './quality';
 import { traced } from './logger';
@@ -132,39 +132,62 @@ export async function loadIncident(incident_id: string, config?: MemoryConfig): 
 /**
  * Load all incidents with batched I/O (max 50 concurrent reads)
  */
-export async function loadAllIncidents(config?: MemoryConfig): Promise<Incident[]> {
-  const paths = getMemoryPaths(config);
-  const INCIDENTS_DIR = paths.incidents;
+export function emptyCorpusCoverage(): CorpusCoverage {
+  return { checked: 0, loaded: 0, skipped: 0, examples: [] };
+}
 
+export function recordCorpusSkip(coverage: CorpusCoverage, file: string, reason: CorpusCoverage['examples'][number]['reason']): void {
+  coverage.skipped++;
+  if (coverage.examples.length < 5) coverage.examples.push({ file: file.slice(0, 160), reason });
+}
+
+export function validIncidentRecord(value: any): value is Incident {
+  return value !== null && typeof value === 'object' &&
+    typeof value.incident_id === 'string' && typeof value.symptom === 'string' &&
+    Number.isFinite(value.timestamp) &&
+    (value.tags === undefined || (Array.isArray(value.tags) && value.tags.every((tag: unknown) => typeof tag === 'string')));
+}
+
+function validPatternRecord(value: any): value is Pattern {
+  return value !== null && typeof value === 'object' &&
+    typeof value.pattern_id === 'string' && typeof value.description === 'string' &&
+    Number.isFinite(value.success_rate) && value.success_rate >= 0 && value.success_rate <= 1 &&
+    (value.usage_history === undefined || (value.usage_history !== null && Number.isSafeInteger(value.usage_history.total_uses) && value.usage_history.total_uses >= 0)) &&
+    Array.isArray(value.detection_signature) && value.detection_signature.every((sig: unknown) => typeof sig === 'string') &&
+    (value.tags === undefined || (Array.isArray(value.tags) && value.tags.every((tag: unknown) => typeof tag === 'string')));
+}
+
+/** Preserve useful records while making partial reads visible to callers that request coverage. */
+async function loadCorpus<T>(directory: string, valid: (value: unknown) => value is T, coverage: CorpusCoverage): Promise<T[]> {
+  let files: string[];
   try {
-    const files = await fs.readdir(INCIDENTS_DIR);
-    const jsonFiles = files.filter(f => f.endsWith('.json'));
-    const incidents: Incident[] = [];
-
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < jsonFiles.length; i += BATCH_SIZE) {
-      const batch = jsonFiles.slice(i, i + BATCH_SIZE);
-      const results = await Promise.all(
-        batch.map(async (file) => {
-          try {
-            const filepath = path.join(INCIDENTS_DIR, file);
-            const content = await fs.readFile(filepath, 'utf-8');
-            return JSON.parse(content) as Incident;
-          } catch {
-            return null;
-          }
-        })
-      );
-      incidents.push(...results.filter((r): r is Incident => r !== null));
-    }
-
-    return incidents;
+    files = (await fs.readdir(directory)).filter(file => file.endsWith('.json')).sort();
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return []; // Directory doesn't exist yet
-    }
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return [];
     throw error;
   }
+  const records: T[] = [];
+  for (let i = 0; i < files.length; i += 50) {
+    const results = await Promise.all(files.slice(i, i + 50).map(async file => {
+      coverage.checked++;
+      let content: string;
+      try { content = await fs.readFile(path.join(directory, file), 'utf-8'); }
+      catch { return { file, reason: 'read_failed' as const }; }
+      let value: unknown;
+      try { value = JSON.parse(content); }
+      catch { return { file, reason: 'invalid_json' as const }; }
+      return valid(value) ? { value } : { file, reason: 'invalid_record' as const };
+    }));
+    for (const result of results) {
+      if ('reason' in result && result.reason) recordCorpusSkip(coverage, result.file, result.reason);
+      else if ('value' in result) { coverage.loaded++; records.push(result.value as T); }
+    }
+  }
+  return records;
+}
+
+export async function loadAllIncidents(config?: MemoryConfig, coverage = emptyCorpusCoverage()): Promise<Incident[]> {
+  return loadCorpus(getMemoryPaths(config).incidents, validIncidentRecord, coverage);
 }
 
 /**
@@ -223,39 +246,8 @@ export async function loadPattern(pattern_id: string, config?: MemoryConfig): Pr
 /**
  * Load all patterns with batched I/O (max 50 concurrent reads)
  */
-export async function loadAllPatterns(config?: MemoryConfig): Promise<Pattern[]> {
-  const paths = getMemoryPaths(config);
-  const PATTERNS_DIR = paths.patterns;
-
-  try {
-    const files = await fs.readdir(PATTERNS_DIR);
-    const jsonFiles = files.filter(f => f.endsWith('.json'));
-    const patterns: Pattern[] = [];
-
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < jsonFiles.length; i += BATCH_SIZE) {
-      const batch = jsonFiles.slice(i, i + BATCH_SIZE);
-      const results = await Promise.all(
-        batch.map(async (file) => {
-          try {
-            const filepath = path.join(PATTERNS_DIR, file);
-            const content = await fs.readFile(filepath, 'utf-8');
-            return JSON.parse(content) as Pattern;
-          } catch {
-            return null;
-          }
-        })
-      );
-      patterns.push(...results.filter((r): r is Pattern => r !== null));
-    }
-
-    return patterns;
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-      return [];
-    }
-    throw error;
-  }
+export async function loadAllPatterns(config?: MemoryConfig, coverage = emptyCorpusCoverage()): Promise<Pattern[]> {
+  return loadCorpus(getMemoryPaths(config).patterns, validPatternRecord, coverage);
 }
 
 /**
@@ -444,13 +436,13 @@ export function toCompactIncident(incident: Incident): CompactIncident {
 export function toCompactPattern(pattern: Pattern): CompactPattern {
   return {
     id: pattern.pattern_id,
-    n: pattern.usage_history?.total_uses || 1,
+    n: pattern.usage_history?.total_uses ?? 0,
     desc: truncate(pattern.description, 100),
     sig: pattern.detection_signature.slice(0, 5),
     fix: truncate(pattern.solution_template, 150),
     sr: pattern.success_rate,
-    cat: pattern.tags[0] || 'general',
-    t: pattern.tags.slice(0, 5),
+    cat: pattern.tags?.[0] || 'general',
+    t: (pattern.tags || []).slice(0, 5),
     last: pattern.last_used || Date.now(),
   };
 }

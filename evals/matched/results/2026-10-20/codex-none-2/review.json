@@ -1,0 +1,260 @@
+{
+  "cases": [
+    {
+      "case_id": "R01",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "A polling event with an older revision unconditionally replaces the current per-job event, allowing state to regress.",
+          "locations": [
+            "poll.py:2",
+            "store.py:2"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Apply the same per-job revision guard used by live events, preferably through a shared acceptance function.",
+          "verification": "Deliver revision 5 through live, then revision 4 through polling; assert revision 5 remains. Confirm polling revision 6 is accepted."
+        }
+      ]
+    },
+    {
+      "case_id": "R02",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R03",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R04",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The public caller still passes milliseconds directly after the provider changed to seconds, making positive timeouts 1000 times longer than requested.",
+          "locations": [
+            "client.py:2",
+            "provider.py:1"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Preserve timeout_ms and convert it to seconds when calling provider.send.",
+          "verification": "Call request with timeout_ms=1500 and assert the transport receives timeout=1.5."
+        }
+      ]
+    },
+    {
+      "case_id": "R05",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R06",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F-ready",
+          "cause": "After start became async, launch calls it without awaiting it, so initialization does not complete before ready is published; the prior synchronous closure premise no longer holds.",
+          "locations": [
+            "owner.py:2",
+            "owner.py:3",
+            "handler.py:1"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "reopened",
+          "suggested_change": "Await handler.start() before publishing ready.",
+          "verification": "Use initialization blocked on a controllable awaitable; assert ready is absent until initialization completes and is published once afterward."
+        }
+      ]
+    },
+    {
+      "case_id": "R07",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "Each outer retry generates a new deduplication key and ignores operation_id, so a lost response followed by a retry or another invocation can execute the same logical checkout again.",
+          "locations": [
+            "checkout.py:4"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Use the caller-supplied operation_id as the provider deduplication key across all attempts and invocations.",
+          "verification": "Simulate provider success followed by a lost response, then retry both within checkout and through another invocation with the same operation_id; assert one logical provider operation."
+        },
+        {
+          "id": "F2",
+          "cause": "Both checkout and gateway retry, allowing up to three provider attempts per supplied max_attempts unit and exceeding the caller's upper bound.",
+          "locations": [
+            "checkout.py:2",
+            "gateway.py:2"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Give checkout sole ownership of retries and make gateway perform one provider attempt, or share one explicit attempt budget.",
+          "verification": "Make every provider attempt time out with max_attempts=2; assert at most two provider.send calls occur."
+        },
+        {
+          "id": "F3",
+          "cause": "Every provider attempt receives the original duration budget without subtracting elapsed time, so retries can continue beyond the total deadline measured from checkout entry.",
+          "locations": [
+            "checkout.py:4",
+            "gateway.py:4"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Compute a monotonic expiration at checkout entry, pass only the remaining duration to each attempt, and stop when the budget is exhausted.",
+          "verification": "With a controlled clock and a five-second budget, let the first attempt consume four seconds; assert the next timeout is at most one second and no attempt starts after expiration."
+        }
+      ]
+    },
+    {
+      "case_id": "R08",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The new audit handler is never registered: build constructs an application with no handlers, so running an event invokes audit zero times.",
+          "locations": [
+            "bootstrap.py:3",
+            "audit.py:1"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Import and register audit.handle exactly once in the application's handler list.",
+          "verification": "Build the application and run one event; assert audit_store receives exactly one append for that event."
+        }
+      ]
+    },
+    {
+      "case_id": "R09",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "Any actor can call read_doc and receive the document body because no ownership check occurs, violating owner-only access.",
+          "locations": [
+            "page.py:2",
+            "page.py:3"
+          ],
+          "severity": "high",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Verify the actor owns the document before returning its body and reject unauthorized reads.",
+          "verification": "Assert an owner can read the body and a different actor is denied without receiving document content."
+        }
+      ]
+    },
+    {
+      "case_id": "C01",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "legacy has no consumers in the complete inventory and is absent from the dynamic plugin configuration, leaving an unused function that can be removed safely.",
+          "locations": [
+            "handlers.py:4"
+          ],
+          "severity": "low",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Remove legacy while retaining active and its dynamic registration.",
+          "verification": "Confirm every configured plugin name still resolves and run(event) retains its uppercase result."
+        }
+      ]
+    },
+    {
+      "case_id": "C02",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The retired flag is neither requested by the application nor reachable through its flag dependencies, leaving unused configuration.",
+          "locations": [
+            "flags.py:1"
+          ],
+          "severity": "low",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Remove the retired entry. Preserve evaluate(\"child\") and its transitive parent dependency unless simplifying them equivalently using the complete configuration contract.",
+          "verification": "Trace child through REQUIRES to parent and confirm evaluate(\"child\") remains True after removing retired."
+        }
+      ]
+    },
+    {
+      "case_id": "C03",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "retired_status has no consumers or supported contract in the complete inventory, leaving an unused function.",
+          "locations": [
+            "service.py:6"
+          ],
+          "severity": "low",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Remove retired_status while preserving the emergency_stop parameter and rejection branch.",
+          "verification": "Confirm normal charge returns the charged amount and emergency_stop=True still raises RuntimeError."
+        }
+      ]
+    },
+    {
+      "case_id": "M01",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The recent predicate compares an elapsed duration with an epoch cutoff, misclassifying historical records and allowing future timestamps to receive the multiplier instead of enforcing the inclusive 90-day window.",
+          "locations": [
+            "ranking.ts:4"
+          ],
+          "severity": "medium",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Use timestamp >= cutoff && timestamp <= now.",
+          "verification": "For a fixed Unix-millisecond now, verify cutoff and now receive 1.2 times base, while cutoff minus one millisecond and now plus one millisecond retain base."
+        }
+      ]
+    },
+    {
+      "case_id": "M02",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "M03",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "When reading a file raises OSError or ValueError, the exception branch skips it without incrementing skipped, making incomplete inspection indistinguishable from successful empty inspection.",
+          "locations": [
+            "corpus.py:6",
+            "corpus.py:7"
+          ],
+          "severity": "medium",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Increment skipped once for each caught read or parse failure while retaining valid records.",
+          "verification": "Supply one valid record, one OSError, and one ValueError; assert the valid record remains and skipped equals 2. Assert empty input reports skipped=0."
+        }
+      ]
+    },
+    {
+      "case_id": "M04",
+      "coverage": "complete",
+      "findings": []
+    }
+  ]
+}

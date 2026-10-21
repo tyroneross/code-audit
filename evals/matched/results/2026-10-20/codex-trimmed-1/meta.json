@@ -1,0 +1,40 @@
+{
+  "host": "codex",
+  "arm": "trimmed",
+  "repeat": 1,
+  "requested_model": "gpt-6.1-sol",
+  "effort": "medium",
+  "timeout_seconds": 300,
+  "prompt_sha256": "97542addaef50b165dc82138dbb920271594225ac7cb33a5239f854590eee35a",
+  "cases_sha256": "085196497a46ffeba3ed53aa66e9581116e16902d0b381a52fa0af28be3cb214",
+  "guidance_sha256": "4a2ee2f9127504812edaf73d11b9b659223c3eb34879e6bc2e304cf0572917ab",
+  "guidance_words": 301,
+  "command": [
+    "codex",
+    "exec",
+    "-m",
+    "gpt-6.1-sol",
+    "--ephemeral",
+    "--ignore-user-config",
+    "--skip-git-repo-check",
+    "--json",
+    "-s",
+    "read-only",
+    "-c",
+    "model_reasoning_effort=\"medium\"",
+    "-"
+  ],
+  "status": "completed",
+  "isolation": "fresh temp cwd; no supplied oracles or other outputs; no tools permitted; CLI harness differs by host",
+  "exit_code": 0,
+  "served_models": null,
+  "usage": {
+    "input_tokens": 18901,
+    "cached_input_tokens": 12288,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 1901,
+    "reasoning_output_tokens": 151
+  },
+  "cost_usd": null,
+  "elapsed_seconds": 49.556
+}

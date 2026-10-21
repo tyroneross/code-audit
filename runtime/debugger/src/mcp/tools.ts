@@ -13,15 +13,21 @@ import {
   loadPattern,
   loadIndex,
   loadAllPatterns,
+  validIncidentRecord,
   toCompactPattern,
   recordOutcome,
+  emptyCorpusCoverage,
+  recordCorpusSkip,
 } from '../storage';
 import { checkMemoryWithVerdict } from '../retrieval';
 import { readProjectLogs } from '../log-reader';
-import type { Incident, VerdictOutcome } from '../types';
+import type { Incident, VerdictOutcome, MemoryConfig } from '../types';
 import type { LogSource, LogSeverity } from '../log-reader';
 import { traced } from '../logger';
-import { getMemoryPaths } from '../config';
+import { getConfig, getMemoryPaths } from '../config';
+import path from 'path';
+import os from 'os';
+import fs from 'fs/promises';
 
 // --- Console safety ---
 
@@ -43,7 +49,7 @@ export const TOOLS = [
   {
     name: 'search',
     description:
-      'Check debugging memory for similar past issues. Returns a verdict (KNOWN_FIX, LIKELY_MATCH, WEAK_SIGNAL, NO_MATCH) with matching incidents and patterns. Consult when available; validate matches against current cause and contracts.',
+      'Check debugging memory for similar past issues. Returns historical candidates with KNOWN_FIX, LIKELY_MATCH or NO_MATCH on the default search path, verification labels and corpus coverage. Consult when available; validate matches against current cause and contracts.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -283,6 +289,38 @@ export const TOOLS = [
   },
 ];
 
+// Project selection is per call: concurrent requests never change process cwd or shared config.
+for (const tool of TOOLS) {
+  if (tool.name !== 'read_logs') Object.assign(tool.inputSchema.properties, {
+    project_root: { type: 'string', description: 'Optional absolute project directory. Required when the host starts this server in its installed plugin directory. Pass the same root to status and every memory operation; selects that project local .claude/memory corpus.' },
+  });
+}
+
+async function checkedProjectRoot(value: unknown): Promise<string> {
+  if (typeof value !== 'string' || !path.isAbsolute(value)) throw new Error('project_root must be an absolute existing project directory');
+  const root = await fs.realpath(value);
+  if (!(await fs.stat(root)).isDirectory()) throw new Error('project_root must be a directory');
+  const home = await fs.realpath(os.homedir());
+  const homeRelative = path.relative(root, home);
+  if (homeRelative === '' || (!homeRelative.startsWith('..' + path.sep) && homeRelative !== '..' && !path.isAbsolute(homeRelative))) throw new Error('Project scope unavailable: choose a specific project, not home or its ancestors; pass project_root.');
+  for (const installed of [process.env.PLUGIN_ROOT, process.env.CLAUDE_PLUGIN_ROOT].filter((value): value is string => Boolean(value))) {
+    const relative = path.relative(await fs.realpath(installed), root);
+    if (relative === '' || (!relative.startsWith('..' + path.sep) && relative !== '..' && !path.isAbsolute(relative))) throw new Error('Project scope unavailable: host started MCP in the installed plugin directory. Call status and every memory tool with the authorized project_root. No project memory was accessed.');
+  }
+  return root;
+}
+
+async function memoryConfigFor(args: Record<string, unknown>): Promise<MemoryConfig> {
+  if (args.project_root !== undefined) {
+    const root = await checkedProjectRoot(args.project_root);
+    return getConfig({ storageMode: 'local', memoryPath: path.join(root, '.claude/memory') });
+  }
+  const config = getConfig();
+  // Explicit legacy corpus configuration, including opt-in shared mode, retains its semantics.
+  if (config.storageMode === 'local' && !process.env.CLAUDE_MEMORY_PATH) await checkedProjectRoot(process.cwd());
+  return config;
+}
+
 // --- Tool handlers ---
 
 export async function handleToolCall(
@@ -290,21 +328,22 @@ export async function handleToolCall(
   args: Record<string, unknown>
 ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
     try {
+      const config = name === 'read_logs' ? undefined : await memoryConfigFor(args);
       switch (name) {
         case 'search':
-          return await traced('mcp:search', args, () => handleSearch(args));
+          return await traced('mcp:search', args, () => handleSearch(args, config!));
         case 'store':
-          return await traced('mcp:store', args, () => handleStore(args));
+          return await traced('mcp:store', args, () => handleStore(args, config!));
         case 'detail':
-          return await traced('mcp:detail', args, () => handleDetail(args));
+          return await traced('mcp:detail', args, () => handleDetail(args, config!));
         case 'status':
-          return await traced('mcp:status', undefined, () => handleStatus());
+          return await traced('mcp:status', undefined, () => handleStatus(config!));
         case 'list':
-          return await traced('mcp:list', args, () => handleList(args));
+          return await traced('mcp:list', args, () => handleList(args, config!));
         case 'patterns':
-          return await traced('mcp:patterns', args, () => handlePatterns(args));
+          return await traced('mcp:patterns', args, () => handlePatterns(args, config!));
         case 'outcome':
-          return await traced('mcp:outcome', args, () => handleOutcome(args));
+          return await traced('mcp:outcome', args, () => handleOutcome(args, config!));
         case 'read_logs':
           return await traced('mcp:read_logs', args, () => handleReadLogs(args));
         default:
@@ -319,15 +358,25 @@ export async function handleToolCall(
 
 // --- Individual handlers ---
 
+function corpusCoverageLines(name: string, coverage: ReturnType<typeof emptyCorpusCoverage>): string[] {
+  const lines = [`Coverage ${name}: checked ${coverage.checked}, loaded ${coverage.loaded}, skipped ${coverage.skipped}`];
+  if (coverage.skipped) {
+    lines.push(`PARTIAL COVERAGE: skipped ${coverage.skipped} ${name} records; absence of matches is inconclusive.`);
+    for (const example of coverage.examples) lines.push(`  ${JSON.stringify(example.file)}: ${example.reason}`);
+    if (coverage.skipped > coverage.examples.length) lines.push('  Additional skip details omitted.');
+  }
+  return lines;
+}
+
 async function handleSearch(
-  args: Record<string, unknown>
+  args: Record<string, unknown>, config: MemoryConfig
 ): Promise<{ content: Array<{ type: string; text: string }> }> {
   const symptom = String(args.symptom || '');
   if (!symptom.trim()) {
     return errorResponse('symptom is required');
   }
 
-  const result = await checkMemoryWithVerdict(symptom);
+  const result = await checkMemoryWithVerdict(symptom, { memoryConfig: config });
 
   const lines = [
     `Verdict: ${result.verdict}`,
@@ -348,20 +397,27 @@ async function handleSearch(
   if (result.incidents.length > 0) {
     lines.push(`\nIncidents (${result.incidents.length}):`);
     for (const inc of result.incidents) {
-      lines.push(`- ${inc.id}: ${inc.sym}`);
+      const verification = inc.v === 'V' ? 'verified (historical record)' : inc.v === 'P' ? 'partial' : 'unverified';
+      lines.push(`- ${inc.id}: ${inc.sym} [verification: ${verification}]`);
       if (inc.rc) {
         lines.push(`  Root cause: ${inc.rc.d} (${inc.rc.cat})`);
       }
     }
   }
 
-  lines.push(`\nTokens used: ${result.tokens_used}`);
+  if (result.coverage) {
+    for (const [name, coverage] of Object.entries(result.coverage)) {
+      if (typeof coverage === 'object' && coverage) lines.push(...corpusCoverageLines(name, coverage));
+    }
+    if (!result.coverage.incidents) lines.push('Incident corpus not inspected: pattern-first retrieval.');
+  }
+  lines.push(`\nTokens used (match estimate): ${result.tokens_used}`);
 
   return textResponse(lines.join('\n'));
 }
 
 async function handleStore(
-  args: Record<string, unknown>
+  args: Record<string, unknown>, config: MemoryConfig
 ): Promise<{ content: Array<{ type: string; text: string }> }> {
   const symptom = String(args.symptom || '');
   const rootCause = String(args.root_cause || '');
@@ -425,7 +481,7 @@ async function handleStore(
     },
   };
 
-  const result = await storeIncident(incident);
+  const result = await storeIncident(incident, { config });
 
   return textResponse(
     `Incident stored: ${result.incident_id}\nFile: ${result.file_path}`
@@ -433,13 +489,13 @@ async function handleStore(
 }
 
 async function handleDetail(
-  args: Record<string, unknown>
+  args: Record<string, unknown>, config: MemoryConfig
 ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
   const id = String(args.id || '');
   if (!id.trim()) return errorResponse('id is required');
 
   if (id.startsWith('PTN_')) {
-    const pattern = await loadPattern(id);
+    const pattern = await loadPattern(id, config);
     if (!pattern) return errorResponse(`Pattern not found: ${id}`);
 
     const lines = [
@@ -448,7 +504,7 @@ async function handleDetail(
       `Description: ${pattern.description}`,
       `Success rate: ${(pattern.success_rate * 100).toFixed(0)}%`,
       `Uses: ${pattern.usage_history?.total_uses || 0}`,
-      `Tags: ${pattern.tags.join(', ')}`,
+      `Tags: ${(pattern.tags || []).join(', ')}`,
       `\nDetection signatures: ${pattern.detection_signature.join(', ')}`,
       `\nSolution:\n${pattern.solution_template}`,
     ];
@@ -461,34 +517,34 @@ async function handleDetail(
   }
 
   if (id.startsWith('INC_')) {
-    const incident = await loadIncident(id);
+    const incident = await loadIncident(id, config);
     if (!incident) return errorResponse(`Incident not found: ${id}`);
 
     const lines = [
       `Incident: ${incident.incident_id}`,
       `Date: ${new Date(incident.timestamp).toISOString()}`,
       `Symptom: ${incident.symptom}`,
-      `\nRoot cause: ${incident.root_cause.description}`,
-      `Category: ${incident.root_cause.category}`,
-      `Confidence: ${(incident.root_cause.confidence * 100).toFixed(0)}%`,
+      `\nRoot cause: ${incident.root_cause?.description || 'unknown'}`,
+      `Category: ${incident.root_cause?.category || 'unknown'}`,
+      `Diagnosis confidence: historical metadata, not independently calibrated`,
+      `Verification: ${incident.verification?.status || 'unverified'} (historical record)`,
     ];
 
-    if (incident.root_cause.file) {
+    if (incident.root_cause?.file) {
       lines.push(`File: ${incident.root_cause.file}`);
     }
 
-    lines.push(`\nFix: ${incident.fix.approach}`);
+    lines.push(`\nFix: ${incident.fix?.approach || 'unknown'}`);
 
-    if (incident.fix.changes?.length) {
+    if (incident.fix?.changes?.length) {
       lines.push('Changes:');
       for (const c of incident.fix.changes) {
         lines.push(`- ${c.file}: ${c.summary || c.change_type} (${c.lines_changed} lines)`);
       }
     }
 
-    lines.push(`\nVerification: ${incident.verification.status}`);
-    lines.push(`Tags: ${incident.tags.join(', ')}`);
-    lines.push(`Files changed: ${incident.files_changed.join(', ')}`);
+    lines.push(`Tags: ${(incident.tags || []).join(', ')}`);
+    lines.push(`Files changed: ${(incident.files_changed || []).join(', ')}`);
 
     const quality = incident.completeness?.quality_score ?? incident.quality_score ?? 0;
     lines.push(`Quality: ${(quality * 100).toFixed(0)}%`);
@@ -499,11 +555,11 @@ async function handleDetail(
   return errorResponse(`Invalid ID format. Expected INC_* or PTN_*, got: ${id}`);
 }
 
-async function handleStatus(): Promise<{
+async function handleStatus(config: MemoryConfig): Promise<{
   content: Array<{ type: string; text: string }>;
 }> {
-  const index = await loadIndex();
-  const scope = `Server working directory: ${process.cwd()}\nMemory path: ${getMemoryPaths().root}`;
+  const index = await loadIndex(config);
+  const scope = `Server working directory: ${process.cwd()}\nMemory path: ${getMemoryPaths(config).root}`;
 
   if (!index) {
     return textResponse(
@@ -562,21 +618,29 @@ async function handleStatus(): Promise<{
   return textResponse(lines.join('\n'));
 }
 
+function resultLimit(args: Record<string, unknown>): number {
+  if (args.limit === undefined) return 10;
+  if (typeof args.limit !== 'number' || !Number.isSafeInteger(args.limit) || args.limit <= 0) throw new Error('limit must be a positive safe integer');
+  return args.limit;
+}
+
 async function handleList(
-  args: Record<string, unknown>
+  args: Record<string, unknown>, config: MemoryConfig
 ): Promise<{ content: Array<{ type: string; text: string }> }> {
-  const limit = typeof args.limit === 'number' ? args.limit : 10;
+  const limit = resultLimit(args);
   const category = args.category ? String(args.category) : undefined;
 
-  const index = await loadIndex();
+  const index = await loadIndex(config);
   if (!index) {
-    return textResponse('No debugging memory found.');
+    return textResponse('Memory index unavailable; incident corpus not inspected. Use search for file-based retrieval.');
   }
 
   let incidentIds: string[];
+  let indexedTotal: number;
 
   if (category) {
-    incidentIds = index.by_category[category] || [];
+    incidentIds = Object.prototype.hasOwnProperty.call(index.by_category, category) && Array.isArray(index.by_category[category]) ? index.by_category[category] : [];
+    indexedTotal = incidentIds.length;
     if (incidentIds.length === 0) {
       const available = Object.keys(index.by_category).join(', ');
       return textResponse(
@@ -586,6 +650,7 @@ async function handleList(
     // Most recent first (IDs contain timestamps)
     incidentIds = incidentIds.slice().reverse().slice(0, limit);
   } else {
+    indexedTotal = index.recent.length;
     incidentIds = index.recent.slice(0, limit);
   }
 
@@ -593,33 +658,41 @@ async function handleList(
     return textResponse('No incidents found.');
   }
 
-  const lines = [
-    category
-      ? `Recent incidents (${category}, showing ${incidentIds.length}):`
-      : `Recent incidents (showing ${incidentIds.length}):`,
-  ];
+  const lines: string[] = [];
 
+  const coverage = emptyCorpusCoverage();
   for (const id of incidentIds) {
-    const incident = await loadIncident(id);
-    if (!incident) {
-      lines.push(`- ${id}: (file missing)`);
-      continue;
+    coverage.checked++;
+    if (typeof id !== 'string' || !/^INC_[\w\-]+$/.test(id)) { recordCorpusSkip(coverage, String(id), 'invalid_record'); continue; }
+    try {
+      const incident = await loadIncident(id, config);
+      if (!incident) { recordCorpusSkip(coverage, id, 'read_failed'); continue; }
+      if (!validIncidentRecord(incident) || incident.incident_id !== id) {
+        recordCorpusSkip(coverage, id, 'invalid_record'); continue;
+      }
+      const parsedDate = new Date(incident.timestamp);
+      if (!Number.isFinite(parsedDate.getTime())) { recordCorpusSkip(coverage, id, 'invalid_record'); continue; }
+      const date = parsedDate.toISOString().slice(0, 10);
+      const cat = incident.root_cause?.category || 'unknown';
+      lines.push(`- ${id} [${date}] ${cat}: ${incident.symptom.substring(0, 60)}`);
+      coverage.loaded++;
+    } catch (error) {
+      recordCorpusSkip(coverage, id, error instanceof SyntaxError ? 'invalid_json' : 'read_failed');
     }
-    const date = new Date(incident.timestamp).toISOString().slice(0, 10);
-    const cat = incident.root_cause?.category || 'unknown';
-    const sym = incident.symptom.substring(0, 60);
-    lines.push(`- ${id} [${date}] ${cat}: ${sym}`);
   }
-
+  lines.unshift(`Recent incidents${category ? ' (' + category + ')' : ''}: showing ${coverage.loaded} of ${incidentIds.length} indexed requested (${indexedTotal} total indexed)`);
+  lines.push(...corpusCoverageLines('indexed incidents', coverage));
   return textResponse(lines.join('\n'));
 }
 
 async function handlePatterns(
-  args: Record<string, unknown>
+  args: Record<string, unknown>, config: MemoryConfig
 ): Promise<{ content: Array<{ type: string; text: string }> }> {
-  const limit = typeof args.limit === 'number' ? args.limit : 10;
+  const limit = resultLimit(args);
 
-  const patterns = await loadAllPatterns();
+  const coverage = emptyCorpusCoverage();
+  const patterns = await loadAllPatterns(config, coverage);
+  if (patterns.length === 0 && coverage.skipped) return textResponse(corpusCoverageLines('patterns', coverage).join('\n'));
   if (patterns.length === 0) {
     return textResponse(
       'No patterns found. Patterns are extracted when 3+ similar incidents exist.'
@@ -642,11 +715,12 @@ async function handlePatterns(
     }
   }
 
+  lines.push(...corpusCoverageLines('patterns', coverage));
   return textResponse(lines.join('\n'));
 }
 
 async function handleOutcome(
-  args: Record<string, unknown>
+  args: Record<string, unknown>, config: MemoryConfig
 ): Promise<{ content: Array<{ type: string; text: string }>; isError?: boolean }> {
   const incidentId = String(args.incident_id || '');
   const result = String(args.result || '');
@@ -657,7 +731,9 @@ async function handleOutcome(
     return errorResponse('result must be one of: worked, failed, modified');
   }
 
-  if (!await loadIncident(incidentId)) return errorResponse('incident_id does not identify a stored incident');
+  const stored = await loadIncident(incidentId, config);
+  if (!stored) return errorResponse('incident_id does not identify a stored incident');
+  if (!validIncidentRecord(stored) || stored.incident_id !== incidentId) return errorResponse('Invalid stored incident record; outcome was not recorded');
   const verdict = args.verdict_given;
   if (verdict !== undefined && !['KNOWN_FIX', 'LIKELY_MATCH', 'WEAK_SIGNAL', 'NO_MATCH'].includes(String(verdict))) {
     return errorResponse('verdict_given must be a known search verdict when provided');
@@ -671,7 +747,7 @@ async function handleOutcome(
     notes,
   };
 
-  await recordOutcome(outcome);
+  await recordOutcome(outcome, config);
 
   return textResponse(`Outcome recorded for ${incidentId}: ${result}`);
 }

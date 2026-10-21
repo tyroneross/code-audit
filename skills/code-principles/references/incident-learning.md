@@ -25,7 +25,11 @@ Use the existing `store` fields and narrative; do not invent unsupported MCP arg
 
 For example, record that increasing a timeout fixed cold completion but did not prevent duplicate writes in the tested lost-response scenario; also record the stable-identity/retry-owner/deadline repair and its simulator-only boundary. Do not generalize that all fixed timeout constants are wrong.
 
-The current MCP accepts conservative unverified structured metadata. Narrative receipts do not upgrade those fields or authenticate evidence. Keep the linked report and disclose that boundary. `outcome(incident_id, result, notes)` applies only to an actually attempted retrieved repair; record `worked`, `failed` or `modified` with context, not a fabricated verdict or production acceptance. This is not an API for changing lifecycle status. When authorized, store a linked invalidation/supersession record through the existing `store` fields: use the relevant symptom, name the old incident ID, describe the observed invalidation evidence in `root_cause`, and state the applicable correction or do-not-reuse caveat in `fix`. Clearly label this as an invalidated historical candidate when no new repair was performed; do not invent verification or a successful fix. Search the symptom and candidate ID for linked invalidations before reusing a historical fix. Cross-record retrieval is best-effort, not an enforced inactive-status filter; keep important caveats in the task report too. Use `outcome` only for a repair actually attempted. Uncertain results belong in narrative/report text, never an invented outcome value.
+The MCP stores structured verification as unverified; narrative receipts do not authenticate or upgrade it. Retain the linked evidence report.
+
+- Record `outcome(incident_id, result, notes)` only for a retrieved repair actually attempted, using `worked`, `failed` or `modified` with environment and limits. Uncertain results belong in the narrative.
+- To invalidate old advice, use an authorized linked `store`: name the old incident ID, state observed invalidation evidence in `root_cause`, and put the correction or do-not-reuse caveat in `fix`. Do not invent a successful repair or lifecycle-update API.
+- Search the symptom and candidate ID before reuse. Linked-record retrieval is best-effort, not an enforced inactive-state filter; retain consequential caveats in the task report.
 
 ## Enforce a useful response to failure
 

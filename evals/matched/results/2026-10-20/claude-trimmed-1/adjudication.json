@@ -1,0 +1,121 @@
+{
+  "judgments": [
+    {
+      "case_id": "R01",
+      "finding_id": "F1",
+      "oracle_id": "stale-poll",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "on_poll calls apply unconditionally, while on_live guards on revision. The contract requires every source to reject older revisions. The suggested fix (copy the guard, or better a shared accept helper) matches the oracle. Rejecting equal revisions matches live's strict '>' check."
+    },
+    {
+      "case_id": "R04",
+      "finding_id": "F1",
+      "oracle_id": "timeout-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The unchanged client.request passes milliseconds to send, which now takes timeout_seconds, so the timeout is 1000x too long. Converting timeout_ms/1000 at the call site keeps the public timeout_ms argument."
+    },
+    {
+      "case_id": "R06",
+      "finding_id": "F-ready",
+      "oracle_id": "reopen-ready",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The closure premise (synchronous start) is invalidated. The un-awaited coroutine means publish('ready') runs before initialize. Reopening F-ready is legitimate, so this is not a duplicate. Awaiting start is the correct fix."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F1",
+      "oracle_id": "operation-identity",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "new_uuid() on every attempt defeats provider dedup on key. Using the stable operation_id is correct."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F2",
+      "oracle_id": "retry-owner",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Gateway runs 3 attempts inside each of checkout's max_attempts iterations, giving 3*max_attempts sends and exceeding the upper bound. A single retry owner fixes it."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F3",
+      "oracle_id": "total-deadline",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The full duration budget is passed as every per-attempt timeout and elapsed time is never subtracted. A monotonic remaining-budget fix matches the contract."
+    },
+    {
+      "case_id": "R08",
+      "finding_id": "F1",
+      "oracle_id": "unwired-handler",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "bootstrap.build constructs App(handlers=[]), so audit.handle is invoked zero times. Registering it once satisfies the exactly-once requirement."
+    },
+    {
+      "case_id": "R09",
+      "finding_id": "F1",
+      "oracle_id": "missing-owner-check",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "read_doc returns the body to any actor, and identical logic existed in the before revision. Classifying it as pre_existing is correct."
+    },
+    {
+      "case_id": "C01",
+      "finding_id": "F1",
+      "oracle_id": "unused-legacy",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The inventory is complete and plugins.json lists only 'active', so legacy is unreachable. The finding correctly keeps active."
+    },
+    {
+      "case_id": "C02",
+      "finding_id": "F1",
+      "oracle_id": "unused-retired",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "retired has no consumer and no REQUIRES edge. The finding correctly keeps parent, which evaluate('child') reaches through REQUIRES, and rejects the sampled profile as evidence of disuse."
+    },
+    {
+      "case_id": "C03",
+      "finding_id": "F1",
+      "oracle_id": "unused-status",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "retired_status has no consumers or contract. The finding correctly retains emergency_stop despite zero telemetry activations, as the contract and runbook require."
+    },
+    {
+      "case_id": "M01",
+      "finding_id": "F1",
+      "oracle_id": "recency-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The code compares a duration with an epoch cutoff, so old records get the boost, and future timestamps do too. The fix timestamp>=cutoff&&timestamp<=now implements the inclusive window."
+    },
+    {
+      "case_id": "M03",
+      "finding_id": "F1",
+      "oracle_id": "silent-skip",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The except branch passes without incrementing skipped, so incomplete inspection is hidden. Changing it to skipped += 1 preserves the valid records."
+    }
+  ]
+}

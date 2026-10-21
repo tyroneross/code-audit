@@ -1,0 +1,121 @@
+{
+  "judgments": [
+    {
+      "case_id": "R01",
+      "finding_id": "F1",
+      "oracle_id": "stale-poll",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Correctly identifies the unguarded poll path and the unenforcing shared apply. Centralizing in store matches the oracle's preferred remedy."
+    },
+    {
+      "case_id": "R04",
+      "finding_id": "F1",
+      "oracle_id": "timeout-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The unchanged caller passes ms to a seconds contract. Boundary conversion preserves the public timeout_ms argument."
+    },
+    {
+      "case_id": "R06",
+      "finding_id": "F-ready",
+      "oracle_id": "reopen-ready",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The un-awaited coroutine causes ready to be published before initialize. The changed closure premise makes this a legitimate reopening."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F1",
+      "oracle_id": "operation-identity",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "A fresh UUID per attempt breaks deduplication for one logical checkout. Using the stable operation_id is correct."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F2",
+      "oracle_id": "retry-owner",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Nested loops yield up to 3*max_attempts sends. Making gateway single-attempt is correct."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F3",
+      "oracle_id": "total-deadline",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The total budget is reused per attempt, so up to 3*max_attempts*deadline is an accurate bound. Remaining-time propagation fixes it."
+    },
+    {
+      "case_id": "R08",
+      "finding_id": "F1",
+      "oracle_id": "unwired-handler",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The handler is never registered at the composition root. Registering it once fixes this."
+    },
+    {
+      "case_id": "R09",
+      "finding_id": "F1",
+      "oracle_id": "missing-owner-check",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Missing owner check, correctly attributed as pre_existing and unaffected by the heading rename."
+    },
+    {
+      "case_id": "C01",
+      "finding_id": "F1",
+      "oracle_id": "unused-legacy",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "legacy is unreachable given the complete inventory and plugins.json contents. active is retained."
+    },
+    {
+      "case_id": "C02",
+      "finding_id": "F1",
+      "oracle_id": "unused-retired",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Removing only retired is safe. parent is correctly kept via REQUIRES, and the advice not to inline child preserves configurability."
+    },
+    {
+      "case_id": "C03",
+      "finding_id": "F1",
+      "oracle_id": "unused-status",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "retired_status is removable and emergency_stop is retained. The cited line 8 does not exist (retired_status occupies lines 6-7), a minor locator slip that does not affect validity."
+    },
+    {
+      "case_id": "M01",
+      "finding_id": "F1",
+      "oracle_id": "recency-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Correct duration-versus-epoch mechanism, including the future-timestamp case. The fix and boundary tests match the inclusive contract. Line references are offset by one but identify the right expression."
+    },
+    {
+      "case_id": "M03",
+      "finding_id": "F1",
+      "oracle_id": "silent-skip",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Failures are never counted. Incrementing skipped while keeping the narrow exception types is correct."
+    }
+  ]
+}

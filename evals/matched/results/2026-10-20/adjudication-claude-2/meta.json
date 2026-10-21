@@ -1,0 +1,23 @@
+{
+  "exit_code": 0,
+  "elapsed_seconds": 40.343,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 2,
+      "outputTokens": 4761,
+      "cacheReadInputTokens": 1568,
+      "cacheCreationInputTokens": 18997,
+      "webSearchRequests": 0,
+      "costUSD": 0.2475176,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 748,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "cost_usd": 0.2475176,
+  "is_error": false,
+  "boundary": "fresh blinded source adjudication; no repairs executed; same model family for Claude reviewer; parent reviews source fit"
+}

@@ -1,0 +1,49 @@
+{
+  "scope": "Independent Claude source reviews of combined Code Audit/debugger runtime and matched evaluator, followed by targeted closure; execution evidence remains separate.",
+  "reviewer": "claude-opus-5-5",
+  "runtime": {
+    "verdict": "approve",
+    "findings": [],
+    "limits": [
+      "This review used only the excerpts provided. Nothing was executed, and test file contents were not shown.",
+      "The search path (checkMemoryWithVerdict) and its coverage propagation are not in the excerpt. I could not check closure of the partial NO_MATCH summary finding from source. Handler lines 379-395 show no corpus coverage lines, so confirm that result.summary or later lines disclose skipped records before treating NO_MATCH as conclusive.",
+      "loadAllPatterns and toCompactPattern bodies are not shown. Pattern closure is assessed from the call site, from validPatternRecord, and from coverage reporting in handlePatterns.",
+      "checkedProjectRoot calls fs.realpath on PLUGIN_ROOT and CLAUDE_PLUGIN_ROOT. If either variable is set but points to a missing path, every non-read_logs call fails. That fails closed and is consistent with the guard's purpose, so it is not flagged.",
+      "validPatternRecord requires total_uses whenever a usage_history object is present. That matches the stated rule only if 'optional' means the whole usage_history object is optional, which is how I read it.",
+      "handleList assumes index.recent is an array. A malformed index throws, and the top-level handler turns that into an error response. That fails closed rather than producing a misleading listing.",
+      "Codex PLUGIN_ROOT export and the evaluator, sandbox and replay results are accepted as supplied evidence, not independently verified.",
+      "The recency score is accepted as a recency-weighted ranking only. No calibration claim was evaluated."
+    ]
+  },
+  "evaluation": {
+    "verdict": "approve",
+    "findings": [],
+    "limits": [
+      "Assessed only the closure items visible in the four shown files: exact-byte host event capture before decoding, kill-then-bounded-drain before rethrow, the /private/var/folders denial being independent of TMPDIR, descriptor-relative O_NOFOLLOW|O_DIRECTORY traversal, permanent worker poisoning on protocol faults, and the finally-block source snapshot.",
+      "Host events: repair.py:98 writes raw stdout/stderr bytes before the replace-decoding and JSON parsing at repair.py:99, and parse or shape faults fall to host_protocol_error at repair.py:108-109. Closed.",
+      "Timeout handling: isolation.py:56-65 kills the owned group, then drains for 0.5 s. Partial output from the cumulative communicate state is preserved. If the drain times out, it flags escaped_pipe and closes the streams. The finally block kills again and reaps. Closed.",
+      "Temp-root policy: isolation.py:15 adds /private/var/folders unconditionally. The parent verifier temp directory is created under the parent's default tempdir, not the child TMPDIR, so it falls under this denial and is also passed explicitly as protected by bridge.py:94. Closed.",
+      "Traversal: repair.py:36 and :52 open every directory with O_NOFOLLOW|O_DIRECTORY relative to its parent fd. A swap to a symlink, FIFO or file after the stat raises OSError, which repair.py:115 maps to contamination. Closed.",
+      "Worker poisoning: bridge.py:34-35 sets failed before kill/raise, every ask checks it at bridge.py:40, and send faults route through fail at bridge.py:38. Closed.",
+      "Source integrity: repair.py:149-153 re-snapshots unconditionally, never downgrades a contaminated status, and records snapshot errors as contaminated. Closed.",
+      "Not verified: the runtime-side fixes for outcome shape/ID validation, invalid_record/read_failed index handling and dual-root guards. Those files were not provided.",
+      "Not verified: the cited regression tests and kernel canary results. This is a static source review with no execution, and it makes no claim about broader efficacy."
+    ]
+  },
+  "execution": "See docs/combined-host-verification.json, docs/verification.md, evals/matched/results/2026-10-20 and local Build Loop acceptance receipts.",
+  "source_sha256": {
+    "runtime/debugger/src/mcp/tools.ts": "5a68590d413a1506017cc67366893a377c177e6a5bc087306aa50aab603e752d",
+    "runtime/debugger/src/storage.ts": "e45f7a65fe5880261bd0bd3e0108c9cf5e69a27d5a8c96f9c46d529d9ae867c2",
+    "runtime/debugger/src/retrieval.ts": "bd684b6acd835a8794d3057cdc5a4a6c1aa45babfbb665dd60105ec416ba0feb",
+    "evals/matched/run.py": "6b82630f683b666f7f86a25ab7a4b41508d9c6e18039f15092add601fe933e9f",
+    "evals/matched/repair.py": "918de0dd6dab7d51e04923f5ce80e3872cec8c7feecacb261459c1eaa28f6956",
+    "evals/matched/isolation.py": "ce89b04b0c5dc8a0451506e2835ae2627b99942c6cc722e290c3ee81bedc840f",
+    "evals/matched/bridge.py": "506aeb5459e09b2b481e74bf46751a68bd2388562ce086cdec2e00b363442b10",
+    "evals/matched/worker.py": "7da043ba1c557910fed8cb3f60b69ed1e0728cd6f985dadd86750b054ab7a3cf"
+  },
+  "limits": [
+    "Source-only reviewers did not execute tests or host receipts.",
+    "Final approvals are targeted closure after earlier broader source audits, not independent execution or broad efficacy certification.",
+    "All reported in-scope confirmed issues received implementation and regression coverage; hypotheses remain distinguished in local disposition ledger."
+  ]
+}

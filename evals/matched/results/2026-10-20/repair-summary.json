@@ -1,0 +1,627 @@
+{
+  "trials": [
+    {
+      "trial": "repair-claude-current-1",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "ff313d914cce363b4f1ff81a73120b7e93fc6bbb3ca89a4ed44ad8c75d5d6afc",
+        "case/policy.py": "dbd2644ce100f58ac2fff1feb6ec48bf3e83e26a28be3fccb540f8cbcc5af411",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "fa8442639dbe435559831e84615ee05f0cdd5180d76f3f91040b9aad69fd4f08",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "1e6807fcd6f2231747501a762aa22f6ebba6212b120edcea1f29668db928cacc",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 80.43,
+      "requested_model": "claude-opus-5-5",
+      "served_models": [
+        "claude-opus-5-5"
+      ],
+      "usage": {
+        "input_tokens": 22,
+        "cache_creation_input_tokens": 28310,
+        "cache_read_input_tokens": 276330,
+        "output_tokens": 8196,
+        "output_tokens_details": {
+          "thinking_tokens": 890
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 28310,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1460,
+            "cache_read_input_tokens": 31459,
+            "cache_creation_input_tokens": 1202,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1202
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "cost_usd": 0.44575400000000004,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-claude-current-2",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "98732358f32d5fdf0258b3f73ddd49a98b6c644c8f569ab972722738bfa29f6b",
+        "case/policy.py": "945e042e1bdd26e9d717e65ba5e180e360d63440e47b9d5cb76a68b69941f6fc",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "2b47a2689e1c2e1245b097a75425e89ebfad8025ca65fde160b36764af63476d",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "6cbc7674ffddce6264bf91b28ae1b062950dd88526256c680bb2230010d17a17",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 75.516,
+      "requested_model": "claude-opus-5-5",
+      "served_models": [
+        "claude-opus-5-5"
+      ],
+      "usage": {
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 11066,
+        "cache_read_input_tokens": 196834,
+        "output_tokens": 7378,
+        "output_tokens_details": {
+          "thinking_tokens": 1459
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 11066,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1516,
+            "cache_read_input_tokens": 29193,
+            "cache_creation_input_tokens": 2058,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 2058
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "cost_usd": 0.27551879999999995,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-claude-none-1",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "88a4799faa9d3e85f143297fb2b55c1b1e79c385a4c1523d09808b6d0c001ec3",
+        "case/policy.py": "d86b4daf18397727829762f0b65f8f1c161c93cfb6da4c6d5ad1f20fd8cd1a15",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "38733a03d1d84f84d95c8b2ef194c84116e02dbdc77f22959e18389597f3e742",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "00247cd183406386b15c98f88b9f010f3c8b67988266351b8d1ca6752ab6153a",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 78.243,
+      "requested_model": "claude-opus-5-5",
+      "served_models": [
+        "claude-opus-5-5"
+      ],
+      "usage": {
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 13359,
+        "cache_read_input_tokens": 94509,
+        "output_tokens": 7383,
+        "output_tokens_details": {
+          "thinking_tokens": 989
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 13359,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1232,
+            "cache_read_input_tokens": 15727,
+            "cache_creation_input_tokens": 1064,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1064
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "cost_usd": 0.2735058,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-claude-none-2",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "88a4799faa9d3e85f143297fb2b55c1b1e79c385a4c1523d09808b6d0c001ec3",
+        "case/policy.py": "608f8e02975176d9da783ced13e9a3e57b176d61a9c72596a020a08a33dd9cde",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "490d57edee4349ff56b86a2559c72b052043316f217df027092eb73eeefb8468",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "b3d7cafbe7f6a5aa64ab043bf65749e1991c26502abc14789d6d92c4e4f0f04a",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 84.578,
+      "requested_model": "claude-opus-5-5",
+      "served_models": [
+        "claude-opus-5-5"
+      ],
+      "usage": {
+        "input_tokens": 18,
+        "cache_creation_input_tokens": 13897,
+        "cache_read_input_tokens": 109939,
+        "output_tokens": 9312,
+        "output_tokens_details": {
+          "thinking_tokens": 943
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 13897,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1401,
+            "cache_read_input_tokens": 18083,
+            "cache_creation_input_tokens": 839,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 839
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "cost_usd": 0.3194758,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-claude-trimmed-1",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "856a027129277438adc553d7dd4f30693da412149dc5c5308984a06e1da2caed",
+        "case/policy.py": "ae976c2c2e435f063bf436579c9b3154ea113ce35c78e01bad6f228f7833eb43",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "482a6e1eb4757e466f8472bb04cfaf6dd948d2ad6b095745b1f9d88406ff5351",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "a11a2dc04c14d9b414494ef7644b081c55196130c858811bdad93405834678a1",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 63.924,
+      "requested_model": "claude-opus-5-5",
+      "served_models": [
+        "claude-opus-5-5"
+      ],
+      "usage": {
+        "input_tokens": 16,
+        "cache_creation_input_tokens": 11482,
+        "cache_read_input_tokens": 80900,
+        "output_tokens": 6703,
+        "output_tokens_details": {
+          "thinking_tokens": 720
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 11482,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1585,
+            "cache_read_input_tokens": 14707,
+            "cache_creation_input_tokens": 1126,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1126
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "cost_usd": 0.24216,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-claude-trimmed-2",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "2e9a1eb975042000ac3be66a82624cadbfaca178e65be121435e7f03ea595534",
+        "case/policy.py": "8a5a4788ada60ce19184089d3bae8c2fc9d2bb21b8c246c1b30f8a56d7cb32b0",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "d22f729d120094397231cab5e403d6c9427ad0266d9105b1de499174bad20eae",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "a11a2dc04c14d9b414494ef7644b081c55196130c858811bdad93405834678a1",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 80.21,
+      "requested_model": "claude-opus-5-5",
+      "served_models": [
+        "claude-opus-5-5"
+      ],
+      "usage": {
+        "input_tokens": 12,
+        "cache_creation_input_tokens": 12180,
+        "cache_read_input_tokens": 62341,
+        "output_tokens": 8120,
+        "output_tokens_details": {
+          "thinking_tokens": 665
+        },
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 12180,
+          "ephemeral_5m_input_tokens": 0
+        },
+        "inference_geo": "global",
+        "iterations": [
+          {
+            "input_tokens": 2,
+            "output_tokens": 1407,
+            "cache_read_input_tokens": 16505,
+            "cache_creation_input_tokens": 1386,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 1386
+            },
+            "type": "message"
+          }
+        ],
+        "speed": "standard",
+        "fallback_credit": null
+      },
+      "cost_usd": 0.2723562,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-codex-current-1",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "bbbe054ea2c106478458f7e6435ddaeef424cf3945d292b7b524d348f9fe45a8",
+        "case/policy.py": "c252e363b8ee4ff211c4ad580bd132267c50219bfdb9ef1c184643d2e0ad0e8f",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "bf6b33c4b7ee98924fe2b49d68b46ee5331403a23003db8a17583d77f444bdc5",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "a11a2dc04c14d9b414494ef7644b081c55196130c858811bdad93405834678a1",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 139.431,
+      "requested_model": "gpt-6.1-sol",
+      "served_models": null,
+      "usage": {
+        "input_tokens": 208256,
+        "cached_input_tokens": 184320,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 5049,
+        "reasoning_output_tokens": 853
+      },
+      "cost_usd": null,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-codex-current-2",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "a17c9be8af94c8c39f6b6a46836f70a33b01906d78f81da5ce1a4fd0173556f5",
+        "case/policy.py": "362127f3b2a32f25decd6ae6fb24c540a76554ebe9726d4206710ccfcbdc6c3d",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "56c6d7fcbfb6cf93d1e9ce77a0c28b9ed5891da2073bc1dd4d9c3e809829e407",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "219e08713a0c669b7b31783aec0c7b7b31fa5ca6a5b847c5e6576095fe8aa88c",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 91.984,
+      "requested_model": "gpt-6.1-sol",
+      "served_models": null,
+      "usage": {
+        "input_tokens": 287714,
+        "cached_input_tokens": 258432,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4611,
+        "reasoning_output_tokens": 736
+      },
+      "cost_usd": null,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-codex-none-1",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "88e321d2215a8f98dcfe1cd88d261aab1d9ff13dd46ad31876c6e9aba1c01d70",
+        "case/policy.py": "67a9b426564a86e643c5ac9379185919b942450c5727a94cfb7170980f1892db",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "7df20f083cdd640b36bf4d01eec5a267e53d733d7fc70d76131f0f8b2c2a09e3",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "76dbdc2f128b2a90eb1d61c18f8804a7902c68a509cc5690f58f759f163b3905",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 107.605,
+      "requested_model": "gpt-6.1-sol",
+      "served_models": null,
+      "usage": {
+        "input_tokens": 144588,
+        "cached_input_tokens": 128256,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 3925,
+        "reasoning_output_tokens": 456
+      },
+      "cost_usd": null,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-codex-none-2",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "88e321d2215a8f98dcfe1cd88d261aab1d9ff13dd46ad31876c6e9aba1c01d70",
+        "case/policy.py": "6b03983ff56fd473039787be560c7c31f16f551c4ee8f5ec08e69367ab1b5219",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "e3c9743d9ac6a4d0074d0c2f32564c7fa7fd5698374dbb4bb73f5b3800fb9b8f",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "5e3fe470d3df98def6efa881f69f448354b4626b066b11d4bafaa3876f481f78",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 122.603,
+      "requested_model": "gpt-6.1-sol",
+      "served_models": null,
+      "usage": {
+        "input_tokens": 147994,
+        "cached_input_tokens": 125312,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4432,
+        "reasoning_output_tokens": 576
+      },
+      "cost_usd": null,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-codex-trimmed-1",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "fac4e526ee82c3e2e18f31f6f5ca77ae637851ccb5bbde5ef0d905187e25ef14",
+        "case/policy.py": "515a7d4f2b6b374e7547f38de441a204bb82a52cea0e9dbe3130d378837a35eb",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "94a51d51b681013ad2c47546a1126ca84633ea841aba3ccb9d172d14102bf9e4",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "e112e5aa61d8b33ff7f67383a07cf18ea4e124600fca782f5273cf8c851a7a7c",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 108.556,
+      "requested_model": "gpt-6.1-sol",
+      "served_models": null,
+      "usage": {
+        "input_tokens": 137367,
+        "cached_input_tokens": 116992,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4026,
+        "reasoning_output_tokens": 364
+      },
+      "cost_usd": null,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    },
+    {
+      "trial": "repair-codex-trimmed-2",
+      "generation_status": "completed",
+      "tests": 18,
+      "passed": 18,
+      "verification_exit_code": 0,
+      "protected_changes": [],
+      "source_integrity_unchanged": true,
+      "kernel_canary": {
+        "own_read": "allowed",
+        "protected_read": "denied",
+        "outside_write": "denied"
+      },
+      "candidate_sha256": {
+        "case/gateway.py": "ec2392edebe3365aeb3640d96a58b4a3f3423564b5b59dac041ccc255e29f66a",
+        "case/policy.py": "541821d8af6b79a02b95dcbf221e8b946eed3bea51f8bc7341e7d2c0f1934f5f",
+        "case/CONTRACT.md": "468bf6272714ba0b3ebe8301cbf6973ad6985792eff73868a700b86c97f40128",
+        "case/README.md": "e22ff2bcb2781bd3956e5a800f52823f496d225f10a12fd350dc4d14a71bb87f",
+        "case/test_repair.py": "af27047d5fb86398fa206ec75218332fbbaf212fcf49c19d9b31abc565aa84ee",
+        "case/test_public.py": "4e1ffa00030107ce7766498522730b9ceab3abf0508cbfeb67f8efc56959f58b",
+        "case/checkout.py": "e112e5aa61d8b33ff7f67383a07cf18ea4e124600fca782f5273cf8c851a7a7c",
+        "case/simulator.py": "2b30cc4a82576176eb3e1a879b402ee0af06a97e1d61cedbc8fd8c678e115763",
+        "case/profile.json": "0a69d6e8b71f6720b7f64bdaf26c42dd78ab11d76ce44eca53b2a1eafa9ba316"
+      },
+      "elapsed_seconds": 152.396,
+      "requested_model": "gpt-6.1-sol",
+      "served_models": null,
+      "usage": {
+        "input_tokens": 160693,
+        "cached_input_tokens": 144768,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 5929,
+        "reasoning_output_tokens": 442
+      },
+      "cost_usd": null,
+      "verification_boundary": "Parent-owned existing 18 assertions and pristine simulator; candidate only in OS-isolated worker via constrained JSON callbacks. Replayed verification, not a new model run."
+    }
+  ],
+  "limits": [
+    "Two repetitions per arm per host on one synthetic repair task; no production or human-effort evidence.",
+    "Generation source and command receipts identify each sandboxed batch. Later artifact/quiescence defenses receive mechanical tests; candidate bytes were replayed through the parent-owned oracle without regenerating the model outputs.",
+    "Parent receipt-forgery, link/special-file and background-process canaries accompany the boundary; no general arbitrary-code security certification."
+  ]
+}

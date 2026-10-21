@@ -1,0 +1,267 @@
+{
+  "cases": [
+    {
+      "case_id": "R01",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "When polling returns an older revision for an existing job, on_poll unconditionally overwrites the stored event, allowing job state to regress despite the live-source guard.",
+          "locations": [
+            "poll.py:2",
+            "store.py:2"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Enforce the revision guard in the shared apply function so every event source rejects older per-job revisions.",
+          "verification": "Propose applying revision 5 through live delivery followed by revision 4 through polling; assert revision 5 remains stored, while revision 6 is accepted."
+        }
+      ]
+    },
+    {
+      "case_id": "R02",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R03",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R04",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "Calls through request still pass milliseconds directly to the provider's new seconds parameter. A public timeout_ms value of 1000 therefore becomes a 1000-second transport timeout instead of one second.",
+          "locations": [
+            "client.py:2",
+            "provider.py:2"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Preserve request's timeout_ms argument and convert it to seconds when calling provider.send.",
+          "verification": "Propose calling request with timeout_ms=1000 using a recording transport and asserting its timeout is 1 second."
+        }
+      ]
+    },
+    {
+      "case_id": "R05",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "R06",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F-ready",
+          "cause": "After start became async, launch calls it without awaiting the returned coroutine. Initialization does not execute through this call, yet ready is published immediately; the synchronous-completion premise that closed F-ready no longer holds.",
+          "locations": [
+            "owner.py:2",
+            "owner.py:3",
+            "handler.py:1"
+          ],
+          "severity": "high",
+          "origin": "introduced",
+          "disposition": "reopened",
+          "suggested_change": "Await handler.start() before publishing ready, allowing initialization failures to prevent readiness publication.",
+          "verification": "Propose holding initialization on a controllable awaitable and asserting ready is absent until completion; also assert initialization failure prevents ready."
+        }
+      ]
+    },
+    {
+      "case_id": "R07",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "After a provider commits but its response is lost, an outer retry generates a new UUID instead of reusing operation_id. Provider deduplication cannot recognize the same logical checkout across outer attempts or invocations, permitting duplicate checkout effects.",
+          "locations": [
+            "checkout.py:4"
+          ],
+          "severity": "high",
+          "origin": "unknown",
+          "disposition": "open",
+          "suggested_change": "Pass the caller-supplied operation_id unchanged as the provider key for every attempt and repeated invocation of that logical checkout.",
+          "verification": "Propose a provider that commits then times out; retry within checkout and invoke checkout again with the same operation_id, asserting one committed effect and the same key on every send."
+        },
+        {
+          "id": "F2",
+          "cause": "Each checkout iteration invokes a gateway that independently retries three times. Repeated timeouts can therefore produce three times max_attempts provider attempts, violating the supplied upper bound.",
+          "locations": [
+            "checkout.py:2",
+            "gateway.py:2"
+          ],
+          "severity": "medium",
+          "origin": "unknown",
+          "disposition": "open",
+          "suggested_change": "Give checkout sole retry ownership and make gateway perform one provider attempt, preserving TimeoutError propagation when attempts are exhausted.",
+          "verification": "Propose an always-timing-out provider with sufficient deadline budget and assert send is called at most max_attempts times, including zero calls for max_attempts=0."
+        },
+        {
+          "id": "F3",
+          "cause": "Every provider attempt receives the entire original duration budget, and neither retry loop checks elapsed time. Timeouts can repeatedly renew that budget and start attempts after the checkout's total deadline has expired.",
+          "locations": [
+            "checkout.py:2",
+            "checkout.py:4",
+            "gateway.py:4"
+          ],
+          "severity": "medium",
+          "origin": "unknown",
+          "disposition": "open",
+          "suggested_change": "Compute a monotonic expiry at checkout entry, check remaining time before each provider attempt, pass only the remaining duration, and raise TimeoutError when the budget is exhausted.",
+          "verification": "Propose a controlled clock with attempts consuming known durations; assert successive timeouts decrease and no provider call starts at or after expiry."
+        }
+      ]
+    },
+    {
+      "case_id": "R08",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The new audit handler is never registered: build constructs App with an empty handler list. Running an event through that application therefore invokes audit zero times instead of exactly once.",
+          "locations": [
+            "bootstrap.py:3",
+            "app.py:4",
+            "audit.py:1"
+          ],
+          "severity": "medium",
+          "origin": "introduced",
+          "disposition": "open",
+          "suggested_change": "Import audit.handle in bootstrap and register it exactly once in the application's handler list.",
+          "verification": "Propose building the application, running one event, and asserting the audit store receives exactly one append for that event."
+        }
+      ]
+    },
+    {
+      "case_id": "R09",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "Any actor calling read_doc receives doc.body because the function never checks ownership. Non-owners can read documents; the same access defect exists in the supplied before version.",
+          "locations": [
+            "page.py:2",
+            "page.py:3"
+          ],
+          "severity": "high",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Check actor ownership before returning the body and reject non-owner access.",
+          "verification": "Propose owner and non-owner calls against the same document; assert only the owner receives its body."
+        }
+      ]
+    },
+    {
+      "case_id": "C01",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The complete entrypoint inventory registers only active, and there are no external consumers. The legacy function is unreachable supported behavior and remains as removable code.",
+          "locations": [
+            "handlers.py:4",
+            "plugins.json:1",
+            "loader.py:5"
+          ],
+          "severity": "low",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Propose removing legacy while retaining active and its dynamic registration.",
+          "verification": "Propose checking every configured plugin name still resolves and run(\"AbC\") still returns [\"ABC\"] after removal."
+        }
+      ]
+    },
+    {
+      "case_id": "C02",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The retired flag has no application consumer or prerequisite edge in the complete inventory, so its configuration entry is removable. Parent remains required transitively by child regardless of sampled direct-call telemetry.",
+          "locations": [
+            "flags.py:1",
+            "flags.py:2",
+            "application.py:3"
+          ],
+          "severity": "low",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Propose removing only the retired entry; retain child, parent, their prerequisite edge, and evaluate behavior for child.",
+          "verification": "Propose checking evaluate(\"child\") across all parent/child boolean configurations before and after removal, including parent=False with child=True."
+        }
+      ]
+    },
+    {
+      "case_id": "C03",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "retired_status has no consumers or supported output contract in the complete inventory, making it removable. The unused-in-telemetry emergency branch remains required by the operator contract.",
+          "locations": [
+            "service.py:6"
+          ],
+          "severity": "low",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Propose removing retired_status while retaining the emergency_stop argument and rejection branch.",
+          "verification": "Propose confirming normal charge returns the charged amount and emergency_stop=True still raises RuntimeError after cleanup."
+        }
+      ]
+    },
+    {
+      "case_id": "M01",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "The recency predicate compares an elapsed age with an absolute Unix cutoff. For modern Unix timestamps it boosts records older than 90 days and future records, instead of restricting the multiplier to the inclusive permitted interval.",
+          "locations": [
+            "ranking.ts:3",
+            "ranking.ts:4"
+          ],
+          "severity": "medium",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Use timestamp >= cutoff && timestamp <= now as the recency predicate.",
+          "verification": "Propose checking cutoff-1, cutoff, now, and now+1 at a fixed modern Unix-millisecond now; assert multipliers of 1, 1.2, 1.2, and 1 respectively."
+        }
+      ]
+    },
+    {
+      "case_id": "M02",
+      "coverage": "complete",
+      "findings": []
+    },
+    {
+      "case_id": "M03",
+      "coverage": "complete",
+      "findings": [
+        {
+          "id": "F1",
+          "cause": "When read_json raises OSError or ValueError, the handler skips the record without incrementing skipped. Incomplete inspection is reported with skipped=0, preventing callers from distinguishing it from successful inspection.",
+          "locations": [
+            "corpus.py:6",
+            "corpus.py:7"
+          ],
+          "severity": "medium",
+          "origin": "pre_existing",
+          "disposition": "open",
+          "suggested_change": "Increment skipped once for each caught read or parse failure while continuing to retain valid records.",
+          "verification": "Propose inspecting one valid file, one OSError file, and one ValueError file; assert the valid record remains and skipped=2. Compare an empty successful inspection with an all-failed inspection."
+        }
+      ]
+    },
+    {
+      "case_id": "M04",
+      "coverage": "complete",
+      "findings": []
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "judgments": [
+    {
+      "case_id": "R01",
+      "finding_id": "F1",
+      "oracle_id": "stale-poll",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Moving monotonic admission into the shared state boundary (apply) and removing the redundant live guard is the oracle's preferred fix. It protects all sources and preserves live's strict '>' semantics."
+    },
+    {
+      "case_id": "R04",
+      "finding_id": "F1",
+      "oracle_id": "timeout-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "It correctly identifies the unit mismatch at the unchanged caller. Converting at the boundary preserves the public timeout_ms."
+    },
+    {
+      "case_id": "R06",
+      "finding_id": "F-ready",
+      "oracle_id": "reopen-ready",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The un-awaited coroutine causes a premature ready. The invalidated closure premise justifies reopening, so this is not a duplicate."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F1",
+      "oracle_id": "operation-identity",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "new_uuid defeats dedup. A stable operation_id across attempts and invocations is correct."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F2",
+      "oracle_id": "retry-owner",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Nested retries yield 3*max_attempts sends. A single-layer bounded retry is correct."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F3",
+      "oracle_id": "total-deadline",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The full budget is reused per attempt with no elapsed subtraction. The remaining-time fix is correct."
+    },
+    {
+      "case_id": "R08",
+      "finding_id": "F1",
+      "oracle_id": "unwired-handler",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The handler is never registered, so App.run iterates an empty list. Registering it exactly once is correct."
+    },
+    {
+      "case_id": "R09",
+      "finding_id": "F1",
+      "oracle_id": "missing-owner-check",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The owner check is missing, and the finding correctly says the issue exists in the base revision (pre_existing)."
+    },
+    {
+      "case_id": "C01",
+      "finding_id": "F1",
+      "oracle_id": "unused-legacy",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The cleanup substance matches the oracle: remove legacy and keep active. The origin label 'unknown' is imprecise, because no diff exists and the code is pre_existing, but this does not affect causal validity or the fix."
+    },
+    {
+      "case_id": "C02",
+      "finding_id": "F1",
+      "oracle_id": "unused-retired",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "It removes only retired and keeps parent because of the REQUIRES dependency. Advising against inlining is more conservative than the oracle requires but not harmful. The origin label 'unknown' is imprecise (should be pre_existing)."
+    },
+    {
+      "case_id": "C03",
+      "finding_id": "F1",
+      "oracle_id": "unused-status",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "It removes retired_status and preserves the emergency_stop control. The origin label 'unknown' is imprecise (should be pre_existing)."
+    },
+    {
+      "case_id": "M01",
+      "finding_id": "F1",
+      "oracle_id": "recency-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The duration-versus-epoch mismatch and the future-timestamp leak are correctly identified. The direct inclusive window comparison is correct."
+    },
+    {
+      "case_id": "M03",
+      "finding_id": "F1",
+      "oracle_id": "silent-skip",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The missing skipped increment hides incomplete inspection. The fix is correct, and the verification adds a valid-empty control case."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "issues": [
+    {
+      "case_id": "R07",
+      "oracle_id": null,
+      "issue": "No before snapshot is supplied. Both files are in changed_paths, which makes origin 'introduced' plausible but not demonstrable. A reviewer marking 'unknown' is conservative and should not be penalized; origin was not used to judge validity."
+    },
+    {
+      "case_id": "R01",
+      "oracle_id": "stale-poll",
+      "issue": "The contract says only that older revisions must be rejected and is silent on equal revisions. live.py rejects equal revisions (strict >), so extending that to all sources matches existing behavior. However, the oracle does not mandate equal-revision rejection, so suggestions that do or do not reject equal revisions are both acceptable."
+    }
+  ],
+  "disposition": "No causal oracle/source correction required. R01 equal-revision policy is not a required detection criterion; all source-valid corrections remain admissible. R07 introduced origin is weakly established without before snapshot: retain original score descriptively, do not use origin counts to select guidance or claim quality advantage. No reviewer rerun or extra judge; raw caveats preserved."
+}

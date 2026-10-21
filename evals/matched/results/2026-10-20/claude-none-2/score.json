@@ -1,0 +1,168 @@
+{
+  "version": 1,
+  "cases_version": 1,
+  "oracles_version": 1,
+  "cases_sha256": "1c6f4f96c80cae13dbc01e5f2ececcda42c9f1b549334b6415cfe6d398afc587",
+  "oracles_sha256": "78c3248a38ef712bd46e414a9e8faa22897b537f1cddb29e1228ca64ac2b2537",
+  "cases": 16,
+  "fully_reviewed_cases": 16,
+  "unavailable_cases": [],
+  "seeded_defect_classes": 13,
+  "detected_classes": 13,
+  "seeded_class_recall": 1.0,
+  "missed_classes": [],
+  "findings": 13,
+  "valid_findings": 13,
+  "finding_precision": 1.0,
+  "false_positives": 0,
+  "harmful_advice": 0,
+  "harmful_false_positives": 0,
+  "duplicate_findings": 0,
+  "origin_errors": 0,
+  "clean_cases": [
+    "R02",
+    "R03",
+    "R05",
+    "M02",
+    "M04"
+  ],
+  "clean_cases_without_findings": [
+    "R02",
+    "R03",
+    "R05",
+    "M02",
+    "M04"
+  ],
+  "clean_cases_without_false_or_harmful_findings": [
+    "R02",
+    "R03",
+    "R05",
+    "M02",
+    "M04"
+  ],
+  "adjudications": [
+    {
+      "case_id": "R01",
+      "finding_id": "F1",
+      "oracle_id": "stale-poll",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Identifies that the poll path bypasses the revision guard. The shared accept-and-apply remedy matches the oracle, even though only poll.py is listed as a location."
+    },
+    {
+      "case_id": "R04",
+      "finding_id": "F1",
+      "oracle_id": "timeout-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Unit mismatch at the unchanged caller. Converting at the call site preserves timeout_ms."
+    },
+    {
+      "case_id": "R06",
+      "finding_id": "F-ready",
+      "oracle_id": "reopen-ready",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The missing await publishes ready before initialization. Reopening on the invalidated synchronous premise is legitimate."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F1",
+      "oracle_id": "operation-identity",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "A per-attempt UUID defeats deduplication. Using operation_id across attempts and invocations is correct."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F2",
+      "oracle_id": "retry-owner",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The send count is multiplied to 3*max_attempts. Either remedy offered (single loop or shared budget) enforces the bound."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F3",
+      "oracle_id": "total-deadline",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The total budget is not decremented across attempts. The remaining-time fix is correct."
+    },
+    {
+      "case_id": "R08",
+      "finding_id": "F1",
+      "oracle_id": "unwired-handler",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The empty handler list means audit is never invoked. A single registration fixes it."
+    },
+    {
+      "case_id": "R09",
+      "finding_id": "F1",
+      "oracle_id": "missing-owner-check",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The owner-only contract is violated in the before revision as well, so the pre_existing origin is correct."
+    },
+    {
+      "case_id": "C01",
+      "finding_id": "F1",
+      "oracle_id": "unused-legacy",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "legacy is unreachable dead code. The dynamically loaded active is preserved."
+    },
+    {
+      "case_id": "C02",
+      "finding_id": "F1",
+      "oracle_id": "unused-retired",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Only retired is removed. parent is preserved as child's prerequisite, and the sampled profile is correctly discounted."
+    },
+    {
+      "case_id": "C03",
+      "finding_id": "F1",
+      "oracle_id": "unused-status",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "retired_status is removable. The emergency_stop control is retained per the runbook and contract."
+    },
+    {
+      "case_id": "M01",
+      "finding_id": "F1",
+      "oracle_id": "recency-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Correct mechanism. The inclusive bounds fix and boundary tests satisfy the contract."
+    },
+    {
+      "case_id": "M03",
+      "finding_id": "F1",
+      "oracle_id": "silent-skip",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The uncounted skip hides incomplete inspection. The fix is correct; the severity choice does not affect validity."
+    }
+  ],
+  "limits": [
+    "Synthetic seeded cases; not production or population recall.",
+    "Adjudication is supplied evidence-based judgment, not authenticated by this scorer.",
+    "Unavailable cases remain visible and in the all-case recall denominator.",
+    "Duplicate IDs/classes do not demonstrate convergence; judge dispositions and new evidence."
+  ]
+}

@@ -1,0 +1,228 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "R01",
+      "request": "Review this change adding polling fallback. All event sources must reject older per-job revisions.",
+      "sources": {
+        "store.py": "def apply(state, event):\n    state[event.job] = event\n",
+        "live.py": "def on_live(store, event):\n    old = store.get(event.job)\n    if old is None or event.revision > old.revision:\n        apply(store, event)\n",
+        "poll.py": "def on_poll(store, event):\n    apply(store, event)\n"
+      },
+      "changed_paths": [
+        "poll.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R02",
+      "request": "Review retry progress. Contract: a strictly newer attempt may reset progress and return done to running; reject older attempts or non-increasing sequence in the same attempt.",
+      "sources": {
+        "jobs.py": "def accept(old, new):\n    if old and (new.attempt < old.attempt or\n                (new.attempt == old.attempt and new.seq <= old.seq)):\n        return old\n    return new\n"
+      },
+      "changed_paths": [
+        "jobs.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R03",
+      "request": "Review catalog preparation. Contract: first duplicate SKU wins, unknown SKUs return None, catalog is fresh per operation; no catalog mutation.",
+      "sources": {
+        "catalog.py": "def quote(catalog, requested):\n    index = {}\n    for row in catalog:\n        index.setdefault(row.sku, row)\n    return [index.get(sku) for sku in requested]\n"
+      },
+      "changed_paths": [
+        "catalog.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R04",
+      "request": "Re-review this follow-up. The provider now requires timeout seconds. Initial review was clean. Preserve the public timeout_ms argument. Inspect affected callers.",
+      "before": {
+        "provider.py": "def send(payload, timeout_ms): ...\n",
+        "client.py": "def request(payload, timeout_ms):\n    return provider.send(payload, timeout_ms)\n"
+      },
+      "sources": {
+        "provider.py": "def send(payload, timeout_seconds):\n    return transport.send(payload, timeout=timeout_seconds)\n",
+        "client.py": "def request(payload, timeout_ms):\n    return provider.send(payload, timeout_ms)\n"
+      },
+      "changed_paths": [
+        "provider.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R05",
+      "request": "Re-review after the confirmed preview fix. Contract: preview never removes files; apply may remove selected files. No dependent contracts changed.",
+      "sources": {
+        "clean.py": "def clean(paths, apply=False):\n    if not apply:\n        return list(paths)\n    for path in paths:\n        path.unlink()\n    return list(paths)\n"
+      },
+      "changed_paths": [
+        "clean.py"
+      ],
+      "prior_findings": [
+        {
+          "id": "F-preview",
+          "cause": "Preview deleted files",
+          "disposition": "fixed_verified",
+          "evidence": "Current non-apply branch returns before unlink; preview regression passed."
+        }
+      ]
+    },
+    {
+      "id": "R06",
+      "request": "Re-review after Handler.start changed from synchronous completion to async completion. Required behavior: publish ready only after initialization completes. Reopen an old finding if its closure premise changed.",
+      "before": {
+        "handler.py": "def start():\n    initialize()\n"
+      },
+      "sources": {
+        "handler.py": "async def start():\n    await initialize()\n",
+        "owner.py": "async def launch(handler, publish):\n    handler.start()\n    publish(\"ready\")\n"
+      },
+      "changed_paths": [
+        "handler.py"
+      ],
+      "prior_findings": [
+        {
+          "id": "F-ready",
+          "cause": "Ready published before initialization",
+          "disposition": "closed_with_reason",
+          "evidence": "At prior revision, start() was synchronous and returned only after initialization."
+        }
+      ]
+    },
+    {
+      "id": "R07",
+      "request": "Review lost-response retries. Each logical checkout has a caller-supplied operation_id stable across invocations. Provider deduplicates on key. Total deadline includes all attempts; supplied max_attempts is an upper bound. Provider.send performs one attempt. Here deadline is a total duration budget in seconds measured from checkout entry, not an absolute timestamp.",
+      "sources": {
+        "checkout.py": "def checkout(provider, payload, operation_id, deadline, max_attempts):\n    for _ in range(max_attempts):\n        try:\n            return gateway(provider, payload, new_uuid(), deadline)\n        except TimeoutError:\n            pass\n    raise TimeoutError()\n",
+        "gateway.py": "def gateway(provider, payload, key, deadline):\n    for _ in range(3):\n        try:\n            return provider.send(payload, key=key, timeout=deadline)\n        except TimeoutError:\n            pass\n    raise TimeoutError()\n"
+      },
+      "changed_paths": [
+        "checkout.py",
+        "gateway.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R08",
+      "request": "Review adding the audit handler. Required behavior: application.run(event) invokes the audit handler exactly once.",
+      "sources": {
+        "audit.py": "def handle(event):\n    audit_store.append(event)\n",
+        "app.py": "class App:\n    def __init__(self, handlers): self.handlers = handlers\n    def run(self, event):\n        for handler in self.handlers: handler(event)\n",
+        "bootstrap.py": "from app import App\ndef build():\n    return App(handlers=[])\n"
+      },
+      "changed_paths": [
+        "audit.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "R09",
+      "request": "Review the full supplied source and classify finding origin relative to the shown change. Contract: only owner may read a document. The current change renames the heading; access logic is unchanged.",
+      "before": {
+        "page.py": "HEADING = \"Docs\"\ndef read_doc(actor, doc):\n    return doc.body\n"
+      },
+      "sources": {
+        "page.py": "HEADING = \"Documents\"\ndef read_doc(actor, doc):\n    return doc.body\n"
+      },
+      "changed_paths": [
+        "page.py"
+      ],
+      "prior_findings": []
+    },
+    {
+      "id": "C01",
+      "request": "Identify safe cleanup opportunities without changing supported behavior. The supplied package and entrypoint inventory is complete. Plugin names in plugins.json are loaded dynamically and must remain supported. No consumers outside this package exist. Propose changes only.",
+      "sources": {
+        "handlers.py": "def active(event):\n    return event.upper()\n\ndef legacy(event):\n    return event.lower()\n",
+        "loader.py": "import importlib\nimport json\ndef run(event):\n    names = json.loads(open(\"plugins.json\").read())\n    return [getattr(importlib.import_module(\"handlers\"), name)(event) for name in names]\n",
+        "plugins.json": "[\"active\"]"
+      },
+      "changed_paths": [],
+      "prior_findings": []
+    },
+    {
+      "id": "C02",
+      "request": "Find safe cleanup in this complete flag evaluator and application. All supplied flags are server configuration for production; no other consumers or overrides exist. Preserve evaluate(name) for names used by application.py. Profiles cover only sampled successful checkouts over one hour. Propose changes only.",
+      "sources": {
+        "flags.py": "FLAGS = {\"parent\": True, \"child\": True, \"retired\": False}\nREQUIRES = {\"child\": \"parent\"}\ndef evaluate(name):\n    parent = REQUIRES.get(name)\n    return FLAGS[name] and (parent is None or evaluate(parent))\n",
+        "application.py": "from flags import evaluate\ndef enabled():\n    return evaluate(\"child\")\n",
+        "profile.txt": "One-hour sample: no direct application calls to parent or retired."
+      },
+      "changed_paths": [],
+      "prior_findings": []
+    },
+    {
+      "id": "C03",
+      "request": "Find safe cleanup. This is the complete service and consumer inventory. Contract: operators must retain the emergency stop control; normal execution charges, emergency execution rejects. Retired status output has no consumers and no supported contract. Thirty days of telemetry show no emergency activations. Propose changes only.",
+      "sources": {
+        "service.py": "def charge(amount, emergency_stop=False):\n    if emergency_stop:\n        raise RuntimeError(\"charging disabled\")\n    return {\"charged\": amount}\n\ndef retired_status():\n    return \"legacy\"\n",
+        "runbook.md": "During an incident operators call charge with emergency_stop=True. Keep this control available."
+      },
+      "changed_paths": [],
+      "prior_findings": []
+    },
+    {
+      "id": "M01",
+      "request": "Review historical-record ranking. Timestamps and now are Unix milliseconds. Only timestamps in the inclusive last 90 days through now receive a 1.2 recency multiplier. Other finite timestamps retain base. This implementation is pre-existing; no new diff. No other behavior is in scope.",
+      "sources": {
+        "ranking.ts": "export function score(timestamp: number, now: number, base: number): number {\n  const cutoff = now - 90 * 86400000;\n  const age = now - timestamp;\n  const recent = age < cutoff;\n  return base * (recent ? 1.2 : 1.0);\n}\n"
+      },
+      "changed_paths": [],
+      "prior_findings": [],
+      "provenance": {
+        "repository": "code-audit",
+        "revision": "91c2520a7fcd4ae58f6d56e6c9436d851779ffa0",
+        "path": "runtime/debugger/src/retrieval.ts:138",
+        "adaptation": "Extracted temporal calculation with explicit contract; M02 is repaired control."
+      }
+    },
+    {
+      "id": "M02",
+      "request": "Review historical-record ranking. Timestamps and now are Unix milliseconds. Only timestamps in the inclusive last 90 days through now receive a 1.2 recency multiplier. Other finite timestamps retain base. This implementation is pre-existing; no new diff. No other behavior is in scope.",
+      "sources": {
+        "ranking.ts": "export function score(timestamp: number, now: number, base: number): number {\n  const cutoff = now - 90 * 86400000;\n  const recent = timestamp >= cutoff && timestamp <= now;\n  return base * (recent ? 1.2 : 1.0);\n}\n"
+      },
+      "changed_paths": [],
+      "prior_findings": [],
+      "provenance": {
+        "repository": "code-audit",
+        "revision": "91c2520a7fcd4ae58f6d56e6c9436d851779ffa0",
+        "path": "runtime/debugger/src/retrieval.ts:138",
+        "adaptation": "Extracted temporal calculation with explicit contract; M02 is repaired control."
+      }
+    },
+    {
+      "id": "M03",
+      "request": "Review partial historical-corpus inspection. Contract: valid records remain usable, unreadable or malformed records are skipped and counted; callers distinguish empty successful inspection from incomplete inspection using skipped. read_json reads one file and raises OSError or ValueError on failure; it has no other side effects. Pre-existing implementation, no diff.",
+      "sources": {
+        "corpus.py": "def inspect_files(files, read_json):\n    records, skipped = [], 0\n    for file in files:\n        try:\n            records.append(read_json(file))\n        except (OSError, ValueError):\n            pass\n    return {\"records\": records, \"skipped\": skipped}\n"
+      },
+      "changed_paths": [],
+      "prior_findings": [],
+      "provenance": {
+        "repository": "code-audit",
+        "revision": "91c2520a7fcd4ae58f6d56e6c9436d851779ffa0",
+        "path": "runtime/debugger/src/storage.ts:147",
+        "adaptation": "Translated bounded read/parse omission into Python with explicit coverage contract; M04 is repaired control."
+      }
+    },
+    {
+      "id": "M04",
+      "request": "Review partial historical-corpus inspection. Contract: valid records remain usable, unreadable or malformed records are skipped and counted; callers distinguish empty successful inspection from incomplete inspection using skipped. read_json reads one file and raises OSError or ValueError on failure; it has no other side effects. Pre-existing implementation, no diff.",
+      "sources": {
+        "corpus.py": "def inspect_files(files, read_json):\n    records, skipped = [], 0\n    for file in files:\n        try:\n            records.append(read_json(file))\n        except (OSError, ValueError):\n            skipped += 1\n    return {\"records\": records, \"skipped\": skipped}\n"
+      },
+      "changed_paths": [],
+      "prior_findings": [],
+      "provenance": {
+        "repository": "code-audit",
+        "revision": "91c2520a7fcd4ae58f6d56e6c9436d851779ffa0",
+        "path": "runtime/debugger/src/storage.ts:147",
+        "adaptation": "Translated bounded read/parse omission into Python with explicit coverage contract; M04 is repaired control."
+      }
+    }
+  ]
+}

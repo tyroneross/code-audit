@@ -24,11 +24,13 @@ Read [incident learning](../code-principles/references/incident-learning.md) whe
 
 ## Retrieval is evidence
 
-`search(symptom)` returns KNOWN_FIX, LIKELY_MATCH, WEAK_SIGNAL or NO_MATCH with compact matches. These describe retrieval relevance, not calibrated correctness or proof of current causality. Use `detail(id)` to inspect the stored cause, fix, environment and verification limits. A KNOWN_FIX can be stale, inapplicable or insufficient for wider current symptoms. Validate source fit before applying it and rerun the relevant checks afterward. NO_MATCH means no usable match was found, not that the code is correct.
+`search(symptom)` returns KNOWN_FIX, LIKELY_MATCH or NO_MATCH on the default MCP path. WEAK_SIGNAL remains available to programmatic low-confidence callers; it is not produced by the fixed-tier default search. Results include historical verification and checked/loaded/skipped corpus counts. A partial-coverage warning makes absence of matches inconclusive. These describe retrieval relevance, not calibrated correctness or proof of current causality. Use `detail(id)` to inspect the stored cause, fix, environment and verification limits. A KNOWN_FIX can be stale, inapplicable or insufficient for wider current symptoms. Validate source fit before applying it and rerun the relevant checks afterward. NO_MATCH means no usable match was found, not that the code is correct.
 
 Use `status`, `list` and `patterns` to inspect the existing corpus as needed. Use `read_logs` only for the authorized project's relevant logs; inspect sensitive contents before external sharing. An inaccessible log is a coverage gap, not evidence that no errors occurred.
 
 ## Storage and outcomes
+
+Some installed hosts start MCP in the plugin directory. If `status` reports unavailable project scope, pass the authorized absolute `project_root` to `status` and every memory operation. This explicitly selects `<project_root>/.claude/memory` for that call; it does not change process cwd, global settings or later calls. Keep the same root throughout a roundtrip and verify the returned path before writing. Without an explicit project, a package-root host refuses memory access. `read_logs` remains scoped to the actual server working directory; `project_root` does not redirect logs. Existing explicit `CLAUDE_MEMORY_*` configuration remains supported when no per-call root is selected.
 
 Before any `store` or `outcome` write, check `status` for the actual server working directory and configured memory path. They must match the authorized project or an explicitly selected shared corpus. If the host starts in an unintended directory, disclose the storage gap and correct host configuration within authorization; do not write incidents into an assumed project.
 

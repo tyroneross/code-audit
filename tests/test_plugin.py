@@ -12,7 +12,8 @@ class Package(unittest.TestCase):
         self.assertNotIn('postinstall',json.loads((ROOT/'runtime/debugger/package.json').read_text())['scripts'])
         servers=json.loads((ROOT/'mcp.json').read_text())['mcpServers']
         legacy=json.loads((ROOT/'.mcp.json').read_text())['mcpServers']
-        self.assertEqual(servers['code-audit-debugger']['args'],legacy['code-audit-debugger']['args'])
+        self.assertEqual(servers['code-audit-debugger']['args'], ['${PLUGIN_ROOT}/scripts/debugger-server.cjs'])
+        self.assertEqual(legacy['code-audit-debugger']['args'], ['${CLAUDE_PLUGIN_ROOT}/scripts/debugger-server.cjs'])
         self.assertEqual(servers['code-audit-debugger']['type'],'stdio')
 
     def test_packaged_markdown_links_are_local_and_present(self):

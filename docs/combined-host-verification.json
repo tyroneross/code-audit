@@ -1,0 +1,312 @@
+{
+  "claude": {
+    "boundary": "actual CLI host; automatic discovery; desktop UI unexercised",
+    "event_sha256": "9eb29688096c047e3c1d20c3da5cdb37fc723e478acca6ea79ed51dda746ae7f",
+    "meta": {
+      "command": [
+        "claude",
+        "-p",
+        "--no-session-persistence",
+        "--plugin-dir",
+        "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/package",
+        "--setting-sources",
+        "",
+        "--settings",
+        "{\"disableAllHooks\":true}",
+        "--allowedTools",
+        "Read,Skill,mcp__plugin_code-audit_code-audit-debugger__*",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--effort",
+        "medium"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 36.14,
+      "boundary": "actual isolated CLI plugin host; desktop UI not exercised"
+    },
+    "calls": [
+      {
+        "tool": "Skill",
+        "arguments": {
+          "skill": "code-audit:code-audit"
+        },
+        "id": "toolu_01EGpBE2NB5b6ayPCXKDx7Nb"
+      },
+      {
+        "tool": "ToolSearch",
+        "arguments": {
+          "query": "select:mcp__plugin_code-audit_code-audit-debugger__status,mcp__plugin_code-audit_code-audit-debugger__store,mcp__plugin_code-audit_code-audit-debugger__list,mcp__plugin_code-audit_code-audit-debugger__search,mcp__plugin_code-audit_code-audit-debugger__detail",
+          "max_results": 5
+        },
+        "id": "toolu_01E4RYZZfSb9zFwZZfQGBvLH"
+      },
+      {
+        "tool": "Read",
+        "arguments": {
+          "file_path": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/package/skills/debugging-memory/SKILL.md"
+        },
+        "id": "toolu_01VUA36yGru3mWsaqJRuxdPQ"
+      },
+      {
+        "tool": "mcp__plugin_code-audit_code-audit-debugger__status",
+        "arguments": {
+          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project"
+        },
+        "id": "toolu_01Nf8jfajfuz3TvKEHXTQ6Bs"
+      },
+      {
+        "tool": "mcp__plugin_code-audit_code-audit-debugger__store",
+        "arguments": {
+          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project",
+          "symptom": "Synthetic host smoke duplicate checkout receipt",
+          "root_cause": "Synthetic retry regenerated operation identity",
+          "fix": "Synthetic fixture only: preserve operation identity",
+          "category": "test"
+        },
+        "id": "toolu_01YBLcT1RKgBeeXGmMQLZfcp"
+      },
+      {
+        "tool": "mcp__plugin_code-audit_code-audit-debugger__list",
+        "arguments": {
+          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project"
+        },
+        "id": "toolu_018RqgTcPZkz8cBBMx9bFnCf"
+      },
+      {
+        "tool": "mcp__plugin_code-audit_code-audit-debugger__search",
+        "arguments": {
+          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project",
+          "symptom": "Synthetic host smoke duplicate checkout receipt"
+        },
+        "id": "toolu_01RyCoFHRfMADS7oHXYy9UJW"
+      },
+      {
+        "tool": "mcp__plugin_code-audit_code-audit-debugger__detail",
+        "arguments": {
+          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project",
+          "id": "INC_TEST_20261021_065123_bb5b37001"
+        },
+        "id": "toolu_01UaxV3JrJA9jBGCx1AykykM"
+      }
+    ],
+    "tool_results": [
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_01EGpBE2NB5b6ayPCXKDx7Nb",
+        "content": "Launching skill: code-audit:code-audit"
+      },
+      {
+        "type": "tool_result",
+        "tool_use_id": "toolu_01E4RYZZfSb9zFwZZfQGBvLH",
+        "content": [
+          {
+            "type": "tool_reference",
+            "tool_name": "mcp__plugin_code-audit_code-audit-debugger__status"
+          },
+          {
+            "type": "tool_reference",
+            "tool_name": "mcp__plugin_code-audit_code-audit-debugger__store"
+          },
+          {
+            "type": "tool_reference",
+            "tool_name": "mcp__plugin_code-audit_code-audit-debugger__list"
+          },
+          {
+            "type": "tool_reference",
+            "tool_name": "mcp__plugin_code-audit_code-audit-debugger__search"
+          },
+          {
+            "type": "tool_reference",
+            "tool_name": "mcp__plugin_code-audit_code-audit-debugger__detail"
+          }
+        ]
+      },
+      {
+        "tool_use_id": "toolu_01VUA36yGru3mWsaqJRuxdPQ",
+        "type": "tool_result",
+        "content": "1\t---\n2\tname: debugging-memory\n3\tdescription: Consult stored debugging incidents before fresh investigation when the bundled memory MCP is available; validate past causes against current code and record evidence-supported outcomes.\n4\tuser-invocable: false\n5\t---\n6\t\n7\t# Debugging memory\n8\t\n9\t```text\n10\tif memory unavailable: disclose the gap and continue source investigation\n11\tsearch the current symptom\n12\tload details only for plausible matches\n13\tbefore reuse: search candidate ID for linked invalidation/supersession records (best-effort)\n14\tvalidate lifecycle, cause, applicability, failed approaches and fix against current code\n15\tif a known fix fits: adapt it and verify current behavior\n16\telse: use ../debug/SKILL.md and investigate fresh\n17\tstore trigger, cause, tried/rejected approaches, repair, evidence and limits when authorized\n18\trecord whether an actually attempted retrieved fix worked, failed or modified\n19\t```\n20\t\n21\tResolve references from this skill's installed location. Use the actual host-exposed names for tools on `code-audit-debugger`.\n22\t\n23\tRead [incident learning](../code-principles/references/incident-learning.md) when using or recording a lesson. Use existing MCP fields and narrative; do not invent lifecycle/verification update arguments.\n24\t\n25\t## Retrieval is evidence\n26\t\n27\t`search(symptom)` returns KNOWN_FIX, LIKELY_MATCH or NO_MATCH on the default MCP path. WEAK_SIGNAL remains available to programmatic low-confidence callers; it is not produced by the fixed-tier default search. Results include historical verification and checked/loaded/skipped corpus counts. A partial-coverage warning makes absence of matches inconclusive. These describe retrieval relevance, not calibrated correctness or proof of current causality. Use `detail(id)` to inspect the stored cause, fix, environment and verification limits. A KNOWN_FIX can be stale, inapplicable or insufficient for wider current symptoms. Validate source fit before applying it and rerun the relevant checks afterward. NO_MATCH means no usable match was found, not that the code is correct.\n28\t\n29\tUse `status`, `list` and `patterns` to inspect the existing corpus as needed. Use `read_logs` only for the authorized project's relevant logs; inspect sensitive contents before external sharing. An inaccessible log is a coverage gap, not evidence that no errors occurred.\n30\t\n31\t## Storage and outcomes\n32\t\n33\tSome installed hosts start MCP in the plugin directory. If `status` reports unavailable project scope, pass the authorized absolute `project_root` to `status` and every memory operation. This explicitly selects `<project_root>/.claude/memory` for that call; it does not change process cwd, global settings or later calls. Keep the same root throughout a roundtrip and verify the returned path before writing. Without an explicit project, a package-root host refuses memory access. `read_logs` remains scoped to the actual server working directory; `project_root` does not redirect logs. Existing explicit `CLAUDE_MEMORY_*` configuration remains supported when no per-call root is selected.\n34\t\n35\tBefore any `store` or `outcome` write, check `status` for the actual server working directory and configured memory path. They must match the authorized project or an explicitly selected shared corpus. If the host starts in an unintended directory, disclose the storage gap and correct host configuration within authorization; do not write incidents into an assumed project.\n36\t\n37\t`store` accepts required strings `symptom`, `root_cause`, `fix`; optional `category`, `tags`, `files_changed`, `file`. Describe the triggering conditions, causal evidence, actual changes and checks in these fields. Distinguish hypotheses and recommendations from verified repairs. Do not invent findings merely to populate memory.\n38\t\n39\tThe current tool stores conservative structured verification fields as unverified; it does not accept a verification object or authenticate test receipts. Include observed check commands/results and boundaries in the fix narrative, and retain the linked evidence report. Do not claim the structured metadata became verified simply because the narrative reports passing checks.\n40\t\n41\tUse `outcome(incident_id, result, notes)` for a retrieved repair actually tried, with result `worked`, `failed` or `modified`. Explain the tested environment and limitations in notes. An outcome record is not production acceptance or independent verification.\n42\t\n43\tDo not manually write an isolated incident JSON file: storage also maintains retrieval indexes and append logs. Use the bundled API/MCP to preserve those structures. If unavailable, keep a local task report and disclose that incident persistence was not performed. Preserve explicit `CLAUDE_MEMORY_*` overrides; do not migrate, merge or enable shared memory without authorization.\n44\t\n45\t## Independent work\n46\t\n47\tThe plugin provides procedures, not pre-registered domain assessors on every host. If authorized agents are available, pass the relevant current evidence and candidate incidents, clearly labeling historical hypotheses. Never invent dispatch, access or independent approval. Continue directly when independent execution is unavailable, and disclose the review gap. See [the debug workflow](../debug/SKILL.md) and [deep loop](../debug-loop/SKILL.md).\n48\t"
+      },
+      {
+        "tool_use_id": "toolu_01Nf8jfajfuz3TvKEHXTQ6Bs",
+        "type": "tool_result",
+        "content": [
+          {
+            "type": "text",
+            "text": "Server working directory: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project\nMemory path: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project/.claude/memory\nNo memory index available; existing incident files may still be searchable."
+          }
+        ]
+      },
+      {
+        "tool_use_id": "toolu_01YBLcT1RKgBeeXGmMQLZfcp",
+        "type": "tool_result",
+        "content": [
+          {
+            "type": "text",
+            "text": "Incident stored: INC_TEST_20261021_065123_bb5b37001\nFile: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project/.claude/memory/incidents/INC_TEST_20261021_065123_bb5b37001.json"
+          }
+        ]
+      },
+      {
+        "tool_use_id": "toolu_018RqgTcPZkz8cBBMx9bFnCf",
+        "type": "tool_result",
+        "content": [
+          {
+            "type": "text",
+            "text": "Recent incidents: showing 1 of 1 indexed requested (1 total indexed)\n- INC_TEST_20261021_065123_bb5b37001 [2026-10-21] test: Synthetic host smoke duplicate checkout receipt\nCoverage indexed incidents: checked 1, loaded 1, skipped 0"
+          }
+        ]
+      },
+      {
+        "tool_use_id": "toolu_01RyCoFHRfMADS7oHXYy9UJW",
+        "type": "tool_result",
+        "content": [
+          {
+            "type": "text",
+            "text": "Verdict: LIKELY_MATCH\n1 similar incident found (incident retrieval tier)\nRetrieval tier: incident (not calibrated repair confidence)\nAction: Review these similar incidents for guidance\n\nIncidents (1):\n- INC_TEST_20261021_065123_bb5b37001: Synthetic host smoke duplicate checkout receipt [verification: unverified]\n  Root cause: Synthetic retry regenerated operation identity (test)\nCoverage patterns: checked 0, loaded 0, skipped 0\nCoverage incidents: checked 1, loaded 1, skipped 0\n\nTokens used (match estimate): 191"
+          }
+        ]
+      },
+      {
+        "tool_use_id": "toolu_01UaxV3JrJA9jBGCx1AykykM",
+        "type": "tool_result",
+        "content": [
+          {
+            "type": "text",
+            "text": "Incident: INC_TEST_20261021_065123_bb5b37001\nDate: 2026-10-21T06:51:23.755Z\nSymptom: Synthetic host smoke duplicate checkout receipt\n\nRoot cause: Synthetic retry regenerated operation identity\nCategory: test\nDiagnosis confidence: historical metadata, not independently calibrated\nVerification: unverified (historical record)\n\nFix: Synthetic fixture only: preserve operation identity\nTags: \nFiles changed: \nQuality: 25%"
+          }
+        ]
+      }
+    ]
+  },
+  "codex": {
+    "boundary": "actual CLI host; automatic discovery; desktop UI unexercised",
+    "event_sha256": "98a7af02f6703abbf6b7eecc631515a5eb0c385f229e5b48b72e90acafbc0cd4",
+    "meta": {
+      "command": [
+        "codex",
+        "exec",
+        "--ephemeral",
+        "--skip-git-repo-check",
+        "--json",
+        "-c",
+        "model_reasoning_effort=\"medium\"",
+        "-C",
+        "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
+        "-"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 40.75,
+      "boundary": "actual isolated CLI plugin host; desktop UI not exercised"
+    },
+    "calls": [
+      {
+        "id": "item_2",
+        "type": "mcp_tool_call",
+        "server": "code-audit-debugger",
+        "tool": "status",
+        "arguments": {
+          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Server working directory: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-home/plugins/cache/code-audit-local/code-audit/0.3.0\nMemory path: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project/.claude/memory\nNo memory index available; existing incident files may still be searchable."
+            }
+          ],
+          "structured_content": null
+        },
+        "error": null,
+        "status": "completed"
+      },
+      {
+        "id": "item_5",
+        "type": "mcp_tool_call",
+        "server": "code-audit-debugger",
+        "tool": "store",
+        "arguments": {
+          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
+          "symptom": "Synthetic host smoke duplicate checkout receipt",
+          "root_cause": "Synthetic retry regenerated operation identity",
+          "fix": "Synthetic fixture only: preserve operation identity",
+          "category": "test"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Incident stored: INC_TEST_20261021_065129_727263001\nFile: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project/.claude/memory/incidents/INC_TEST_20261021_065129_727263001.json"
+            }
+          ],
+          "structured_content": null
+        },
+        "error": null,
+        "status": "completed"
+      },
+      {
+        "id": "item_6",
+        "type": "mcp_tool_call",
+        "server": "code-audit-debugger",
+        "tool": "list",
+        "arguments": {
+          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Recent incidents: showing 1 of 1 indexed requested (1 total indexed)\n- INC_TEST_20261021_065129_727263001 [2026-10-21] test: Synthetic host smoke duplicate checkout receipt\nCoverage indexed incidents: checked 1, loaded 1, skipped 0"
+            }
+          ],
+          "structured_content": null
+        },
+        "error": null,
+        "status": "completed"
+      },
+      {
+        "id": "item_7",
+        "type": "mcp_tool_call",
+        "server": "code-audit-debugger",
+        "tool": "search",
+        "arguments": {
+          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
+          "symptom": "Synthetic host smoke duplicate checkout receipt"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Verdict: LIKELY_MATCH\n1 similar incident found (incident retrieval tier)\nRetrieval tier: incident (not calibrated repair confidence)\nAction: Review these similar incidents for guidance\n\nIncidents (1):\n- INC_TEST_20261021_065129_727263001: Synthetic host smoke duplicate checkout receipt [verification: unverified]\n  Root cause: Synthetic retry regenerated operation identity (test)\nCoverage patterns: checked 0, loaded 0, skipped 0\nCoverage incidents: checked 1, loaded 1, skipped 0\n\nTokens used (match estimate): 191"
+            }
+          ],
+          "structured_content": null
+        },
+        "error": null,
+        "status": "completed"
+      },
+      {
+        "id": "item_8",
+        "type": "mcp_tool_call",
+        "server": "code-audit-debugger",
+        "tool": "detail",
+        "arguments": {
+          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
+          "id": "INC_TEST_20261021_065129_727263001"
+        },
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "Incident: INC_TEST_20261021_065129_727263001\nDate: 2026-10-21T06:51:29.936Z\nSymptom: Synthetic host smoke duplicate checkout receipt\n\nRoot cause: Synthetic retry regenerated operation identity\nCategory: test\nDiagnosis confidence: historical metadata, not independently calibrated\nVerification: unverified (historical record)\n\nFix: Synthetic fixture only: preserve operation identity\nTags: \nFiles changed: \nQuality: 25%"
+            }
+          ],
+          "structured_content": null
+        },
+        "error": null,
+        "status": "completed"
+      }
+    ],
+    "tool_results": []
+  }
+}

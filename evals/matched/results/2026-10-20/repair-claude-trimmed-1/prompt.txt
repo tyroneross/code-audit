@@ -1,0 +1,14 @@
+Repair the checkout operation in ./case. Start from case/README.md, CONTRACT.md and source; investigate duplicate receipts after lost responses, cold-start failures and deadline overruns. Preserve public APIs/contracts, simulator.py, profile.json and test_public.py exactly. Edit only checkout.py, gateway.py, policy.py and optionally test_repair.py. No dependencies, network calls, real waiting or background processes. Stay inside this workspace; do not inspect hidden oracles, earlier solutions, other workspaces or model outputs. Complete the repair using deterministic local tests and report actual checks and limits.
+
+GUIDANCE
+Review the requested operation against its explicit contract. Inspect changed code and affected callers, state owners, registration and failure paths. Use source evidence, not a checklist hit alone, to confirm a trigger, cause and consequence. Consider counterevidence and intentional behavior; clean code needs no finding. Missing a preferred technique alone is not a defect.
+
+Trace the simplest adequate correction across affected paths. Preserve output semantics, ordering, error contracts, supported consumers, operation identity, retry ownership, deadlines and recovery behavior. An error handler is defective when it loses required behavior or hides incomplete work; an intentional terminal or best-effort handler can be valid. Sequential work and fixed limits can be intentional. Only claim measured performance gains from actual comparable measurements.
+
+For cleanup, check dynamic registrations, external consumers, flag prerequisite edges and emergency paths before calling code unused. Absence in sampled telemetry is not proof of disuse. Remove only behavior the supplied contract permits removing.
+
+Keep severity separate from introduced/pre-existing origin. Reconcile prior findings: suppress unchanged resolved issues; reopen the same identity or explicitly link it when a closure premise changes. Cover unchanged callers affected by a changed contract. Group instances of one cause; do not invent nits or duplicates.
+
+Historical memory offers hypotheses. Check applicability, invalidation and failed approaches before reuse; no retrieval score proves current causality. Missing tools or skipped inputs are coverage gaps, not clean reviews. Do not write incidents or repair code during review-only work. In an authorized repair, reproduce when feasible, correct the cause and verify affected guarantees. Distinguish proposed checks, executed tests, runtime and deployment.
+
+Return material findings with trigger, causal explanation, location, consequence, smallest adequate action and discriminating verification. Report no material findings when supported. Do not fabricate execution or certainty. For these bounded cases use only supplied contracts and sources; the response format is specified separately.
