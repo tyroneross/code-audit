@@ -1,0 +1,121 @@
+{
+  "judgments": [
+    {
+      "case_id": "R01",
+      "finding_id": "F1",
+      "oracle_id": "stale-poll",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Unguarded poll apply overwrites newer revisions. A shared acceptance function guarding all paths matches the oracle."
+    },
+    {
+      "case_id": "R04",
+      "finding_id": "F1",
+      "oracle_id": "timeout-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Milliseconds are passed positionally into timeout_seconds. Passing timeout_ms/1000 preserves the public API."
+    },
+    {
+      "case_id": "R06",
+      "finding_id": "F-ready",
+      "oracle_id": "reopen-ready",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The unawaited coroutine means initialization does not run before ready is published. This is a legitimate reopening of F-ready given the changed premise."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F1",
+      "oracle_id": "operation-identity",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "A fresh UUID per outer attempt and ignoring operation_id break deduplication. Using operation_id is correct."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F2",
+      "oracle_id": "total-deadline",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Each send gets the original budget with no elapsed subtraction. Remaining-budget passing plus an exhaustion stop is correct."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F3",
+      "oracle_id": "retry-owner",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Gateway's inner 3 tries multiply outer attempts beyond max_attempts. A single loop with a shared counter is correct."
+    },
+    {
+      "case_id": "R08",
+      "finding_id": "F1",
+      "oracle_id": "unwired-handler",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "build registers no handlers, so audit is invoked zero times. The registration fix is correct."
+    },
+    {
+      "case_id": "R09",
+      "finding_id": "F1",
+      "oracle_id": "missing-owner-check",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "There is no ownership check, the defect is unchanged from before, and it is correctly marked pre_existing."
+    },
+    {
+      "case_id": "C01",
+      "finding_id": "F1",
+      "oracle_id": "unused-legacy",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "legacy has no consumers or configuration entry, so removal is safe while active is retained. The verification is concrete."
+    },
+    {
+      "case_id": "C02",
+      "finding_id": "F1",
+      "oracle_id": "unused-retired",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "retired is unused. The finding explicitly retains parent as a transitive dependency and rejects the sampled-profile inference."
+    },
+    {
+      "case_id": "C03",
+      "finding_id": "F1",
+      "oracle_id": "unused-status",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "retired_status is removable, and the emergency_stop branch is preserved per the contract."
+    },
+    {
+      "case_id": "M01",
+      "finding_id": "F1",
+      "oracle_id": "recency-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "An epoch cutoff is compared with an elapsed age. The inclusive interval fix and boundary tests match the contract."
+    },
+    {
+      "case_id": "M03",
+      "finding_id": "F1",
+      "oracle_id": "silent-skip",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "skipped is never incremented. Counting each caught failure while keeping valid records matches the contract."
+    }
+  ]
+}

@@ -1,0 +1,121 @@
+{
+  "judgments": [
+    {
+      "case_id": "R01",
+      "finding_id": "F1",
+      "oracle_id": "stale-poll",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "on_poll calls apply unconditionally, so an older polled revision overwrites newer state. Moving the guard into shared apply covers every source; live's pre-check stays redundant but correct."
+    },
+    {
+      "case_id": "R04",
+      "finding_id": "F1",
+      "oracle_id": "timeout-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "client.request still forwards timeout_ms to the timeout_seconds parameter. Converting at the boundary keeps the public argument, and 1000ms\u21921s is the correct check."
+    },
+    {
+      "case_id": "R06",
+      "finding_id": "F-ready",
+      "oracle_id": "reopen-ready",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "launch calls async start() without await, so the coroutine never runs before ready is published. The synchronous premise behind the closure no longer holds, so this is a legitimate reopening, not a duplicate."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F1",
+      "oracle_id": "operation-identity",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "new_uuid() per outer attempt defeats provider dedup across retries and invocations, and operation_id is ignored. Origin 'unknown' is defensible without a before snapshot."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F2",
+      "oracle_id": "retry-owner",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The outer loop runs max_attempts times and gateway's inner loop runs 3, giving up to 3\u00d7max_attempts sends. A single retry owner fixes the bound, and the max_attempts=0 check is consistent."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F3",
+      "oracle_id": "total-deadline",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The full duration budget is passed as each send's timeout and elapsed time is never subtracted. A monotonic expiry plus remaining-time propagation is the correct fix."
+    },
+    {
+      "case_id": "R08",
+      "finding_id": "F1",
+      "oracle_id": "unwired-handler",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "bootstrap.build constructs App(handlers=[]), so audit.handle is never invoked. Registering it once satisfies the exactly-once requirement."
+    },
+    {
+      "case_id": "R09",
+      "finding_id": "F1",
+      "oracle_id": "missing-owner-check",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "read_doc returns doc.body with no ownership check. The same code exists in the before snapshot, so 'pre_existing' is correctly classified."
+    },
+    {
+      "case_id": "C01",
+      "finding_id": "F1",
+      "oracle_id": "unused-legacy",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "plugins.json lists only 'active' and the inventory is complete with no external consumers. Removing legacy while keeping active is safe."
+    },
+    {
+      "case_id": "C02",
+      "finding_id": "F1",
+      "oracle_id": "unused-retired",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "retired is unreferenced by the application and by REQUIRES. The finding correctly keeps parent despite the sampled profile, and its verification over parent/child combinations is thorough rather than harmful."
+    },
+    {
+      "case_id": "C03",
+      "finding_id": "F1",
+      "oracle_id": "unused-status",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "retired_status has no consumers and no contract. The finding explicitly preserves the emergency_stop branch that the runbook requires, despite zero telemetry activations."
+    },
+    {
+      "case_id": "M01",
+      "finding_id": "F1",
+      "oracle_id": "recency-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "age<cutoff reduces to timestamp > ~90 days after the epoch, so old modern timestamps and future timestamps get the boost. The fix and the four boundary checks are correct."
+    },
+    {
+      "case_id": "M03",
+      "finding_id": "F1",
+      "oracle_id": "silent-skip",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The except branch passes without incrementing skipped. Counting each failure while retaining valid records matches the contract."
+    }
+  ]
+}

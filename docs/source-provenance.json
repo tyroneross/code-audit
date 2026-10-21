@@ -451,21 +451,21 @@
       "path": "runtime/debugger/dist/src/mcp/tools.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "f438011e3bbabd83e236bb908dfdc3593dcc7aedb72314f527de97939527ffbb",
-      "current_sha256": "97d5c756eb710785eb6e39a20c25f1a86f7140f43bc3eb149de179ae1abc833d",
+      "current_sha256": "680d9b36099fb8ea4599378a5236f1381993c68f5310e015133aa735294fcb23",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/mcp/tools.js",
       "source": "coding-debugger",
       "source_sha256": "73411cbde215cec2dad12d6fc5aec8f2ad159e7efdab48ed25d014c798dc0c6a",
-      "current_sha256": "c0d31380d7b6781d7ea3cc86ba7c3104f1651b4716b8b8d6d9ce28f2de7ecec0",
+      "current_sha256": "654fa613746fcfca0a7dc2858cd975c0a717f80fadf0e31a0508adb1276ca9f5",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/mcp/tools.js.map",
       "source": "coding-debugger",
       "source_sha256": "fb37bf662e7a4f27fd1ca105a7397a7e5677eb88307a76f4e8c50c50354a47be",
-      "current_sha256": "dded1c5ed982270982cfb93869e99d219b2dca7e6137130889cb579ff0702263",
+      "current_sha256": "95e53bb33811979c1f098259db0b684be3377a4fa97069cbaf922faa59bd5810",
       "modified_from_import": true
     },
     {
@@ -591,21 +591,21 @@
       "path": "runtime/debugger/dist/src/retrieval.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "aed670aee69a7f7783f573550eeb1bcc801138779ea5c8feb0f1e180ac79a2f4",
-      "current_sha256": "aed670aee69a7f7783f573550eeb1bcc801138779ea5c8feb0f1e180ac79a2f4",
-      "modified_from_import": false
+      "current_sha256": "3c5ffe7f068be3d30a8d08754b95eedbad50f75ce8df988de1a27794703a621c",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/retrieval.js",
       "source": "coding-debugger",
       "source_sha256": "aa585361bcd54c6639a9a4135584724ed64f3d9f6ae5612b4ec86b2a341bab07",
-      "current_sha256": "93fcc98c190ba65831206563b53cc6712260650ae2ff5b844eca444db60116da",
+      "current_sha256": "5764ccad52ab5afbe25be907692a0ee79547a29735c8d847e8f876814ec100ad",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/retrieval.js.map",
       "source": "coding-debugger",
       "source_sha256": "9208378389d6fcd25bd05752d6a452f81bd925b106762b23fb550b1ef06f4fe5",
-      "current_sha256": "c840bcf3247187782aa5be8af7fbb0eb78ad43a19978c9a68f92c30ac7805a46",
+      "current_sha256": "ca0efab1b4a9fed6116b7b98338e458d601775c10955bf39ea58cc99dabcaf60",
       "modified_from_import": true
     },
     {
@@ -780,29 +780,29 @@
       "path": "runtime/debugger/dist/src/storage.d.ts",
       "source": "coding-debugger",
       "source_sha256": "a3abcb137bc90719cb0366dc41237b888f5907964052d810269f68073cb4d024",
-      "current_sha256": "a3abcb137bc90719cb0366dc41237b888f5907964052d810269f68073cb4d024",
-      "modified_from_import": false
+      "current_sha256": "7d3ee9864e418f392c8ece23908abee7c4ae215853514c25d4661e691f847455",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "ee54c36bd7d6e6a7cb57254c6bb3602b66d48a7ba9297d0ec750abb195f28e0c",
-      "current_sha256": "ee54c36bd7d6e6a7cb57254c6bb3602b66d48a7ba9297d0ec750abb195f28e0c",
-      "modified_from_import": false
+      "current_sha256": "66a72730a1efc3fed6f4a7a31cabb961479bbe3ee141ac2069ff5152b466c489",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js",
       "source": "coding-debugger",
       "source_sha256": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361",
-      "current_sha256": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361",
-      "modified_from_import": false
+      "current_sha256": "2e8f73d6147e3f48b82f0ac3f69a85fa92be9b829f1c45780e3e3d2c2020d406",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js.map",
       "source": "coding-debugger",
       "source_sha256": "81f7bba12869371e93f1d59a4e7851ce9e6cb2a169e0170e52487ece2a0448ca",
-      "current_sha256": "81f7bba12869371e93f1d59a4e7851ce9e6cb2a169e0170e52487ece2a0448ca",
-      "modified_from_import": false
+      "current_sha256": "ea2c6ab8796c3dbf30718420b9cd9ffd7d169a8a47b8645f4ab14241ac6031c1",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/string-similarity.d.ts",
@@ -1088,14 +1088,14 @@
       "path": "runtime/debugger/dist/src/types.d.ts",
       "source": "coding-debugger",
       "source_sha256": "6be8081caa993bef29b35a09bc82f9b56fcfd3dbd58ffef5a780ad8e9ad88963",
-      "current_sha256": "20df97323ffaaba6d37597ec80222e2dd9625e88d660c316a5a634f3af66c61e",
+      "current_sha256": "fcd81d251f74869de5ddc98d8d2113aaf8790b8620362da4397b66dda2889dda",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/types.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "7f2a4ca73ced915f60e60df23bdb40fb910cb30e98e3845fb13bbf80112181b3",
-      "current_sha256": "7048e7920328e1c4e853382036d141384ded8b37d71192d371ad2e48f9027c02",
+      "current_sha256": "6ea7664b6279c823b0fecc80af7662fbb047fa60e6a6bfc45faf730f4e3068fc",
       "modified_from_import": true
     },
     {
@@ -1109,8 +1109,8 @@
       "path": "runtime/debugger/dist/src/types.js.map",
       "source": "coding-debugger",
       "source_sha256": "5c6469250c78a757d5ffb8d3fad22e98733ee5b9d3740e07f7153ff2d73983d3",
-      "current_sha256": "5c6469250c78a757d5ffb8d3fad22e98733ee5b9d3740e07f7153ff2d73983d3",
-      "modified_from_import": false
+      "current_sha256": "c624bfdf2313600bbe4aff6c99c8064c756e54f67a153871c46d306d82973645",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/package-lock.json",
@@ -1207,7 +1207,7 @@
       "path": "runtime/debugger/src/mcp/tools.ts",
       "source": "coding-debugger",
       "source_sha256": "cc37487da687dda595da713239d18c6580e95e112fe035b79014603d3429e4f3",
-      "current_sha256": "cddca2d201d8c1d996133917ff44808d07067e8da59b17501a30d938f096e94d",
+      "current_sha256": "5a68590d413a1506017cc67366893a377c177e6a5bc087306aa50aab603e752d",
       "modified_from_import": true
     },
     {
@@ -1242,7 +1242,7 @@
       "path": "runtime/debugger/src/retrieval.ts",
       "source": "coding-debugger",
       "source_sha256": "d731035669bdceb372e2f28c74e6ade9490ac82b130ce7bf84d8b2883e29bf2d",
-      "current_sha256": "58f1c2c93bd6ac4841f80141d0afa72e6024ff98047cbb267e5b09e8cd9135f8",
+      "current_sha256": "bd684b6acd835a8794d3057cdc5a4a6c1aa45babfbb665dd60105ec416ba0feb",
       "modified_from_import": true
     },
     {
@@ -1291,8 +1291,8 @@
       "path": "runtime/debugger/src/storage.ts",
       "source": "coding-debugger",
       "source_sha256": "a384fde223a93df9ae02596cd74f50e7e041f191b6c201c089194224ea59d3dc",
-      "current_sha256": "a384fde223a93df9ae02596cd74f50e7e041f191b6c201c089194224ea59d3dc",
-      "modified_from_import": false
+      "current_sha256": "e45f7a65fe5880261bd0bd3e0108c9cf5e69a27d5a8c96f9c46d529d9ae867c2",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/src/string-similarity.ts",
@@ -1368,7 +1368,7 @@
       "path": "runtime/debugger/src/types.ts",
       "source": "coding-debugger",
       "source_sha256": "5da9b8bdd87fec032b4b4030106c386596bb14d9d0ff6566101fdd2a28b547a5",
-      "current_sha256": "84cabdef49750eac9b1aa299631aee3e3bb383ab09c5ebd49c76a0270f1ad47a",
+      "current_sha256": "98f287c9522d4ffb2220e1bd44df2cebaf76adbfdccdcad7e950bd0d6dc8390e",
       "modified_from_import": true
     },
     {
@@ -1739,7 +1739,7 @@
       "path": "skills/code-principles/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "1870d79c6f3c17ca343f60708a899939210ba1f0c89349004375c68f2b14915d",
+      "current_sha256": "ee1a7202970de33adc0a8f418ecb3f4c178c715ca313e94310aaef58553fb84b",
       "modified_from_import": true
     },
     {
@@ -1837,7 +1837,7 @@
       "path": "skills/debugging-memory/SKILL.md",
       "source": "coding-debugger",
       "source_sha256": "2139ecd13e7e159b0db29df6afe82b852ae74ce312e05c0bd922f8cfefa26205",
-      "current_sha256": "a7c6a4d9004c364ca5ed9fb2cfea9c2bbfafed47ae8178408f589649201124f0",
+      "current_sha256": "bc3de1c2f6a6a8c25530530901317dd3bbff3d1260b66777a886a26ab651f3a7",
       "modified_from_import": true
     },
     {
@@ -1881,6 +1881,15 @@
       "source_sha256": "ad4bd1652ac3ebfc2c3df0b64895da316e49227f58c7b5c84d21a7dc874d0319",
       "current_sha256": "ad4bd1652ac3ebfc2c3df0b64895da316e49227f58c7b5c84d21a7dc874d0319",
       "modified_from_import": false
+    },
+    {
+      "path": "skills/code-principles/references/focused-checklist.md",
+      "source": "code-principles-audit",
+      "source_path": "skills/code-principles/SKILL.md",
+      "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
+      "current_sha256": "199c25cbe67d952f04cee0a9a28e2b86c6c84916bfce31c3f411624c802246c0",
+      "modified_from_import": true,
+      "adaptation": "Checklist extracted from the imported focused skill; contextual failure-handler wording and relative links updated."
     }
   ],
   "hash_semantics": "source_sha256 records imported bytes; current_sha256 records current retained bytes. Removed imports are historical provenance, not packaged resources. Incidental session state is excluded.",

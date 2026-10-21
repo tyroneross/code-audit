@@ -75,24 +75,28 @@ async function checkMemory(symptom, config = {}) {
         const { memoryConfig, ...retrievalConfig } = config;
         const fullConfig = { ...DEFAULT_CONFIG, ...retrievalConfig };
         console.log(`🧠 Checking memory for: "${symptom.substring(0, 50)}..."`);
-        // Step 1: Try to match patterns first (most efficient)
-        const patterns = await matchPatterns(symptom, fullConfig, memoryConfig);
+        const coverage = { patterns: (0, storage_1.emptyCorpusCoverage)() };
+        // Pattern-first is intentional; absence of incident coverage means it was not inspected.
+        const patterns = await matchPatterns(symptom, fullConfig, memoryConfig, coverage.patterns);
         if (patterns.length > 0) {
             console.log(`✅ Found ${patterns.length} matching patterns`);
             return {
                 incidents: [],
                 patterns,
+                coverage,
                 confidence: 0.9, // Legacy pattern retrieval tier, not measured similarity/calibration
                 retrieval_method: 'pattern',
                 tokens_used: estimateTokens(patterns)
             };
         }
         // Step 2: No patterns, search incidents
-        const incidents = await searchIncidents(symptom, fullConfig, memoryConfig);
+        coverage.incidents = (0, storage_1.emptyCorpusCoverage)();
+        const incidents = await searchIncidents(symptom, fullConfig, memoryConfig, coverage.incidents);
         console.log(`✅ Found ${incidents.length} similar incidents`);
         return {
             incidents,
             patterns: [],
+            coverage,
             confidence: incidents.length > 0 ? 0.7 : 0.0,
             retrieval_method: 'incident',
             tokens_used: estimateTokens(incidents)
@@ -102,8 +106,8 @@ async function checkMemory(symptom, config = {}) {
 /**
  * Match patterns based on symptom
  */
-async function matchPatterns(symptom, config, memoryConfig) {
-    const allPatterns = await (0, storage_1.loadAllPatterns)(memoryConfig);
+async function matchPatterns(symptom, config, memoryConfig, coverage) {
+    const allPatterns = await (0, storage_1.loadAllPatterns)(memoryConfig, coverage);
     const symptomLower = symptom.toLowerCase();
     const symptomWords = extractKeywords(symptomLower);
     const scored = allPatterns.map(pattern => {
@@ -127,18 +131,18 @@ async function matchPatterns(symptom, config, memoryConfig) {
 /**
  * Search for similar incidents
  */
-async function searchIncidents(symptom, config, memoryConfig) {
-    const allIncidents = await (0, storage_1.loadAllIncidents)(memoryConfig);
+async function searchIncidents(symptom, config, memoryConfig, coverage) {
+    const allIncidents = await (0, storage_1.loadAllIncidents)(memoryConfig, coverage);
     const symptomLower = symptom.toLowerCase();
     const symptomWords = extractKeywords(symptomLower);
     const now = Date.now();
-    const temporalCutoff = now - (config.temporal_preference || 90) * 24 * 60 * 60 * 1000;
+    const temporalCutoff = now - (config.temporal_preference ?? 90) * 24 * 60 * 60 * 1000;
     const scored = allIncidents.map(incident => {
         // Skip unvalidated if configured
         if (!config.include_unvalidated &&
             incident.quality_gates &&
             !incident.quality_gates.guardian_validated) {
-            return { incident, score: 0 };
+            return { incident, score: -Infinity };
         }
         // Skip incidents without valid symptom
         if (!incident.symptom || typeof incident.symptom !== 'string') {
@@ -151,8 +155,7 @@ async function searchIncidents(symptom, config, memoryConfig) {
         const tagMatches = symptomWords.filter(word => incidentTagWords.some(tagWord => tagWord.includes(word) || word.includes(tagWord))).length;
         const tagSimilarity = tagMatches / Math.max(symptomWords.length, 1);
         // Temporal boost (prefer recent)
-        const age = now - incident.timestamp;
-        const temporalBoost = age < temporalCutoff ? 1.2 : 1.0;
+        const temporalBoost = incident.timestamp >= temporalCutoff && incident.timestamp <= now ? 1.2 : 1.0;
         // Weight: 60% symptom keywords, 40% tags (tags are more semantic)
         const score = (symptomSimilarity * 0.6 + tagSimilarity * 0.4) * temporalBoost;
         return { incident, score };
@@ -550,16 +553,18 @@ async function checkMemoryWithVerdict(symptom, config = {}) {
         const fullConfig = { ...DEFAULT_CONFIG, ...retrievalConfig };
         const result = await checkMemory(symptom, { memoryConfig, ...fullConfig });
         const verdict = classifyVerdict(result);
+        const partial = Object.values(result.coverage || {}).some(value => typeof value === 'object' && value?.skipped > 0);
         const compactIncidents = result.incidents.map(storage_2.toCompactIncident);
         const compactPatterns = result.patterns.map(storage_2.toCompactPattern);
         return {
             verdict,
-            summary: verdictSummary(verdict, result),
+            coverage: result.coverage,
+            summary: (partial ? 'Partial corpus coverage; ' : '') + verdictSummary(verdict, result),
             confidence: result.confidence,
             incidents: compactIncidents,
             patterns: compactPatterns,
             tokens_used: result.tokens_used,
-            action: verdictAction(verdict),
+            action: partial && verdict === 'NO_MATCH' ? 'Absence of matches is inconclusive; inspect skipped records or investigate fresh.' : verdictAction(verdict),
         };
     });
 }
@@ -652,37 +657,52 @@ async function checkMemoryScaled(symptom, config = {}) {
         // Too few incidents to benefit from index — use standard path
         return checkMemory(symptom, { memoryConfig, ...fullConfig });
     }
+    const coverage = { patterns: (0, storage_1.emptyCorpusCoverage)(), incidents: (0, storage_1.emptyCorpusCoverage)(), scope: 'keyword candidates' };
     const queryWords = extractKeywords(symptom.toLowerCase());
     if (queryWords.length === 0) {
-        return { incidents: [], patterns: [], confidence: 0, retrieval_method: 'incident', tokens_used: 0 };
+        return { incidents: [], patterns: [], confidence: 0, retrieval_method: 'incident', tokens_used: 0, coverage };
     }
     // Find candidates via keyword index (O(1) per keyword)
     const candidateIds = (0, storage_2.findCandidatesByKeyword)(queryWords, kwIndex, 20);
     if (candidateIds.length === 0) {
         // No keyword matches — check patterns via standard path
-        const patterns = await matchPatterns(symptom, fullConfig, memoryConfig);
+        const patterns = await matchPatterns(symptom, fullConfig, memoryConfig, coverage.patterns);
         if (patterns.length > 0) {
             return {
                 incidents: [],
                 patterns,
                 confidence: 0.9,
+                coverage,
                 retrieval_method: 'pattern',
                 tokens_used: estimateTokens(patterns),
             };
         }
-        return { incidents: [], patterns: [], confidence: 0, retrieval_method: 'incident', tokens_used: 0 };
+        return { incidents: [], patterns: [], confidence: 0, retrieval_method: 'incident', tokens_used: 0, coverage };
     }
     // Load only candidate incidents (max 20 file reads instead of all)
     const candidateIncidents = [];
     for (const id of candidateIds) {
-        const inc = await (0, storage_2.loadIncident)(id, memoryConfig);
-        if (inc)
-            candidateIncidents.push(inc);
+        coverage.incidents.checked++;
+        try {
+            const inc = await (0, storage_2.loadIncident)(id, memoryConfig);
+            if (inc && typeof inc.symptom === 'string' && Number.isFinite(inc.timestamp) &&
+                (inc.tags === undefined || (Array.isArray(inc.tags) && inc.tags.every(tag => typeof tag === 'string')))) {
+                candidateIncidents.push(inc);
+                coverage.incidents.loaded++;
+            }
+            else
+                (0, storage_1.recordCorpusSkip)(coverage.incidents, id, 'invalid_record');
+        }
+        catch (error) {
+            (0, storage_1.recordCorpusSkip)(coverage.incidents, id, error instanceof SyntaxError ? 'invalid_json' : 'read_failed');
+        }
     }
     // Score candidates
     const now = Date.now();
-    const temporalCutoff = now - (fullConfig.temporal_preference || 90) * 24 * 60 * 60 * 1000;
+    const temporalCutoff = now - (fullConfig.temporal_preference ?? 90) * 24 * 60 * 60 * 1000;
     const scored = candidateIncidents.map(incident => {
+        if (!fullConfig.include_unvalidated && incident.quality_gates && !incident.quality_gates.guardian_validated)
+            return { incident, score: -Infinity };
         if (!incident.symptom || typeof incident.symptom !== 'string') {
             return { incident, score: 0 };
         }
@@ -690,8 +710,7 @@ async function checkMemoryScaled(symptom, config = {}) {
         const incidentTagWords = (incident.tags ?? []).flatMap(tag => tag.toLowerCase().split(/\s+/));
         const tagMatches = queryWords.filter(word => incidentTagWords.some(tagWord => tagWord.includes(word) || word.includes(tagWord))).length;
         const tagSimilarity = tagMatches / Math.max(queryWords.length, 1);
-        const age = now - incident.timestamp;
-        const temporalBoost = age < temporalCutoff ? 1.2 : 1.0;
+        const temporalBoost = incident.timestamp >= temporalCutoff && incident.timestamp <= now ? 1.2 : 1.0;
         const score = (symptomSimilarity * 0.6 + tagSimilarity * 0.4) * temporalBoost;
         return { incident, score };
     });
@@ -701,12 +720,13 @@ async function checkMemoryScaled(symptom, config = {}) {
         .slice(0, fullConfig.max_results)
         .map(item => ({ ...item.incident, similarity_score: item.score }));
     // Also check patterns
-    const patterns = await matchPatterns(symptom, fullConfig, memoryConfig);
+    const patterns = await matchPatterns(symptom, fullConfig, memoryConfig, coverage.patterns);
     if (patterns.length > 0 && incidents.length === 0) {
         return {
             incidents: [],
             patterns,
             confidence: 0.9,
+            coverage,
             retrieval_method: 'pattern',
             tokens_used: estimateTokens(patterns),
         };
@@ -714,6 +734,7 @@ async function checkMemoryScaled(symptom, config = {}) {
     return {
         incidents,
         patterns,
+        coverage,
         confidence: incidents.length > 0 ? 0.7 : 0.0,
         retrieval_method: incidents.length > 0 && patterns.length > 0 ? 'hybrid' : 'incident',
         tokens_used: estimateTokens([...incidents, ...patterns]),

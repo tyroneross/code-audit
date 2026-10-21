@@ -96,6 +96,113 @@ class Boundaries(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             rows=self.run_server(tmp,[self.request(1,'detail',{'id':'INC_/../../other'}),{'jsonrpc':'2.0','method':'tools/list'},{'jsonrpc':'2.0','id':{},'method':'ping'},{'jsonrpc':'2.0','id':2,'method':'ping'}]);byid={str(m['id']):m for m in rows};self.assertTrue(byid['1']['result']['isError']);self.assertEqual(byid['None']['error']['code'],-32600);self.assertEqual(byid['2']['result'],{});self.assertEqual(len(rows),3);self.assertEqual(list(Path(tmp).iterdir()),[])
 
+    def test_search_surfaces_partial_corpus_and_historical_verification(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project=Path(tmp);folder=project/'.claude/memory/incidents';folder.mkdir(parents=True)
+            (folder/'INC_BAD.json').write_text('{bad')
+            rows=self.run_server(tmp,[self.request(1,'search',{'symptom':'alpha beta gamma'})])
+            text=rows[0]['result']['content'][0]['text']
+            self.assertIn('NO_MATCH',text);self.assertIn('PARTIAL COVERAGE',text);self.assertIn('invalid_json',text)
+            incident={'incident_id':'INC_VALID','timestamp':1780000000000,'symptom':'alpha beta gamma','tags':[], 'verification':{'status':'verified'}}
+            (folder/'INC_VALID.json').write_text(json.dumps(incident))
+            rows=self.run_server(tmp,[self.request(1,'search',{'symptom':'alpha beta gamma'}),self.request(2,'detail',{'id':'INC_VALID'})])
+            byid={row['id']:row['result']['content'][0]['text'] for row in rows}
+            self.assertIn('verification: verified (historical record)',byid[1]);self.assertIn('PARTIAL COVERAGE',byid[1])
+            # Detail requires root-cause fields in legacy incident records.
+            incident['files_changed']=[]
+            incident['root_cause']={'description':'Fixture','category':'test','confidence':0.8};incident['fix']={'approach':'Fixture','changes':[]}
+            (folder/'INC_VALID.json').write_text(json.dumps(incident))
+            rows=self.run_server(tmp,[self.request(1,'detail',{'id':'INC_VALID'})]);text=rows[0]['result']['content'][0]['text']
+            self.assertIn('not independently calibrated',text);self.assertNotIn('Confidence: 80%',text)
+
+    def test_installed_host_requires_project_scope_and_keeps_calls_isolated(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base=Path(tmp);installed=base/'installed';first=base/'first';second=base/'second'
+            for folder in [installed,first,second]:folder.mkdir()
+            rows=self.run_server(installed,[self.request(1,'status'),self.request(2,'store',{'symptom':'scope test','root_cause':'fixture','fix':'fixture'})],PLUGIN_ROOT=str(installed))
+            self.assertTrue(all(row['result'].get('isError') for row in rows));self.assertEqual(list(installed.iterdir()),[])
+            payload={'symptom':'alpha first project unique','root_cause':'Synthetic cause','fix':'Synthetic fixture only'}
+            rows=self.run_server(installed,[self.request(1,'store',{**payload,'project_root':str(first)}),self.request(2,'store',{**payload,'symptom':'beta second project unique','project_root':str(second)})],PLUGIN_ROOT=str(installed))
+            self.assertTrue(all(not row['result'].get('isError') for row in rows))
+            calls=[self.request(1,'status',{'project_root':str(first)}),self.request(2,'list',{'project_root':str(first)}),self.request(3,'list',{'project_root':str(second)}),self.request(4,'status',{'project_root':str(Path.home())}),self.request(5,'status',{'project_root':'relative'})]
+            rows=self.run_server(installed,calls,PLUGIN_ROOT=str(installed));byid={row['id']:row['result'] for row in rows}
+            self.assertIn(str(first/'.claude/memory'),byid[1]['content'][0]['text'])
+            self.assertIn('alpha first',byid[2]['content'][0]['text']);self.assertNotIn('beta second',byid[2]['content'][0]['text'])
+            self.assertIn('beta second',byid[3]['content'][0]['text']);self.assertNotIn('alpha first',byid[3]['content'][0]['text'])
+            self.assertTrue(byid[4]['isError']);self.assertTrue(byid[5]['isError']);self.assertEqual(list(installed.iterdir()),[])
+
+    def test_patterns_list_and_summary_preserve_partial_coverage(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project=Path(tmp);patterns=project/'.claude/memory/patterns';patterns.mkdir(parents=True)
+            (patterns/'PTN_BAD.json').write_text('{}')
+            calls=[self.request(1,'patterns'),self.request(2,'list')]
+            rows=self.run_server(tmp,calls);byid={row['id']:row['result']['content'][0]['text'] for row in rows};text=byid[1]
+            self.assertIn('PARTIAL COVERAGE',text);self.assertIn('invalid_record',text);self.assertNotIn('No patterns found',text)
+            self.assertIn('index unavailable',byid[2])
+            (patterns/'PTN_VALID.json').write_text(json.dumps({'pattern_id':'PTN_VALID','description':'Fixture','detection_signature':['alpha'],'tags':[],'solution_template':'Fixture','success_rate':0.8}))
+            rows=self.run_server(tmp,[self.request(1,'patterns')]);text=rows[0]['result']['content'][0]['text']
+            self.assertIn('1 of 1',text);self.assertIn('PARTIAL COVERAGE',text);self.assertIn('PTN_VALID',text)
+            incidents=project/'.claude/memory/incidents';incidents.mkdir();(incidents/'INC_BAD.json').write_text('{bad')
+            rows=self.run_server(tmp,[self.request(1,'search',{'symptom':'alpha beta'})]);text=rows[0]['result']['content'][0]['text']
+            self.assertIn('Partial corpus coverage',text);self.assertIn('inconclusive',text)
+            (incidents/'INC_VALID.json').write_text(json.dumps({'incident_id':'INC_VALID','timestamp':1780000000000,'symptom':'usable fixture'}))
+            (project/'.claude/memory/index.json').write_text(json.dumps({'recent':['INC_BAD','INC_VALID'],'by_category':{}}))
+            rows=self.run_server(tmp,[self.request(1,'list')]);text=rows[0]['result']['content'][0]['text']
+            self.assertIn('PARTIAL COVERAGE',text);self.assertIn('invalid_json',text);self.assertIn('usable fixture',text)
+
+    def test_default_scope_rejects_home_and_package_children_but_preserves_explicit_shared(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base=Path(tmp);installed=base/'installed';child=installed/'scripts';child.mkdir(parents=True);home=base/'home';home.mkdir()
+            rows=self.run_server(child,[self.request(1,'status')],PLUGIN_ROOT=str(installed))
+            self.assertTrue(rows[0]['result'].get('isError'))
+            rows=self.run_server(home,[self.request(1,'status')],HOME=str(home))
+            self.assertTrue(rows[0]['result'].get('isError'));self.assertEqual(list(home.iterdir()),[])
+            rows=self.run_server(installed,[self.request(1,'status')],HOME=str(home),PLUGIN_ROOT=str(installed),CLAUDE_MEMORY_MODE='shared')
+            self.assertFalse(rows[0]['result'].get('isError'));self.assertIn(str(home/'.claude-memory'),rows[0]['result']['content'][0]['text'])
+            self.assertEqual(list(home.iterdir()),[])
+
+    def test_list_rejects_unrepresentable_dates_and_invalid_limits(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            project=Path(tmp);folder=project/'.claude/memory/incidents';folder.mkdir(parents=True)
+            for ident,timestamp in [('INC_GOOD',1780000000000),('INC_OVERFLOW',1e20)]:
+                (folder/(ident+'.json')).write_text(json.dumps({'incident_id':ident,'timestamp':timestamp,'symptom':'fixture'}))
+            (project/'.claude/memory/index.json').write_text(json.dumps({'recent':['INC_OVERFLOW','INC_GOOD'],'by_category':{}}))
+            rows=self.run_server(tmp,[self.request(1,'list')]);text=rows[0]['result']['content'][0]['text']
+            self.assertIn('showing 1 of 2 indexed',text);self.assertIn('checked 2, loaded 1, skipped 1',text);self.assertIn('invalid_record',text)
+            calls=[self.request(i+1,tool,{'limit':limit}) for i,(tool,limit) in enumerate([('list',0),('list',-1),('list',1.5),('patterns','2'),('patterns',0)])]
+            rows=self.run_server(tmp,calls)
+            self.assertEqual(len(rows),len(calls));self.assertTrue(all(row['result'].get('isError') for row in rows))
+
+    def test_index_identity_category_and_pattern_value_validation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);memory=root/'.claude/memory';incidents=memory/'incidents';patterns=memory/'patterns';incidents.mkdir(parents=True);patterns.mkdir()
+            (incidents/'INC_WRONG.json').write_text(json.dumps({'incident_id':'INC_OTHER','timestamp':1780000000000,'symptom':'mismatched'}))
+            ids=['INC_WRONG']+[f'INC_{i}' for i in range(24)]
+            (memory/'index.json').write_text(json.dumps({'recent':ids,'by_category':{}}))
+            rows=self.run_server(tmp,[self.request(1,'list',{'category':'constructor'}),self.request(2,'list')]);byid={r['id']:r['result']['content'][0]['text'] for r in rows}
+            self.assertIn('No incidents in category',byid[1]);self.assertIn('25 total indexed',byid[2]);self.assertIn('invalid_record',byid[2]);self.assertNotIn('mismatched',byid[2])
+            base={'pattern_id':'PTN_VALID','description':'fixture','detection_signature':[],'success_rate':0.8}
+            for ident,value in [('PTN_BAD1',None),('PTN_BAD2','x'),('PTN_VALID',0.8)]:
+                row={**base,'pattern_id':ident,'success_rate':value}
+                if value is None:row.pop('success_rate')
+                (patterns/(ident+'.json')).write_text(json.dumps(row))
+            rows=self.run_server(tmp,[self.request(1,'patterns')]);text=rows[0]['result']['content'][0]['text']
+            self.assertIn('checked 3, loaded 1, skipped 2',text);self.assertIn('PTN_VALID',text);self.assertNotIn('NaN',text)
+
+    def test_bad_index_rows_outcomes_and_both_host_roots_fail_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);first=root/'plugin-a';second=root/'plugin-b';child=second/'child'
+            first.mkdir();child.mkdir(parents=True)
+            rows=self.run_server(root,[self.request(1,'status',{'project_root':str(child)})],PLUGIN_ROOT=str(first),CLAUDE_PLUGIN_ROOT=str(second));self.assertTrue(rows[0]['result'].get('isError'))
+            memory=root/'.claude/memory';inc=memory/'incidents';inc.mkdir(parents=True)
+            (inc/'INC_GOOD.json').write_text(json.dumps({'incident_id':'INC_GOOD','timestamp':1780000000000,'symptom':'good'}))
+            (inc/'INC_BAD.json').write_text('{}')
+            (inc/'INC_WRONG.json').write_text(json.dumps({'incident_id':'INC_OTHER','timestamp':1780000000000,'symptom':'wrong'}))
+            (memory/'index.json').write_text(json.dumps({'recent':[5,None,'INC_missing','../outside','INC_GOOD'],'by_category':{}}))
+            rows=self.run_server(root,[self.request(1,'list'),self.request(2,'outcome',{'incident_id':'INC_BAD','result':'worked'}),self.request(3,'outcome',{'incident_id':'INC_WRONG','result':'worked'})]);byid={r['id']:r['result'] for r in rows}
+            self.assertIn('checked 5, loaded 1, skipped 4',byid[1]['content'][0]['text']);self.assertIn('read_failed',byid[1]['content'][0]['text'])
+            self.assertTrue(byid[2].get('isError'));self.assertTrue(byid[3].get('isError'));self.assertFalse((memory/'outcomes.jsonl').exists())
+
     def test_package_hygiene_and_import_provenance(self):
         if (ROOT/'.git').exists():
             paths=subprocess.check_output(['git','-C',str(ROOT),'ls-files','-z'],text=True).split('\0')

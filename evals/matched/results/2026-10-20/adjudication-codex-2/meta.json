@@ -1,0 +1,23 @@
+{
+  "exit_code": 0,
+  "host_reported_duration_ms": 43918,
+  "modelUsage": {
+    "claude-opus-5-5": {
+      "inputTokens": 2,
+      "outputTokens": 5248,
+      "cacheReadInputTokens": 1568,
+      "cacheCreationInputTokens": 15637,
+      "webSearchRequests": 0,
+      "costUSD": 0.23037760000000002,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "thinkingTokens": 993,
+      "canonicalModel": "claude-opus-5-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+    }
+  },
+  "cost_usd": 0.23037760000000002,
+  "is_error": false,
+  "oracle_caveats_retained": true
+}

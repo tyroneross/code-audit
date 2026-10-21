@@ -1,0 +1,121 @@
+{
+  "judgments": [
+    {
+      "case_id": "R01",
+      "finding_id": "F1",
+      "oracle_id": "stale-poll",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Correct cause and a shared-boundary fix. Rejecting equal revisions exceeds the literal contract but matches live.py's existing strict comparison, so it is not harmful."
+    },
+    {
+      "case_id": "R04",
+      "finding_id": "F1",
+      "oracle_id": "timeout-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Correct unit mismatch, with conversion at the client boundary that preserves timeout_ms."
+    },
+    {
+      "case_id": "R06",
+      "finding_id": "F-ready",
+      "oracle_id": "reopen-ready",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The discarded coroutine means ready is published before initialization. The reopening is justified by the invalidated premise, and the failure-path check is a good addition."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F1",
+      "oracle_id": "operation-identity",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "A new key per attempt defeats dedup after a lost response. Reusing operation_id is correct."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F2",
+      "oracle_id": "retry-owner",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Nested retry multiplication is correctly identified, and the fix bounds total sends by max_attempts."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F3",
+      "oracle_id": "total-deadline",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Per-attempt reuse of the full budget is correctly identified. The monotonic expiry fix is correct."
+    },
+    {
+      "case_id": "R08",
+      "finding_id": "F1",
+      "oracle_id": "unwired-handler",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The handler is never registered in build. The fix and the exactly-once check are correct."
+    },
+    {
+      "case_id": "R09",
+      "finding_id": "F1",
+      "oracle_id": "missing-owner-check",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The authorization gap is identified and correctly marked pre_existing."
+    },
+    {
+      "case_id": "C01",
+      "finding_id": "F1",
+      "oracle_id": "unused-legacy",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Safe removal of legacy, with active and plugins.json preserved."
+    },
+    {
+      "case_id": "C02",
+      "finding_id": "F1",
+      "oracle_id": "unused-retired",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Only retired is removed and parent is kept. The finding correctly rejects relying on the sampled profile."
+    },
+    {
+      "case_id": "C03",
+      "finding_id": "F1",
+      "oracle_id": "unused-status",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "retired_status is removable and the operator emergency path is retained."
+    },
+    {
+      "case_id": "M01",
+      "finding_id": "F1",
+      "oracle_id": "recency-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Correct core cause and fix. The 'mishandles the inclusive boundary' wording is loose: cutoff and now are boosted correctly, and only cutoff-1 is wrong as part of the general bug. This does not affect validity."
+    },
+    {
+      "case_id": "M03",
+      "finding_id": "F1",
+      "oracle_id": "silent-skip",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Correct omission identified, with a fix that counts failures and preserves valid records."
+    }
+  ]
+}

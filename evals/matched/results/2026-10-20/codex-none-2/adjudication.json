@@ -1,0 +1,121 @@
+{
+  "judgments": [
+    {
+      "case_id": "R01",
+      "finding_id": "F1",
+      "oracle_id": "stale-poll",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Same root cause: polling bypasses the revision guard. Using a shared acceptance function matches the oracle. A severity of high is arguable but does not affect validity."
+    },
+    {
+      "case_id": "R04",
+      "finding_id": "F1",
+      "oracle_id": "timeout-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Correctly identifies the unchanged caller passing ms to a seconds parameter. The 1500\u21921.5 check is correct."
+    },
+    {
+      "case_id": "R06",
+      "finding_id": "F-ready",
+      "oracle_id": "reopen-ready",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Unawaited async start lets ready be published before initialization. The changed premise is cited, so reopening is legitimate."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F1",
+      "oracle_id": "operation-identity",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "A fresh UUID per outer attempt loses logical identity. Using operation_id as the key is the correct fix."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F2",
+      "oracle_id": "retry-owner",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Nested retries exceed the max_attempts bound. Either fix offered (single owner or a shared budget) is acceptable."
+    },
+    {
+      "case_id": "R07",
+      "finding_id": "F3",
+      "oracle_id": "total-deadline",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The budget is renewed per attempt. The remaining-time check with a controlled clock is correct."
+    },
+    {
+      "case_id": "R08",
+      "finding_id": "F1",
+      "oracle_id": "unwired-handler",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The empty handler list in bootstrap means zero audit invocations. Registering audit.handle once fixes it."
+    },
+    {
+      "case_id": "R09",
+      "finding_id": "F1",
+      "oracle_id": "missing-owner-check",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "The owner check is missing and correctly classified as pre_existing relative to the heading rename."
+    },
+    {
+      "case_id": "C01",
+      "finding_id": "F1",
+      "oracle_id": "unused-legacy",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "legacy is unconfigured and unconsumed. active is retained."
+    },
+    {
+      "case_id": "C02",
+      "finding_id": "F1",
+      "oracle_id": "unused-retired",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Removing retired is safe. The finding preserves the parent dependency and permits only an equivalent simplification, which the oracle allows."
+    },
+    {
+      "case_id": "C03",
+      "finding_id": "F1",
+      "oracle_id": "unused-status",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "retired_status is removable and the emergency branch is preserved."
+    },
+    {
+      "case_id": "M01",
+      "finding_id": "F1",
+      "oracle_id": "recency-units",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Correct units mismatch, fix, and inclusive boundary checks."
+    },
+    {
+      "case_id": "M03",
+      "finding_id": "F1",
+      "oracle_id": "silent-skip",
+      "valid": true,
+      "harmful": false,
+      "duplicate": false,
+      "rationale": "Correct omission identified. The fix retains valid records, and the empty-input skipped=0 check is apt."
+    }
+  ]
+}

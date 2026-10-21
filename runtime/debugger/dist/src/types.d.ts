@@ -127,11 +127,27 @@ export interface RetrievalConfig {
 /**
  * Memory Retrieval Result
  */
+/** Per-call corpus inspection; examples are bounded and never contain record contents. */
+export interface CorpusCoverage {
+    checked: number;
+    loaded: number;
+    skipped: number;
+    examples: Array<{
+        file: string;
+        reason: 'read_failed' | 'invalid_json' | 'invalid_record';
+    }>;
+}
+export interface RetrievalCoverage {
+    patterns: CorpusCoverage;
+    incidents?: CorpusCoverage;
+    scope?: 'keyword candidates';
+}
 export interface RetrievalResult {
     incidents: Incident[];
     patterns: Pattern[];
     confidence: number;
     retrieval_method: 'pattern' | 'incident' | 'hybrid';
+    coverage?: RetrievalCoverage;
     tokens_used: number;
 }
 /**
@@ -389,6 +405,7 @@ export type SearchVerdict = 'KNOWN_FIX' | 'LIKELY_MATCH' | 'WEAK_SIGNAL' | 'NO_M
  * Verdict-wrapped search result
  */
 export interface VerdictResult {
+    coverage?: RetrievalCoverage;
     verdict: SearchVerdict;
     summary: string;
     confidence: number;

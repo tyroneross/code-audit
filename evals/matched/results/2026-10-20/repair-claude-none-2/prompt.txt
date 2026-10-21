@@ -1,0 +1,3 @@
+Repair the checkout operation in ./case. Start from case/README.md, CONTRACT.md and source; investigate duplicate receipts after lost responses, cold-start failures and deadline overruns. Preserve public APIs/contracts, simulator.py, profile.json and test_public.py exactly. Edit only checkout.py, gateway.py, policy.py and optionally test_repair.py. No dependencies, network calls, real waiting or background processes. Stay inside this workspace; do not inspect hidden oracles, earlier solutions, other workspaces or model outputs. Complete the repair using deterministic local tests and report actual checks and limits.
+
+GUIDANCE

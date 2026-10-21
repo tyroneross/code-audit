@@ -45,6 +45,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.storeIncident = storeIncident;
 exports.loadIncident = loadIncident;
+exports.emptyCorpusCoverage = emptyCorpusCoverage;
+exports.recordCorpusSkip = recordCorpusSkip;
+exports.validIncidentRecord = validIncidentRecord;
 exports.loadAllIncidents = loadAllIncidents;
 exports.storePattern = storePattern;
 exports.loadPattern = loadPattern;
@@ -177,36 +180,72 @@ async function loadIncident(incident_id, config) {
 /**
  * Load all incidents with batched I/O (max 50 concurrent reads)
  */
-async function loadAllIncidents(config) {
-    const paths = (0, config_1.getMemoryPaths)(config);
-    const INCIDENTS_DIR = paths.incidents;
+function emptyCorpusCoverage() {
+    return { checked: 0, loaded: 0, skipped: 0, examples: [] };
+}
+function recordCorpusSkip(coverage, file, reason) {
+    coverage.skipped++;
+    if (coverage.examples.length < 5)
+        coverage.examples.push({ file: file.slice(0, 160), reason });
+}
+function validIncidentRecord(value) {
+    return value !== null && typeof value === 'object' &&
+        typeof value.incident_id === 'string' && typeof value.symptom === 'string' &&
+        Number.isFinite(value.timestamp) &&
+        (value.tags === undefined || (Array.isArray(value.tags) && value.tags.every((tag) => typeof tag === 'string')));
+}
+function validPatternRecord(value) {
+    return value !== null && typeof value === 'object' &&
+        typeof value.pattern_id === 'string' && typeof value.description === 'string' &&
+        Number.isFinite(value.success_rate) && value.success_rate >= 0 && value.success_rate <= 1 &&
+        (value.usage_history === undefined || (value.usage_history !== null && Number.isSafeInteger(value.usage_history.total_uses) && value.usage_history.total_uses >= 0)) &&
+        Array.isArray(value.detection_signature) && value.detection_signature.every((sig) => typeof sig === 'string') &&
+        (value.tags === undefined || (Array.isArray(value.tags) && value.tags.every((tag) => typeof tag === 'string')));
+}
+/** Preserve useful records while making partial reads visible to callers that request coverage. */
+async function loadCorpus(directory, valid, coverage) {
+    let files;
     try {
-        const files = await promises_1.default.readdir(INCIDENTS_DIR);
-        const jsonFiles = files.filter(f => f.endsWith('.json'));
-        const incidents = [];
-        const BATCH_SIZE = 50;
-        for (let i = 0; i < jsonFiles.length; i += BATCH_SIZE) {
-            const batch = jsonFiles.slice(i, i + BATCH_SIZE);
-            const results = await Promise.all(batch.map(async (file) => {
-                try {
-                    const filepath = path_1.default.join(INCIDENTS_DIR, file);
-                    const content = await promises_1.default.readFile(filepath, 'utf-8');
-                    return JSON.parse(content);
-                }
-                catch {
-                    return null;
-                }
-            }));
-            incidents.push(...results.filter((r) => r !== null));
-        }
-        return incidents;
+        files = (await promises_1.default.readdir(directory)).filter(file => file.endsWith('.json')).sort();
     }
     catch (error) {
-        if (error.code === 'ENOENT') {
-            return []; // Directory doesn't exist yet
-        }
+        if (error.code === 'ENOENT')
+            return [];
         throw error;
     }
+    const records = [];
+    for (let i = 0; i < files.length; i += 50) {
+        const results = await Promise.all(files.slice(i, i + 50).map(async (file) => {
+            coverage.checked++;
+            let content;
+            try {
+                content = await promises_1.default.readFile(path_1.default.join(directory, file), 'utf-8');
+            }
+            catch {
+                return { file, reason: 'read_failed' };
+            }
+            let value;
+            try {
+                value = JSON.parse(content);
+            }
+            catch {
+                return { file, reason: 'invalid_json' };
+            }
+            return valid(value) ? { value } : { file, reason: 'invalid_record' };
+        }));
+        for (const result of results) {
+            if ('reason' in result && result.reason)
+                recordCorpusSkip(coverage, result.file, result.reason);
+            else if ('value' in result) {
+                coverage.loaded++;
+                records.push(result.value);
+            }
+        }
+    }
+    return records;
+}
+async function loadAllIncidents(config, coverage = emptyCorpusCoverage()) {
+    return loadCorpus((0, config_1.getMemoryPaths)(config).incidents, validIncidentRecord, coverage);
 }
 /**
  * Store a pattern
@@ -252,36 +291,8 @@ async function loadPattern(pattern_id, config) {
 /**
  * Load all patterns with batched I/O (max 50 concurrent reads)
  */
-async function loadAllPatterns(config) {
-    const paths = (0, config_1.getMemoryPaths)(config);
-    const PATTERNS_DIR = paths.patterns;
-    try {
-        const files = await promises_1.default.readdir(PATTERNS_DIR);
-        const jsonFiles = files.filter(f => f.endsWith('.json'));
-        const patterns = [];
-        const BATCH_SIZE = 50;
-        for (let i = 0; i < jsonFiles.length; i += BATCH_SIZE) {
-            const batch = jsonFiles.slice(i, i + BATCH_SIZE);
-            const results = await Promise.all(batch.map(async (file) => {
-                try {
-                    const filepath = path_1.default.join(PATTERNS_DIR, file);
-                    const content = await promises_1.default.readFile(filepath, 'utf-8');
-                    return JSON.parse(content);
-                }
-                catch {
-                    return null;
-                }
-            }));
-            patterns.push(...results.filter((r) => r !== null));
-        }
-        return patterns;
-    }
-    catch (error) {
-        if (error.code === 'ENOENT') {
-            return [];
-        }
-        throw error;
-    }
+async function loadAllPatterns(config, coverage = emptyCorpusCoverage()) {
+    return loadCorpus((0, config_1.getMemoryPaths)(config).patterns, validPatternRecord, coverage);
 }
 /**
  * Validate incident structure
@@ -439,13 +450,13 @@ function toCompactIncident(incident) {
 function toCompactPattern(pattern) {
     return {
         id: pattern.pattern_id,
-        n: pattern.usage_history?.total_uses || 1,
+        n: pattern.usage_history?.total_uses ?? 0,
         desc: truncate(pattern.description, 100),
         sig: pattern.detection_signature.slice(0, 5),
         fix: truncate(pattern.solution_template, 150),
         sr: pattern.success_rate,
-        cat: pattern.tags[0] || 'general',
-        t: pattern.tags.slice(0, 5),
+        cat: pattern.tags?.[0] || 'general',
+        t: (pattern.tags || []).slice(0, 5),
         last: pattern.last_used || Date.now(),
     };
 }

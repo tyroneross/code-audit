@@ -5,7 +5,7 @@
  * File-based storage for simplicity and portability.
  * Now supports configurable paths (local or shared mode).
  */
-import type { Incident, Pattern, StorageOptions, VerificationResult, MemoryConfig, MemoryIndex, IncidentLogEntry, KeywordIndex, VerdictOutcome } from './types';
+import type { CorpusCoverage, Incident, Pattern, StorageOptions, VerificationResult, MemoryConfig, MemoryIndex, IncidentLogEntry, KeywordIndex, VerdictOutcome } from './types';
 /**
  * Store an incident in memory
  */
@@ -23,7 +23,10 @@ export declare function loadIncident(incident_id: string, config?: MemoryConfig)
 /**
  * Load all incidents with batched I/O (max 50 concurrent reads)
  */
-export declare function loadAllIncidents(config?: MemoryConfig): Promise<Incident[]>;
+export declare function emptyCorpusCoverage(): CorpusCoverage;
+export declare function recordCorpusSkip(coverage: CorpusCoverage, file: string, reason: CorpusCoverage['examples'][number]['reason']): void;
+export declare function validIncidentRecord(value: any): value is Incident;
+export declare function loadAllIncidents(config?: MemoryConfig, coverage?: CorpusCoverage): Promise<Incident[]>;
 /**
  * Store a pattern
  */
@@ -35,7 +38,7 @@ export declare function loadPattern(pattern_id: string, config?: MemoryConfig): 
 /**
  * Load all patterns with batched I/O (max 50 concurrent reads)
  */
-export declare function loadAllPatterns(config?: MemoryConfig): Promise<Pattern[]>;
+export declare function loadAllPatterns(config?: MemoryConfig, coverage?: CorpusCoverage): Promise<Pattern[]>;
 /**
  * Validate incident structure
  */

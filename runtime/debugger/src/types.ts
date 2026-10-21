@@ -40,7 +40,7 @@ export interface Incident {
   completeness: Completeness;       // Which fields are complete
 
   // Memory & Retrieval
-  similarity_score?: number;        // When retrieved (0-1)
+  similarity_score?: number;        // Recency-weighted retrieval score; can exceed 1, not a probability
   pattern_id?: string;              // Associated pattern
   quality_score?: number;           // Overall quality (0-1)
   embedding?: number[];             // Semantic embedding for search
@@ -165,11 +165,26 @@ export interface RetrievalConfig {
 /**
  * Memory Retrieval Result
  */
+/** Per-call corpus inspection; examples are bounded and never contain record contents. */
+export interface CorpusCoverage {
+  checked: number;
+  loaded: number;
+  skipped: number;
+  examples: Array<{ file: string; reason: 'read_failed' | 'invalid_json' | 'invalid_record' }>;
+}
+
+export interface RetrievalCoverage {
+  patterns: CorpusCoverage;
+  incidents?: CorpusCoverage;
+  scope?: 'keyword candidates';
+}
+
 export interface RetrievalResult {
   incidents: Incident[];            // Matched incidents
   patterns: Pattern[];              // Matched patterns
   confidence: number;               // Overall match confidence
   retrieval_method: 'pattern' | 'incident' | 'hybrid';
+  coverage?: RetrievalCoverage;
   tokens_used: number;              // Context size estimate
 }
 
@@ -477,6 +492,7 @@ export type SearchVerdict = 'KNOWN_FIX' | 'LIKELY_MATCH' | 'WEAK_SIGNAL' | 'NO_M
  * Verdict-wrapped search result
  */
 export interface VerdictResult {
+  coverage?: RetrievalCoverage;
   verdict: SearchVerdict;
   summary: string;
   confidence: number;

@@ -1,0 +1,143 @@
+{
+  "version": 1,
+  "oracles": {
+    "R01": [
+      {
+        "id": "stale-poll",
+        "origin": "introduced",
+        "locations": [
+          "poll.py",
+          "store.py"
+        ],
+        "mechanism": "Polling bypasses revision admission; put acceptance at shared state boundary or guard all paths."
+      }
+    ],
+    "R02": [],
+    "R03": [],
+    "R04": [
+      {
+        "id": "timeout-units",
+        "origin": "introduced",
+        "locations": [
+          "client.py",
+          "provider.py"
+        ],
+        "mechanism": "Unchanged caller still passes milliseconds to seconds contract."
+      }
+    ],
+    "R05": [],
+    "R06": [
+      {
+        "id": "reopen-ready",
+        "origin": "introduced",
+        "locations": [
+          "owner.py",
+          "handler.py"
+        ],
+        "mechanism": "Async start is not awaited; old closure premise invalidated; reopening F-ready is legitimate.",
+        "prior_finding_id": "F-ready"
+      }
+    ],
+    "R07": [
+      {
+        "id": "operation-identity",
+        "origin": "introduced",
+        "locations": [
+          "checkout.py"
+        ],
+        "mechanism": "new_uuid loses logical operation identity across retries and repeated calls."
+      },
+      {
+        "id": "retry-owner",
+        "origin": "introduced",
+        "locations": [
+          "checkout.py",
+          "gateway.py"
+        ],
+        "mechanism": "Nested retries multiply max attempts."
+      },
+      {
+        "id": "total-deadline",
+        "origin": "introduced",
+        "locations": [
+          "gateway.py",
+          "checkout.py"
+        ],
+        "mechanism": "Full total budget reused as each attempt timeout; elapsed time is never subtracted."
+      }
+    ],
+    "R08": [
+      {
+        "id": "unwired-handler",
+        "origin": "introduced",
+        "locations": [
+          "audit.py",
+          "bootstrap.py"
+        ],
+        "mechanism": "New handler is never registered; App.run has empty handler list."
+      }
+    ],
+    "R09": [
+      {
+        "id": "missing-owner-check",
+        "origin": "pre_existing",
+        "locations": [
+          "page.py"
+        ],
+        "mechanism": "Existing read_doc has no owner authorization check; heading change did not introduce it."
+      }
+    ],
+    "C01": [
+      {
+        "id": "unused-legacy",
+        "origin": "pre_existing",
+        "locations": [
+          "handlers.py"
+        ],
+        "mechanism": "legacy has no consumers in the complete inventory and may be removed; active is dynamically loaded and must remain."
+      }
+    ],
+    "C02": [
+      {
+        "id": "unused-retired",
+        "origin": "pre_existing",
+        "locations": [
+          "flags.py"
+        ],
+        "mechanism": "retired has no consumers and may be removed. parent is a prerequisite of child; deleting its entry alone breaks evaluation. A proven equivalent simplification of parent and its dependency edge is acceptable."
+      }
+    ],
+    "C03": [
+      {
+        "id": "unused-status",
+        "origin": "pre_existing",
+        "locations": [
+          "service.py"
+        ],
+        "mechanism": "retired_status may be removed; the emergency_stop branch is required despite zero observed activations."
+      }
+    ],
+    "M01": [
+      {
+        "id": "recency-units",
+        "origin": "pre_existing",
+        "locations": [
+          "ranking.ts"
+        ],
+        "mechanism": "Elapsed duration compared with epoch cutoff; old timestamps get recent boost. Compare timestamp with cutoff and now."
+      }
+    ],
+    "M02": [],
+    "M03": [
+      {
+        "id": "silent-skip",
+        "origin": "pre_existing",
+        "locations": [
+          "corpus.py"
+        ],
+        "mechanism": "Read/parse failures do not increment skipped, hiding incomplete inspection. Count failures while preserving successful records."
+      }
+    ],
+    "M04": []
+  }
+}

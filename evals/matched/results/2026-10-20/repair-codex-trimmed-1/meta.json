@@ -1,0 +1,128 @@
+{
+  "host": "codex",
+  "arm": "trimmed",
+  "repeat": 1,
+  "requested_model": "gpt-6.1-sol",
+  "served_models": null,
+  "effort": "medium",
+  "timeout_seconds": 300,
+  "prompt_sha256": "f5a3feabd566268f3a0526e70e5fcdd8369aa899defb80c3c1248fe869c35df0",
+  "guidance_words": 301,
+  "status": "completed",
+  "isolation": "OS sandbox; repository/output/foreign temporary reads denied; writes confined to this workspace; frozen baseline and parent verifier",
+  "kernel_canary": {
+    "own_read": "allowed",
+    "protected_read": "denied",
+    "outside_write": "denied"
+  },
+  "command": [
+    "codex",
+    "exec",
+    "--ephemeral",
+    "--ignore-user-config",
+    "--skip-git-repo-check",
+    "--json",
+    "-s",
+    "danger-full-access",
+    "-m",
+    "gpt-6.1-sol",
+    "-c",
+    "approval_policy=\"never\"",
+    "-c",
+    "model_reasoning_effort=\"medium\"",
+    "-"
+  ],
+  "exit_code": 0,
+  "usage": {
+    "input_tokens": 137367,
+    "cached_input_tokens": 116992,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 4026,
+    "reasoning_output_tokens": 364
+  },
+  "cost_usd": null,
+  "elapsed_seconds": 108.556,
+  "protected_changes": [],
+  "verification_exit_code": 0,
+  "verification_status": "passed",
+  "verification": {
+    "arm": "/private/var/folders/rx/m9xpkrqn3h7bx6t8y5v0mx0h0000gn/T/code-audit-parent-verifier-2c0uj3gq/candidate",
+    "tests": 18,
+    "passed": 18,
+    "cases": [
+      {
+        "test": "__main__.Checks.test_attempt_budget_not_multiplied",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_clock_offset",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_distinct_operations",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_exhausted_budget_starts_nothing",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_expiry_does_not_erase_uncertain_effect",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_explicit_assumption_without_data",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_gateway_default_identity_per_invocation",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_gateway_honors_explicit_timeout",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_gateway_is_one_attempt",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_generated_profile_and_identity_cases",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_identity_payload_conflict",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_lost_ack_same_effect",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_ordinary_cold_completion",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_profile_informs_limit",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_remaining_limit",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_repeat_with_fresh_wrappers",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_total_budget_caps_attempt",
+        "status": "pass"
+      },
+      {
+        "test": "__main__.Checks.test_warm_success",
+        "status": "pass"
+      }
+    ]
+  },
+  "source_integrity_unchanged": true
+}

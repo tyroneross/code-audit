@@ -52,13 +52,19 @@ Codex: this repo includes a local marketplace. Register its folder:
 codex plugin marketplace add /absolute/path/to/code-audit
 ```
 
-Install Code Audit from that source in the desktop Plugins Directory, then test in a new chat. See the [official local marketplace instructions](https://developers.openai.com/plugins/build/plugins). Portable manifests and the `.codex-plugin` compatibility manifest are included. Actual host discovery is separate from source/MCP tests and must be observed.
+Install into your selected Codex configuration and test in a new chat:
+
+```sh
+codex plugin add code-audit@code-audit-local
+```
+
+The local CLI checks exercised automatic skill and MCP discovery in isolated configurations. Desktop Plugins Directory installation remains a separate UI boundary. See the [official local marketplace instructions](https://developers.openai.com/plugins/build/plugins). Portable manifests and the `.codex-plugin` compatibility manifest are included. See [observed host checks](docs/verification.md) for the tested CLI boundaries and limits.
 
 For manual use, read `skills/code-audit/SKILL.md` explicitly. Paths resolve relative to the installed skill. Without MCP registration, continue source review/debugging and disclose the memory gap.
 
 ## Memory and effects
 
-Memory uses the compatible per-project `.claude/memory` path and explicit `CLAUDE_MEMORY_*` overrides; shared mode is opt-in. Incident tool calls write data, but this package enables no global setup, mining or background daemon. Personal assistant memories remain separate. Audit/scanner tools read source and write outputs to specified locations; repairs require task authorization. Inspect private code/logs before external sharing. The plugin itself requires no cloud service or API key.
+Memory uses the compatible per-project `.claude/memory` path and explicit `CLAUDE_MEMORY_*` overrides; shared mode is opt-in. Installed hosts that start MCP inside the package must supply the authorized absolute `project_root` on `status` and every memory call. This selects a local corpus per request; package-root access otherwise fails visibly. Incident tool calls write data, but this package enables no global setup, mining or background daemon. Personal assistant memories remain separate. Audit/scanner tools read source and write outputs to specified locations; repairs require task authorization. Inspect private code/logs before external sharing. The plugin itself requires no cloud service or API key.
 
 ## Verify
 
@@ -70,6 +76,8 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s evals/review -p 'test_
 ```
 
 For runtime development use the bundled package lockfile, disable install scripts, build TypeScript and rerun the supplied runtime suites. Compiled outputs are tracked for dependency-free startup. See [integration](docs/integration.md), [source provenance](docs/source-provenance.json) and [verification](docs/verification.md). Source checks, host loading, model repairs, live application behavior and deployment remain separate evidence.
+
+Search results report historical verification and checked/loaded/skipped corpus counts. Partial coverage remains visible even when no matches are returned. Detailed checklists load only for relevant challenges; the [matched comparisons](evals/matched/README.md) retain the no-guidance control and adverse evidence.
 
 Internal file logging is off by default. Explicit `DEBUGGER_LOG_ENABLED=1` enables diagnostic writes and marks MCP tools as having side effects; logs can contain sensitive operation details. `read_logs` stays within the server working directory and refuses home, its ancestors and filesystem-root scopes, reads at most 16 files of 1 MiB each and returns at most 500 entries; rejected or skipped files are reported. Log tool responses stop at 32 KiB with an explicit truncation notice; narrow filters or use project tools for full logs. These are conservative interactive inspection budgets, not exhaustive log analysis.
 

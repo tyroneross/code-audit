@@ -1,0 +1,80 @@
+{
+  "arm": "/private/var/folders/rx/m9xpkrqn3h7bx6t8y5v0mx0h0000gn/T/code-audit-parent-replay-hlotx4k3/candidate",
+  "tests": 18,
+  "passed": 18,
+  "cases": [
+    {
+      "test": "__main__.Checks.test_attempt_budget_not_multiplied",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_clock_offset",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_distinct_operations",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_exhausted_budget_starts_nothing",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_expiry_does_not_erase_uncertain_effect",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_explicit_assumption_without_data",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_gateway_default_identity_per_invocation",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_gateway_honors_explicit_timeout",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_gateway_is_one_attempt",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_generated_profile_and_identity_cases",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_identity_payload_conflict",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_lost_ack_same_effect",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_ordinary_cold_completion",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_profile_informs_limit",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_remaining_limit",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_repeat_with_fresh_wrappers",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_total_budget_caps_attempt",
+      "status": "pass"
+    },
+    {
+      "test": "__main__.Checks.test_warm_success",
+      "status": "pass"
+    }
+  ],
+  "harness_faults": []
+}

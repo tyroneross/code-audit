@@ -1,0 +1,6 @@
+{"arm": "/private/var/folders/rx/m9xpkrqn3h7bx6t8y5v0mx0h0000gn/T/code-audit-parent-replay-r3ak51uv/candidate", "tests": 18, "passed": 18}
+..................
+----------------------------------------------------------------------
+Ran 18 tests in 3.472s
+
+OK
