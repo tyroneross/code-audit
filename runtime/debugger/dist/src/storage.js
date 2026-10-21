@@ -63,6 +63,8 @@ exports.toCompactIncidents = toCompactIncidents;
 exports.toCompactPatterns = toCompactPatterns;
 exports.estimateCompactIncidentTokens = estimateCompactIncidentTokens;
 exports.estimateCompactPatternTokens = estimateCompactPatternTokens;
+exports.serializedTokenEstimate = serializedTokenEstimate;
+exports.fitRecordBudget = fitRecordBudget;
 exports.enforceTokenBudget = enforceTokenBudget;
 exports.loadCompactIncidents = loadCompactIncidents;
 exports.loadCompactPatterns = loadCompactPatterns;
@@ -98,6 +100,10 @@ async function storeIncident(incident, options = {}) {
             const { buildIncidentInteractive } = await Promise.resolve().then(() => __importStar(require('./interactive-verifier')));
             finalIncident = await buildIncidentInteractive(incident);
         }
+        if (!isValidIncidentId(finalIncident.incident_id))
+            throw new Error('Invalid incident ID format');
+        if (!validIncidentRecord(finalIncident))
+            throw new Error('Invalid incident record');
         // Calculate quality score if not already set
         if (!finalIncident.completeness?.quality_score) {
             const qualityScore = (0, quality_1.calculateQualityScore)(finalIncident);
@@ -129,6 +135,8 @@ async function storeIncident(incident, options = {}) {
         // Generate filename
         const filename = `${finalIncident.incident_id}.json`;
         const filepath = path_1.default.join(INCIDENTS_DIR, filename);
+        const replacing = await promises_1.default.stat(filepath).then(() => true, (error) => { if (error.code === 'ENOENT')
+            return false; throw error; });
         // Write to file
         await promises_1.default.writeFile(filepath, JSON.stringify(finalIncident, null, 2), 'utf-8');
         const qualityEmoji = (finalIncident.completeness.quality_score >= 0.75) ? '🌟' :
@@ -136,10 +144,15 @@ async function storeIncident(incident, options = {}) {
         console.log(`${qualityEmoji} Incident stored: ${finalIncident.incident_id} (quality: ${(finalIncident.completeness.quality_score * 100).toFixed(0)}%)`);
         // Append to JSONL log for fast full-text search
         await appendToIncidentLog(finalIncident, options.config);
-        // Incremental index update (avoids loading all incidents)
-        await updateIndexIncremental(finalIncident, options.config);
-        // Update keyword index
-        await updateKeywordIndex(finalIncident, options.config);
+        if (replacing) {
+            // Replacement must remove old keyword/category/tag contributions and preserve unique counts.
+            await rebuildIndex(options.config);
+            await rebuildKeywordIndex(options.config);
+        }
+        else {
+            await updateIndexIncremental(finalIncident, options.config);
+            await updateKeywordIndex(finalIncident, options.config);
+        }
         return {
             incident_id: finalIncident.incident_id,
             file_path: filepath
@@ -151,7 +164,7 @@ async function storeIncident(incident, options = {}) {
  * Supports both formats: INC_YYYYMMDD_HHMMSS_xxxx and INC_CATEGORY_YYYYMMDD_HHMMSS_xxxx
  */
 function isValidIncidentId(incident_id) {
-    return /^INC_[\w\-]+$/.test(incident_id);
+    return typeof incident_id === 'string' && /^INC_[\w\-]+$/.test(incident_id);
 }
 /**
  * Load an incident by ID
@@ -188,22 +201,32 @@ function recordCorpusSkip(coverage, file, reason) {
     if (coverage.examples.length < 5)
         coverage.examples.push({ file: file.slice(0, 160), reason });
 }
+const optionalString = (value) => value == null || typeof value === 'string';
+const stringArray = (value) => value === undefined || (Array.isArray(value) && value.every(x => typeof x === 'string'));
+const optionalRate = (value) => value == null || (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1);
+function optionalFields(value, fields) {
+    return value == null || (typeof value === 'object' && !Array.isArray(value) && Object.entries(fields).every(([key, valid]) => valid(value[key])));
+}
 function validIncidentRecord(value) {
     return value !== null && typeof value === 'object' &&
-        typeof value.incident_id === 'string' && typeof value.symptom === 'string' &&
-        Number.isFinite(value.timestamp) &&
-        (value.tags === undefined || (Array.isArray(value.tags) && value.tags.every((tag) => typeof tag === 'string')));
+        isValidIncidentId(value.incident_id) && typeof value.symptom === 'string' &&
+        Number.isFinite(value.timestamp) && Number.isFinite(new Date(value.timestamp).getTime()) &&
+        stringArray(value.tags) && stringArray(value.files_changed) && optionalString(value.agent_used) &&
+        optionalFields(value.root_cause, { description: optionalString, category: optionalString, confidence: optionalRate }) &&
+        optionalFields(value.fix, { approach: optionalString, changes: (v) => v === undefined || (Array.isArray(v) && v.every(c => c && typeof c === 'object' && typeof c.file === 'string')) }) &&
+        optionalFields(value.verification, { status: (v) => v === undefined || (typeof v === 'string' && ['verified', 'partial', 'unverified'].includes(v)) }) &&
+        optionalFields(value.completeness, { quality_score: optionalRate }) &&
+        optionalFields(value.quality_gates, { guardian_validated: (v) => v === undefined || typeof v === 'boolean' });
 }
 function validPatternRecord(value) {
     return value !== null && typeof value === 'object' &&
-        typeof value.pattern_id === 'string' && typeof value.description === 'string' &&
+        isValidPatternId(value.pattern_id) && typeof value.description === 'string' && optionalString(value.name) && optionalString(value.solution_template) &&
         Number.isFinite(value.success_rate) && value.success_rate >= 0 && value.success_rate <= 1 &&
         (value.usage_history === undefined || (value.usage_history !== null && Number.isSafeInteger(value.usage_history.total_uses) && value.usage_history.total_uses >= 0)) &&
-        Array.isArray(value.detection_signature) && value.detection_signature.every((sig) => typeof sig === 'string') &&
-        (value.tags === undefined || (Array.isArray(value.tags) && value.tags.every((tag) => typeof tag === 'string')));
+        stringArray(value.applicable_to) && Array.isArray(value.detection_signature) && value.detection_signature.every((sig) => typeof sig === 'string') && stringArray(value.tags);
 }
 /** Preserve useful records while making partial reads visible to callers that request coverage. */
-async function loadCorpus(directory, valid, coverage) {
+async function loadCorpus(directory, valid, coverage, identifier) {
     let files;
     try {
         files = (await promises_1.default.readdir(directory)).filter(file => file.endsWith('.json')).sort();
@@ -231,7 +254,7 @@ async function loadCorpus(directory, valid, coverage) {
             catch {
                 return { file, reason: 'invalid_json' };
             }
-            return valid(value) ? { value } : { file, reason: 'invalid_record' };
+            return valid(value) && `${identifier(value)}.json` === file ? { value } : { file, reason: 'invalid_record' };
         }));
         for (const result of results) {
             if ('reason' in result && result.reason)
@@ -245,12 +268,16 @@ async function loadCorpus(directory, valid, coverage) {
     return records;
 }
 async function loadAllIncidents(config, coverage = emptyCorpusCoverage()) {
-    return loadCorpus((0, config_1.getMemoryPaths)(config).incidents, validIncidentRecord, coverage);
+    return loadCorpus((0, config_1.getMemoryPaths)(config).incidents, validIncidentRecord, coverage, incident => incident.incident_id);
 }
 /**
  * Store a pattern
  */
 async function storePattern(pattern, config) {
+    if (!isValidPatternId(pattern.pattern_id))
+        throw new Error('Invalid pattern ID format');
+    if (!validPatternRecord(pattern))
+        throw new Error('Invalid pattern record');
     const paths = (0, config_1.getMemoryPaths)(config);
     await promises_1.default.mkdir(paths.patterns, { recursive: true });
     const filename = `${pattern.pattern_id}.json`;
@@ -264,7 +291,7 @@ async function storePattern(pattern, config) {
  */
 function isValidPatternId(pattern_id) {
     // Only allow alphanumeric and underscores (PTN_CATEGORY_NAME format)
-    return /^PTN_[\w]+$/.test(pattern_id);
+    return typeof pattern_id === 'string' && /^PTN_[\w]+$/.test(pattern_id);
 }
 /**
  * Load a pattern by ID
@@ -292,7 +319,7 @@ async function loadPattern(pattern_id, config) {
  * Load all patterns with batched I/O (max 50 concurrent reads)
  */
 async function loadAllPatterns(config, coverage = emptyCorpusCoverage()) {
-    return loadCorpus((0, config_1.getMemoryPaths)(config).patterns, validPatternRecord, coverage);
+    return loadCorpus((0, config_1.getMemoryPaths)(config).patterns, validPatternRecord, coverage, pattern => pattern.pattern_id);
 }
 /**
  * Validate incident structure
@@ -478,14 +505,31 @@ function toCompactPatterns(patterns) {
 function estimateCompactIncidentTokens(incident) {
     // Rough estimate: JSON structure + field names + values
     const json = JSON.stringify(incident);
-    return Math.ceil(json.length / 4);
+    return Math.ceil(Buffer.byteLength(json, 'utf8') / 4);
 }
 /**
  * Estimate tokens for a compact pattern
  */
 function estimateCompactPatternTokens(pattern) {
     const json = JSON.stringify(pattern);
-    return Math.ceil(json.length / 4);
+    return Math.ceil(Buffer.byteLength(json, 'utf8') / 4);
+}
+/** Serialized UTF-8 bytes / 4 is a context-size estimate, not tokenizer measurement. */
+function serializedTokenEstimate(value) {
+    return Math.ceil(Buffer.byteLength(JSON.stringify(value), 'utf8') / 4);
+}
+function fitRecordBudget(records, budget) {
+    const selected = [];
+    let tokens = 0;
+    budget = Number.isFinite(budget) ? Math.max(0, Math.floor(budget)) : 0;
+    for (const record of records) {
+        const cost = serializedTokenEstimate(record);
+        if (tokens + cost > budget)
+            break;
+        selected.push(record);
+        tokens += cost;
+    }
+    return { records: selected, tokens };
 }
 /**
  * Enforce token budget on results
@@ -494,18 +538,14 @@ function estimateCompactPatternTokens(pattern) {
  * Patterns get 30% budget, incidents get 60%, metadata gets 10%.
  */
 function enforceTokenBudget(incidents, patterns, budget = 2500) {
+    budget = Number.isFinite(budget) ? Math.max(0, Math.floor(budget)) : 0;
     const patternBudget = Math.floor(budget * 0.3);
     const incidentBudget = Math.floor(budget * 0.6);
-    // Estimate tokens per item (using averages from DEFAULT_TOKEN_BUDGET)
-    const tokensPerPattern = 120;
-    const tokensPerIncident = 200;
-    const maxPatterns = Math.floor(patternBudget / tokensPerPattern);
-    const maxIncidents = Math.floor(incidentBudget / tokensPerIncident);
-    const limitedPatterns = patterns.slice(0, maxPatterns);
-    const limitedIncidents = incidents.slice(0, maxIncidents);
-    const tokensUsed = limitedPatterns.length * tokensPerPattern +
-        limitedIncidents.length * tokensPerIncident +
-        Math.floor(budget * 0.1); // metadata overhead
+    const selectedPatterns = fitRecordBudget(patterns, patternBudget);
+    const selectedIncidents = fitRecordBudget(incidents, incidentBudget);
+    const limitedPatterns = selectedPatterns.records;
+    const limitedIncidents = selectedIncidents.records;
+    const tokensUsed = selectedPatterns.tokens + selectedIncidents.tokens + Math.floor(budget * 0.1);
     return {
         limitedPatterns,
         limitedIncidents,
@@ -561,35 +601,42 @@ async function appendToIncidentLog(incident, config) {
 /**
  * Search JSONL log for fast text matching (avoids loading all incident files)
  */
-async function searchIncidentLog(query, config) {
-    const paths = (0, config_1.getMemoryPaths)(config);
-    const logPath = path_1.default.join(paths.root, 'incidents.jsonl');
+async function searchIncidentLog(query, config, coverage = emptyCorpusCoverage()) {
+    const logPath = path_1.default.join((0, config_1.getMemoryPaths)(config).root, 'incidents.jsonl');
+    let content;
     try {
-        const content = await promises_1.default.readFile(logPath, 'utf-8');
-        const queryLower = query.toLowerCase();
-        return content
-            .split('\n')
-            .filter(line => line.trim())
-            .map(line => {
-            try {
-                return JSON.parse(line);
-            }
-            catch {
-                return null;
-            }
-        })
-            .filter((entry) => {
-            if (!entry)
-                return false;
-            return (entry.incident_id.toLowerCase().includes(queryLower) ||
-                entry.symptom.toLowerCase().includes(queryLower) ||
-                entry.category.toLowerCase().includes(queryLower) ||
-                entry.tags.some(t => t.toLowerCase().includes(queryLower)));
-        });
+        content = await promises_1.default.readFile(logPath, 'utf-8');
     }
-    catch {
+    catch (error) {
+        if (error.code === 'ENOENT')
+            return [];
+        coverage.checked++;
+        recordCorpusSkip(coverage, 'incidents.jsonl', 'read_failed');
         return [];
     }
+    const matches = [];
+    const lower = query.toLowerCase();
+    for (const [n, line] of content.split('\n').entries()) {
+        if (!line.trim())
+            continue;
+        coverage.checked++;
+        let entry;
+        try {
+            entry = JSON.parse(line);
+        }
+        catch {
+            recordCorpusSkip(coverage, `incidents.jsonl:${n + 1}`, 'invalid_json');
+            continue;
+        }
+        if (!entry || !isValidIncidentId(entry.incident_id) || typeof entry.symptom !== 'string' || typeof entry.category !== 'string' || !Array.isArray(entry.tags) || !entry.tags.every(t => typeof t === 'string')) {
+            recordCorpusSkip(coverage, `incidents.jsonl:${n + 1}`, 'invalid_record');
+            continue;
+        }
+        coverage.loaded++;
+        if ([entry.incident_id, entry.symptom, entry.category, ...entry.tags].some(value => value.toLowerCase().includes(lower)))
+            matches.push(entry);
+    }
+    return matches;
 }
 // ============================================================================
 // MEMORY INDEX - O(1) lookups by category, tag, file
@@ -607,15 +654,15 @@ async function rebuildIndex(config) {
             stats: {
                 total_incidents: incidents.length,
                 total_patterns: 0,
-                categories: {},
-                tags: {},
+                categories: Object.create(null),
+                tags: Object.create(null),
                 quality_distribution: { excellent: 0, good: 0, fair: 0 },
                 oldest_timestamp: Infinity,
                 newest_timestamp: 0,
             },
-            by_category: {},
-            by_tag: {},
-            by_file: {},
+            by_category: Object.create(null),
+            by_tag: Object.create(null),
+            by_file: Object.create(null),
             by_quality: { excellent: [], good: [], fair: [] },
             recent: [],
         };
@@ -692,7 +739,15 @@ async function loadIndex(config) {
     const indexPath = path_1.default.join(paths.root, 'index.json');
     try {
         const content = await promises_1.default.readFile(indexPath, 'utf-8');
-        return JSON.parse(content);
+        const index = JSON.parse(content);
+        index.by_category = Object.assign(Object.create(null), index.by_category);
+        index.by_tag = Object.assign(Object.create(null), index.by_tag);
+        index.by_file = Object.assign(Object.create(null), index.by_file);
+        if (index.stats) {
+            index.stats.categories = Object.assign(Object.create(null), index.stats.categories);
+            index.stats.tags = Object.assign(Object.create(null), index.stats.tags);
+        }
+        return index;
     }
     catch {
         return null;
@@ -813,6 +868,7 @@ async function archiveOldIncidents(options = {}, config) {
         await promises_1.default.writeFile(path_1.default.join(archiveDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf-8');
         // Rebuild index and summary
         await rebuildIndex(config);
+        await rebuildKeywordIndex(config);
         await buildMemorySummary(config);
     }
     return {
@@ -890,7 +946,7 @@ async function updateKeywordIndex(incident, config) {
     const index = await loadKeywordIndex(config) || {
         version: 1,
         last_updated: Date.now(),
-        keywords: {},
+        keywords: Object.create(null),
         total_incidents: 0,
         total_keywords: 0,
     };
@@ -919,7 +975,11 @@ async function loadKeywordIndex(config) {
     const indexPath = path_1.default.join(paths.root, 'keyword-index.json');
     try {
         const content = await promises_1.default.readFile(indexPath, 'utf-8');
-        return JSON.parse(content);
+        const index = JSON.parse(content);
+        index.keywords = Object.assign(Object.create(null), index.keywords);
+        if (!Object.values(index.keywords).every(ids => Array.isArray(ids) && ids.every(id => isValidIncidentId(id))))
+            return null;
+        return index;
     }
     catch {
         return null;
@@ -931,7 +991,7 @@ async function loadKeywordIndex(config) {
 function findCandidatesByKeyword(queryWords, index, maxCandidates = 20) {
     const candidateScores = new Map();
     for (const word of queryWords) {
-        const ids = index.keywords[word] || [];
+        const ids = Object.prototype.hasOwnProperty.call(index.keywords, word) && Array.isArray(index.keywords[word]) ? index.keywords[word] : [];
         for (const id of ids) {
             candidateScores.set(id, (candidateScores.get(id) || 0) + 1);
         }
@@ -950,7 +1010,7 @@ async function rebuildKeywordIndex(config) {
     const index = {
         version: 1,
         last_updated: Date.now(),
-        keywords: {},
+        keywords: Object.create(null),
         total_incidents: incidents.length,
         total_keywords: 0,
     };
@@ -981,13 +1041,8 @@ async function rebuildKeywordIndex(config) {
 async function updateIndexIncremental(incident, config) {
     const paths = (0, config_1.getMemoryPaths)(config);
     const indexPath = path_1.default.join(paths.root, 'index.json');
-    let index;
-    try {
-        const content = await promises_1.default.readFile(indexPath, 'utf-8');
-        index = JSON.parse(content);
-    }
-    catch {
-        // No index yet — do a full rebuild
+    const index = await loadIndex(config);
+    if (!index || !index.stats || !index.by_quality) {
         await rebuildIndex(config);
         return;
     }

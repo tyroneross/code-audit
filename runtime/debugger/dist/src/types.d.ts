@@ -283,6 +283,9 @@ export interface TieredRetrievalResult {
     }[];
     incidents?: CompactIncident[];
     patterns?: CompactPattern[];
+    full_incidents?: Incident[];
+    full_patterns?: Pattern[];
+    coverage?: RetrievalCoverage;
     confidence: number;
     tokens_used: number;
     has_more_details?: boolean;
@@ -475,12 +478,15 @@ export interface ProgressiveMatch {
     one_liner: string;
     verdict: SearchVerdict;
     confidence: number;
+    confidence_kind?: 'historical_diagnosis' | 'historical_success_rate';
+    retrieval_score?: number;
     detail_command: string;
 }
 /**
  * Progressive retrieval result — compact matches with drill-down
  */
 export interface ProgressiveResult {
+    coverage?: RetrievalCoverage;
     verdict: SearchVerdict;
     summary: string;
     matches: ProgressiveMatch[];

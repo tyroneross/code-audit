@@ -45,3 +45,8 @@ Do not manually write an isolated incident JSON file: storage also maintains ret
 ## Independent work
 
 The plugin provides procedures, not pre-registered domain assessors on every host. If authorized agents are available, pass the relevant current evidence and candidate incidents, clearly labeling historical hypotheses. Never invent dispatch, access or independent approval. Continue directly when independent execution is unavailable, and disclose the review gap. See [the debug workflow](../debug/SKILL.md) and [deep loop](../debug-loop/SKILL.md).
+
+
+## Programmatic retrieval
+
+All retrieval wrappers carry inspected-corpus coverage. Quick checks include pattern matches and expose `inconclusive` when records were skipped. Full-tier results use additive `full_incidents` and `full_patterns`; compact-tier fields retain their existing shapes. Progressive matches separate `retrieval_score` from explicitly historical diagnosis/success metadata. See [retrieval contracts](../../docs/retrieval-contracts.md) for flags, budgets and storage boundaries.

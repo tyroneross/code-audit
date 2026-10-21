@@ -90,6 +90,12 @@ export declare function estimateCompactIncidentTokens(incident: CompactIncident)
  * Estimate tokens for a compact pattern
  */
 export declare function estimateCompactPatternTokens(pattern: CompactPattern): number;
+/** Serialized UTF-8 bytes / 4 is a context-size estimate, not tokenizer measurement. */
+export declare function serializedTokenEstimate(value: unknown): number;
+export declare function fitRecordBudget<T>(records: T[], budget: number): {
+    records: T[];
+    tokens: number;
+};
 /**
  * Enforce token budget on results
  *
@@ -120,7 +126,7 @@ export declare function appendToIncidentLog(incident: Incident, config?: MemoryC
 /**
  * Search JSONL log for fast text matching (avoids loading all incident files)
  */
-export declare function searchIncidentLog(query: string, config?: MemoryConfig): Promise<IncidentLogEntry[]>;
+export declare function searchIncidentLog(query: string, config?: MemoryConfig, coverage?: CorpusCoverage): Promise<IncidentLogEntry[]>;
 /**
  * Build or rebuild the memory index from all incidents
  */

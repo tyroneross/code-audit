@@ -348,7 +348,12 @@ export interface TieredRetrievalResult {
   incidents?: CompactIncident[];
   patterns?: CompactPattern[];
 
+  // Full tier uses additive fields so compact consumers remain unchanged.
+  full_incidents?: Incident[];
+  full_patterns?: Pattern[];
+
   // Common
+  coverage?: RetrievalCoverage;
   confidence: number;
   tokens_used: number;
   has_more_details?: boolean;
@@ -559,9 +564,11 @@ export interface ArchiveManifest {
 export interface ProgressiveMatch {
   id: string;                         // incident or pattern ID
   type: 'incident' | 'pattern';
-  one_liner: string;                  // e.g. "React hook dep array → stale closure (85% conf)"
+  one_liner: string;                  // Historical context, never calibrated repair confidence
   verdict: SearchVerdict;
-  confidence: number;
+  confidence: number;                 // Historical metadata, not current repair confidence
+  confidence_kind?: 'historical_diagnosis' | 'historical_success_rate';
+  retrieval_score?: number;
   detail_command: string;             // e.g. "/debugger-detail INC_xxx"
 }
 
@@ -569,6 +576,7 @@ export interface ProgressiveMatch {
  * Progressive retrieval result — compact matches with drill-down
  */
 export interface ProgressiveResult {
+  coverage?: RetrievalCoverage;
   verdict: SearchVerdict;
   summary: string;
   matches: ProgressiveMatch[];

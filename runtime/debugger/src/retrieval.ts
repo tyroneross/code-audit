@@ -14,7 +14,7 @@ import type {
   CorpusCoverage,
   RetrievalCoverage
 } from './types';
-import { loadAllIncidents, loadAllPatterns, emptyCorpusCoverage, recordCorpusSkip } from './storage';
+import { loadAllIncidents, loadAllPatterns, emptyCorpusCoverage, recordCorpusSkip, validIncidentRecord } from './storage';
 import { jaroWinklerDistance } from './string-similarity';
 import { traced } from './logger';
 
@@ -101,7 +101,10 @@ async function matchPatterns(
   const symptomLower = symptom.toLowerCase();
   const symptomWords = extractKeywords(symptomLower);
 
-  const scored = allPatterns.map(pattern => {
+  const scored = allPatterns.filter(pattern =>
+    (!config.tags_filter?.length || config.tags_filter.some(tag => (pattern.tags ?? []).includes(tag))) &&
+    (!config.agent_filter || (pattern.applicable_to ?? []).includes(config.agent_filter))
+  ).map(pattern => {
     // Check detection signatures
     const signatureMatches = pattern.detection_signature.filter(sig =>
       symptomWords.some(word => sig.toLowerCase().includes(word))
@@ -129,6 +132,13 @@ async function matchPatterns(
     .map(item => item.pattern);
 }
 
+/** Apply explicit eligibility before scoring, including records with absent legacy gates. */
+function eligibleIncident(incident: Incident, config: RetrievalConfig): boolean {
+  return (config.include_unvalidated !== false || incident.quality_gates?.guardian_validated === true) &&
+    (!config.tags_filter?.length || config.tags_filter.some(tag => (incident.tags ?? []).includes(tag))) &&
+    (!config.agent_filter || incident.agent_used === config.agent_filter);
+}
+
 /**
  * Search for similar incidents
  */
@@ -147,12 +157,7 @@ async function searchIncidents(
   const temporalCutoff = now - (config.temporal_preference ?? 90) * 24 * 60 * 60 * 1000;
 
   const scored = allIncidents.map(incident => {
-    // Skip unvalidated if configured
-    if (!config.include_unvalidated &&
-        incident.quality_gates &&
-        !incident.quality_gates.guardian_validated) {
-      return { incident, score: -Infinity };
-    }
+    if (!eligibleIncident(incident, config)) return { incident, score: -Infinity };
 
     // Skip incidents without valid symptom
     if (!incident.symptom || typeof incident.symptom !== 'string') {
@@ -429,6 +434,8 @@ import {
   loadKeywordIndex,
   findCandidatesByKeyword,
   loadIncident,
+  fitRecordBudget,
+  serializedTokenEstimate,
 } from './storage';
 
 /**
@@ -439,7 +446,7 @@ import {
  * - 'compact': Short keys, truncated fields (~200 tokens/incident) - DEFAULT
  * - 'full': Complete incident data (~550 tokens/incident) for detailed analysis
  *
- * Token budget enforcement ensures context doesn't exceed limits.
+ * Serialized-size estimates limit selected records; they do not measure tokenizer or protocol overhead.
  */
 export async function checkMemoryTiered(
   symptom: string,
@@ -447,24 +454,28 @@ export async function checkMemoryTiered(
 ): Promise<TieredRetrievalResult> {
   const { memoryConfig, tier = 'compact', token_budget = 2500, ...retrievalConfig } = config;
   const fullConfig = { ...DEFAULT_CONFIG, ...retrievalConfig };
+  const budget = Number.isFinite(token_budget) ? Math.max(0, Math.floor(token_budget)) : 0;
 
   // Get raw results using existing search
   const rawResult = await checkMemory(symptom, { memoryConfig, ...fullConfig });
 
   // Transform based on tier
   if (tier === 'summary') {
-    return transformToSummaryTier(rawResult, token_budget);
+    return transformToSummaryTier(rawResult, budget);
   }
 
   if (tier === 'compact') {
-    return transformToCompactTier(rawResult, token_budget);
+    return transformToCompactTier(rawResult, budget);
   }
 
-  // 'full' tier - return as-is with full data
+  const incidents = fitRecordBudget(rawResult.incidents, Math.floor(budget * 0.6));
+  const patterns = fitRecordBudget(rawResult.patterns, Math.floor(budget * 0.3));
+  const truncated = { incidents: rawResult.incidents.length-incidents.records.length, patterns: rawResult.patterns.length-patterns.records.length };
   return {
-    confidence: rawResult.confidence,
-    tokens_used: rawResult.tokens_used,
-    has_more_details: false,
+    full_incidents: incidents.records, full_patterns: patterns.records,
+    coverage: rawResult.coverage, confidence: rawResult.confidence,
+    tokens_used: incidents.tokens+patterns.tokens+Math.floor(budget*0.1),
+    has_more_details: truncated.incidents > 0 || truncated.patterns > 0, truncated,
   };
 }
 
@@ -482,24 +493,17 @@ function transformToSummaryTier(
     success_rate: p.success_rate,
   }));
 
-  // Estimate tokens (100 per summary, 50 per pattern summary)
-  const tokensPerSummary = 100;
-  const tokensPerPatternSummary = 50;
-  const maxSummaries = Math.floor((budget * 0.6) / tokensPerSummary);
-  const maxPatternSummaries = Math.floor((budget * 0.3) / tokensPerPatternSummary);
-
-  const limitedSummaries = summaries.slice(0, maxSummaries);
-  const limitedPatternSummaries = patternSummaries.slice(0, maxPatternSummaries);
-
-  const tokensUsed =
-    limitedSummaries.length * tokensPerSummary +
-    limitedPatternSummaries.length * tokensPerPatternSummary +
-    Math.floor(budget * 0.1);
+  const incidentSelection = fitRecordBudget(summaries, Math.floor(budget * 0.6));
+  const patternSelection = fitRecordBudget(patternSummaries, Math.floor(budget * 0.3));
+  const limitedSummaries = incidentSelection.records;
+  const limitedPatternSummaries = patternSelection.records;
+  const tokensUsed = incidentSelection.tokens + patternSelection.tokens + Math.floor(budget * 0.1);
 
   return {
     summaries: limitedSummaries,
     pattern_summaries: limitedPatternSummaries,
     confidence: result.confidence,
+    coverage: result.coverage,
     tokens_used: tokensUsed,
     has_more_details: true,
     truncated: {
@@ -528,6 +532,7 @@ function transformToCompactTier(
     incidents: limitedIncidents,
     patterns: limitedPatterns,
     confidence: result.confidence,
+    coverage: result.coverage,
     tokens_used: tokensUsed,
     has_more_details: truncated.incidents > 0 || truncated.patterns > 0,
     truncated,
@@ -545,6 +550,8 @@ export async function quickMemoryCheck(
   config?: { memoryConfig?: MemoryConfig; maxResults?: number }
 ): Promise<{
   hasMatches: boolean;
+  coverage?: RetrievalCoverage;
+  inconclusive?: boolean;
   matchCount: number;
   topMatch?: {
     id: string;
@@ -558,14 +565,17 @@ export async function quickMemoryCheck(
     memoryConfig: config?.memoryConfig,
     tier: 'summary',
     token_budget: 500, // Minimal budget
-    max_results: config?.maxResults || 3,
+    max_results: config?.maxResults ?? 3,
   });
 
   const summaries = result.summaries || [];
+  const patterns = result.pattern_summaries || [];
 
   return {
-    hasMatches: summaries.length > 0,
-    matchCount: summaries.length,
+    hasMatches: summaries.length + patterns.length > 0,
+    coverage: result.coverage,
+    inconclusive: Object.values(result.coverage || {}).some(value => typeof value === 'object' && value?.skipped > 0),
+    matchCount: summaries.length + patterns.length,
     topMatch: summaries[0]
       ? {
           id: summaries[0].incident_id,
@@ -573,7 +583,7 @@ export async function quickMemoryCheck(
           category: summaries[0].category,
           confidence: summaries[0].confidence,
         }
-      : undefined,
+      : patterns[0] ? { id: patterns[0].id, symptom: patterns[0].name || 'Pattern match', category: 'pattern', confidence: patterns[0].success_rate } : undefined,
     tokensUsed: result.tokens_used,
   };
 }
@@ -728,7 +738,7 @@ function buildOneLiner(incident: Incident): string {
   const cat = incident.root_cause?.category || 'unknown';
   const conf = incident.root_cause?.confidence || 0;
   const sym = (incident.symptom || '').substring(0, 50);
-  return `${sym} → ${cat} (${(conf * 100).toFixed(0)}% conf)`;
+  return `${sym} → ${cat} (historical diagnosis ${(conf * 100).toFixed(0)}%, uncalibrated)`;
 }
 
 /**
@@ -737,13 +747,13 @@ function buildOneLiner(incident: Incident): string {
 function buildPatternOneLiner(pattern: Pattern): string {
   const sr = (pattern.success_rate * 100).toFixed(0);
   const desc = pattern.description.substring(0, 50);
-  return `${desc} (${sr}% success, ${pattern.usage_history?.total_uses || 0} uses)`;
+  return `${desc} (${sr}% historical success, ${pattern.usage_history?.total_uses || 0} uses)`;
 }
 
 /**
  * Check memory with progressive depth — returns one-liner matches with drill-down commands
  *
- * Total output stays under 500 tokens even with 10 matches.
+ * Output size is estimated from serialized matches; details are fetched separately.
  * Use /debugger-detail <ID> to get full incident data on demand.
  */
 export async function checkMemoryProgressive(
@@ -766,6 +776,7 @@ export async function checkMemoryProgressive(
       one_liner: buildPatternOneLiner(pattern),
       verdict,
       confidence: pattern.success_rate,
+      confidence_kind: 'historical_success_rate',
       detail_command: `/debugger-detail ${pattern.pattern_id}`,
     });
   }
@@ -777,21 +788,25 @@ export async function checkMemoryProgressive(
       type: 'incident',
       one_liner: buildOneLiner(incident),
       verdict,
-      confidence: incident.similarity_score || incident.root_cause?.confidence || 0,
+      confidence: incident.root_cause?.confidence ?? 0,
+      confidence_kind: 'historical_diagnosis',
+      retrieval_score: incident.similarity_score,
       detail_command: `/debugger-detail ${incident.incident_id}`,
     });
   }
 
   // Estimate tokens (~40 tokens per one-liner match)
-  const tokensUsed = matches.length * 40 + 60; // 60 for header/summary
+  const tokensUsed = serializedTokenEstimate(matches) + 60;
+  const partial = Object.values(result.coverage || {}).some(value => typeof value === 'object' && value?.skipped > 0);
 
   return {
     verdict,
-    summary: verdictSummary(verdict, result),
+    summary: (partial ? 'Partial corpus coverage; ' : '') + verdictSummary(verdict, result),
+    coverage: result.coverage,
     matches,
     total_matches: matches.length,
     tokens_used: tokensUsed,
-    action: verdictAction(verdict),
+    action: partial && verdict === 'NO_MATCH' ? 'Absence of matches is inconclusive; inspect skipped records or investigate fresh.' : verdictAction(verdict),
   };
 }
 
@@ -827,43 +842,34 @@ export async function checkMemoryScaled(
   }
 
   const coverage: RetrievalCoverage = { patterns: emptyCorpusCoverage(), incidents: emptyCorpusCoverage(), scope: 'keyword candidates' };
+  const patterns = await matchPatterns(symptom, fullConfig, memoryConfig, coverage.patterns);
+  if (patterns.length) return { incidents: [], patterns, coverage: { patterns: coverage.patterns, scope: 'keyword candidates' }, confidence: 0.9, retrieval_method: 'pattern', tokens_used: estimateTokens(patterns) };
   const queryWords = extractKeywords(symptom.toLowerCase());
   if (queryWords.length === 0) {
     return { incidents: [], patterns: [], confidence: 0, retrieval_method: 'incident', tokens_used: 0, coverage };
   }
 
   // Find candidates via keyword index (O(1) per keyword)
-  const candidateIds = findCandidatesByKeyword(queryWords, kwIndex, 20);
+  const candidateIds = findCandidatesByKeyword(queryWords, kwIndex, Number.MAX_SAFE_INTEGER);
 
   if (candidateIds.length === 0) {
-    // No keyword matches — check patterns via standard path
-    const patterns = await matchPatterns(symptom, fullConfig, memoryConfig, coverage.patterns);
-    if (patterns.length > 0) {
-      return {
-        incidents: [],
-        patterns,
-        confidence: 0.9,
-        coverage,
-        retrieval_method: 'pattern',
-        tokens_used: estimateTokens(patterns),
-      };
-    }
     return { incidents: [], patterns: [], confidence: 0, retrieval_method: 'incident', tokens_used: 0, coverage };
   }
 
-  // Load only candidate incidents (max 20 file reads instead of all)
+  // Scan ranked postings until 20 eligible records or exhaustion; filters and stale IDs consume no result slots.
   const candidateIncidents: Incident[] = [];
   for (const id of candidateIds) {
     coverage.incidents!.checked++;
     try {
       const inc = await loadIncident(id, memoryConfig);
-      if (inc && typeof inc.symptom === 'string' && Number.isFinite(inc.timestamp) &&
-          (inc.tags === undefined || (Array.isArray(inc.tags) && inc.tags.every(tag => typeof tag === 'string')))) {
-        candidateIncidents.push(inc); coverage.incidents!.loaded++;
+      if (validIncidentRecord(inc) && inc.incident_id === id) {
+        coverage.incidents!.loaded++;
+        if (eligibleIncident(inc, fullConfig)) candidateIncidents.push(inc);
       } else recordCorpusSkip(coverage.incidents!, id, 'invalid_record');
     } catch (error) {
       recordCorpusSkip(coverage.incidents!, id, error instanceof SyntaxError ? 'invalid_json' : 'read_failed');
     }
+    if (candidateIncidents.length >= 20) break;
   }
 
   // Score candidates
@@ -871,7 +877,7 @@ export async function checkMemoryScaled(
   const temporalCutoff = now - (fullConfig.temporal_preference ?? 90) * 24 * 60 * 60 * 1000;
 
   const scored = candidateIncidents.map(incident => {
-    if (!fullConfig.include_unvalidated && incident.quality_gates && !incident.quality_gates.guardian_validated) return { incident, score: -Infinity };
+    if (!eligibleIncident(incident, fullConfig)) return { incident, score: -Infinity };
     if (!incident.symptom || typeof incident.symptom !== 'string') {
       return { incident, score: 0 };
     }
@@ -899,26 +905,13 @@ export async function checkMemoryScaled(
     .slice(0, fullConfig.max_results)
     .map(item => ({ ...item.incident, similarity_score: item.score }));
 
-  // Also check patterns
-  const patterns = await matchPatterns(symptom, fullConfig, memoryConfig, coverage.patterns);
-
-  if (patterns.length > 0 && incidents.length === 0) {
-    return {
-      incidents: [],
-      patterns,
-      confidence: 0.9,
-      coverage,
-      retrieval_method: 'pattern',
-      tokens_used: estimateTokens(patterns),
-    };
-  }
 
   return {
     incidents,
     patterns,
     coverage,
     confidence: incidents.length > 0 ? 0.7 : 0.0,
-    retrieval_method: incidents.length > 0 && patterns.length > 0 ? 'hybrid' : 'incident',
+    retrieval_method: 'incident',
     tokens_used: estimateTokens([...incidents, ...patterns]),
   };
 }
