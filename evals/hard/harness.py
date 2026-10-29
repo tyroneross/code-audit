@@ -221,7 +221,13 @@ def network_commands(host_output):
     The lane cannot deny network to model commands without also denying the Codex API, so access is audited instead."""
     import re
     global NETWORK
-    NETWORK = NETWORK or re.compile(r'\b(curl|wget|gh|ssh|scp|rsync|nc|ncat|telnet|pip3?|npm|npx|pnpm|yarn|brew|urllib|requests|httpx|aiohttp|socket|fetch\(|http\.client|https?\.(get|request))\b|https?://|\bgit\s+(clone|fetch|pull|ls-remote|remote|submodule|archive)\b|github\.com')
+    # Invocation-shaped only: a tool used as a command word, a network library imported, a git network verb. Bare words
+    # (a "requests" test name, a "yarn.lock" glob, an e-mail domain in a copyright header) are not access.
+    NETWORK = NETWORK or re.compile(
+        r'(?:^|[\s;&|(`\'"])(?:curl|wget|gh|ssh|scp|rsync|nc|ncat|telnet|pip3?|npm|npx|pnpm|yarn|brew)\s'
+        r'|\b(?:import|from)\s+(?:urllib|requests|httpx|aiohttp|socket|http\.client)\b'
+        r'|require\(\s*[\'"](?:node:)?(?:https?|net|dgram)[\'"]|\bfetch\(\s*[\'"`]https?:'
+        r'|\bgit\s+(?:clone|fetch|pull|ls-remote|remote\s+add|submodule)\b')
     flagged, tools = [], []
     for line in host_output.splitlines():
         if not line.startswith('{'): continue
