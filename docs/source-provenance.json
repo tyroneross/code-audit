@@ -1739,14 +1739,14 @@
       "path": "skills/code-principles/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "ee1a7202970de33adc0a8f418ecb3f4c178c715ca313e94310aaef58553fb84b",
+      "current_sha256": "d27f3b1bcdbe9c7f828c5785652dd5f3fb19ff5e69641aeb325095d417dc4d7d",
       "modified_from_import": true
     },
     {
       "path": "skills/code-principles/references/challenge-guidance.md",
       "source": "code-principles-audit",
       "source_sha256": "78ac53a0dafd61c97d50024d9d3eedb1abf5940e6daa96c9c75a675019962e85",
-      "current_sha256": "202797c2b3c7161f4626ed109cdde085641c6d31bd592ccbfe35ed35f4cbda22",
+      "current_sha256": "39fa7f90cb518c8adc95879c9d7f1834b646d503575d6f409d75ce2b2ff67719",
       "modified_from_import": true
     },
     {
@@ -1899,7 +1899,8 @@
     "Audit packaging tests validate combined identity and independent plugin/tool versions.",
     "Memory workflow matches actual tool schemas and optional host capabilities.",
     "Debugger package and lockfile remove automatic install setup; compiled runtime rebuilt from copied source.",
-    "2026-10-17: Add review convergence, evidence-sensitive finding reopening, incident applicability and negative-outcome guidance, research limits and a held-out synthetic review evaluation; MCP schemas and runtime unchanged."
+    "2026-10-17: Add review convergence, evidence-sensitive finding reopening, incident applicability and negative-outcome guidance, research limits and a held-out synthetic review evaluation; MCP schemas and runtime unchanged.",
+    "2026-10-28: Re-recorded current hashes after adding the 2026-10-25 agent communication and dependency handoff checks to code-principles SKILL.md and challenge-guidance.md; source bytes unchanged."
   ],
   "removed_imports": [
     {

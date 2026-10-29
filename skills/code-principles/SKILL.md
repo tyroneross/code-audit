@@ -21,6 +21,7 @@ Return material findings with trigger, causal explanation, location, consequence
 ## Load details when needed
 
 - Re-review, disputed findings, changed closure premises or review-budget decisions: [review feedback](references/review-feedback.md).
+- Agent communication, dependency readiness or handoff acceptance: [dependency handoff checks](references/challenge-guidance.md#agent-communication-and-dependency-handoffs).
 - A concrete performance, retry, concurrency, failure or contract concern: the relevant section of [focused checklist](references/focused-checklist.md), then its linked rule cards. Do not load all cards for a small review.
 - Choosing correction scope or engineering tradeoffs: [foundations](references/engineering-foundations.md), [whole-system repair](references/whole-system-repair.md) and [challenge guidance](references/challenge-guidance.md) as applicable.
 - Available incident memory: follow [debugging memory](../debugging-memory/SKILL.md), check actual project scope, and load [incident learning](references/incident-learning.md) for lifecycle or recording questions. If unavailable, continue source investigation and disclose that limit.
