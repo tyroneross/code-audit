@@ -1,6 +1,6 @@
 # Hard review and repair benchmark: results, 2026-10-28
 
-All four arms scored the same on every review case and every repair case. On the pre-registered primary set, Code Audit, Coding Debugger, Code Principles Audit and the no-guidance control each detected 6 of 12 review trials and passed 8 of 8 repairs. So both sources are at parity with Code Audit. The review family is now below ceiling (the control scored 0.50), but guidance bundles still made no measurable difference to which defects a reviewer found. Repair stayed at ceiling, so it does not discriminate.
+On the pre-registered primary set, all four arms scored the same: Code Audit, Coding Debugger, Code Principles Audit and the no-guidance control each detected 6 of 12 review trials and passed 8 of 8 repairs. Across all cases they differ only on H09, where `code-principles-audit` and `none` each detected one more trial (13/20 against 12/20) on a partial match. Both sources are at parity with Code Audit. The review family is now below ceiling (the control scored 0.50), but guidance bundles still made no measurable difference to which defects a reviewer found. Repair stayed at ceiling, so it does not discriminate.
 
 Method, cases, pilot rule, validity rules and verdict rule: [README](../../README.md), committed in 2e6ef9d before any trial, with the pilot addendum (9f066c9) before the scored runs. Per-arm numbers: [scores.json](scores.json). Raw host output, prompts, judge packets and judgments are kept outside the repository.
 

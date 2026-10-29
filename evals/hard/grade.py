@@ -128,8 +128,10 @@ def aggregate(out, matches, case_ids=None):
         a = arms[t['arm']]; a['seconds'] += t.get('elapsed_seconds') or 0; a['tokens'] += usage_tokens(t)
         if t['family'] == 'repair':
             # Invalid trials (host failure, timeout, network or other tool use) are excluded from the denominator and counted.
-            if not t.get('valid', t.get('status') == 'completed'): a['repair_invalid'] += 1; continue
-            passed = bool(t.get('passed_final', t.get('passed')))
+            if 'valid' not in t or 'passed_final' not in t:
+                raise ValueError(f"{t['folder']}: repair trial has no audit; run `harness.py reverify --out ...` before grading")
+            if not t['valid']: a['repair_invalid'] += 1; continue
+            passed = bool(t['passed_final'])
             a['repair_trials'] += 1; a['repair_passed'] += passed
             a['per_case'].setdefault(t['case_id'], []).append(int(passed)); continue
         case, oracle = case_info(t['case_id'])
