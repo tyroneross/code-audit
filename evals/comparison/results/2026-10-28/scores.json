@@ -1,0 +1,992 @@
+{
+  "f1": {
+    "trials": {
+      "P01-code-audit-1": {
+        "arm": "code-audit",
+        "case": "P01",
+        "repeat": 1,
+        "status": "completed",
+        "seconds": 146.782,
+        "usage": {
+          "input_tokens": 52366,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 5071,
+          "reasoning_output_tokens": 2429
+        },
+        "findings": 15,
+        "valid": 15,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": [
+          "D1",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      "P01-code-audit-2": {
+        "arm": "code-audit",
+        "case": "P01",
+        "repeat": 2,
+        "status": "completed",
+        "seconds": 79.805,
+        "usage": {
+          "input_tokens": 52372,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4258,
+          "reasoning_output_tokens": 966
+        },
+        "findings": 16,
+        "valid": 16,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": [
+          "D1",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      "P01-code-principles-audit-1": {
+        "arm": "code-principles-audit",
+        "case": "P01",
+        "repeat": 1,
+        "status": "completed_recovered",
+        "seconds": 79.095,
+        "usage": {
+          "input_tokens": 49440,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 2939,
+          "reasoning_output_tokens": 269
+        },
+        "findings": 15,
+        "valid": 15,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": [
+          "D1",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      "P01-code-principles-audit-2": {
+        "arm": "code-principles-audit",
+        "case": "P01",
+        "repeat": 2,
+        "status": "completed_recovered",
+        "seconds": 84.268,
+        "usage": {
+          "input_tokens": 49443,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3129,
+          "reasoning_output_tokens": 362
+        },
+        "findings": 14,
+        "valid": 14,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": [
+          "D1",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      "P01-coding-debugger-1": {
+        "arm": "coding-debugger",
+        "case": "P01",
+        "repeat": 1,
+        "status": "completed_recovered",
+        "seconds": 79.776,
+        "usage": {
+          "input_tokens": 52767,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 2819,
+          "reasoning_output_tokens": 384
+        },
+        "findings": 14,
+        "valid": 14,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": [
+          "D1",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      "P01-coding-debugger-2": {
+        "arm": "coding-debugger",
+        "case": "P01",
+        "repeat": 2,
+        "status": "completed_recovered",
+        "seconds": 75.774,
+        "usage": {
+          "input_tokens": 52767,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 2716,
+          "reasoning_output_tokens": 478
+        },
+        "findings": 13,
+        "valid": 13,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": [
+          "D1",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      "P01-none-1": {
+        "arm": "none",
+        "case": "P01",
+        "repeat": 1,
+        "status": "completed",
+        "seconds": 80.04,
+        "usage": {
+          "input_tokens": 47039,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 2847,
+          "reasoning_output_tokens": 750
+        },
+        "findings": 11,
+        "valid": 11,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": [
+          "D1",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      "P01-none-2": {
+        "arm": "none",
+        "case": "P01",
+        "repeat": 2,
+        "status": "completed_recovered",
+        "seconds": 100.25,
+        "usage": {
+          "input_tokens": 47042,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3472,
+          "reasoning_output_tokens": 757
+        },
+        "findings": 14,
+        "valid": 14,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": [
+          "D1",
+          "D2",
+          "D3",
+          "D4"
+        ]
+      },
+      "P02-code-audit-1": {
+        "arm": "code-audit",
+        "case": "P02",
+        "repeat": 1,
+        "status": "completed_recovered",
+        "seconds": 84.298,
+        "usage": {
+          "input_tokens": 53163,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 2619,
+          "reasoning_output_tokens": 726
+        },
+        "findings": 11,
+        "valid": 11,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": []
+      },
+      "P02-code-audit-2": {
+        "arm": "code-audit",
+        "case": "P02",
+        "repeat": 2,
+        "status": "completed",
+        "seconds": 99.428,
+        "usage": {
+          "input_tokens": 53166,
+          "cached_input_tokens": 0,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4841,
+          "reasoning_output_tokens": 2019
+        },
+        "findings": 14,
+        "valid": 14,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": []
+      },
+      "P02-code-principles-audit-1": {
+        "arm": "code-principles-audit",
+        "case": "P02",
+        "repeat": 1,
+        "status": "completed",
+        "seconds": 70.513,
+        "usage": {
+          "input_tokens": 50234,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 2800,
+          "reasoning_output_tokens": 471
+        },
+        "findings": 14,
+        "valid": 14,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": []
+      },
+      "P02-code-principles-audit-2": {
+        "arm": "code-principles-audit",
+        "case": "P02",
+        "repeat": 2,
+        "status": "completed_recovered",
+        "seconds": 87.96,
+        "usage": {
+          "input_tokens": 50231,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 2951,
+          "reasoning_output_tokens": 464
+        },
+        "findings": 14,
+        "valid": 14,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": []
+      },
+      "P02-coding-debugger-1": {
+        "arm": "coding-debugger",
+        "case": "P02",
+        "repeat": 1,
+        "status": "completed_recovered",
+        "seconds": 71.812,
+        "usage": {
+          "input_tokens": 53561,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 2727,
+          "reasoning_output_tokens": 516
+        },
+        "findings": 14,
+        "valid": 14,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": []
+      },
+      "P02-coding-debugger-2": {
+        "arm": "coding-debugger",
+        "case": "P02",
+        "repeat": 2,
+        "status": "completed_recovered",
+        "seconds": 55.241,
+        "usage": {
+          "input_tokens": 53561,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 2079,
+          "reasoning_output_tokens": 337
+        },
+        "findings": 10,
+        "valid": 10,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": []
+      },
+      "P02-none-1": {
+        "arm": "none",
+        "case": "P02",
+        "repeat": 1,
+        "status": "completed",
+        "seconds": 68.037,
+        "usage": {
+          "input_tokens": 47833,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3032,
+          "reasoning_output_tokens": 953
+        },
+        "findings": 13,
+        "valid": 13,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": []
+      },
+      "P02-none-2": {
+        "arm": "none",
+        "case": "P02",
+        "repeat": 2,
+        "status": "completed_recovered",
+        "seconds": 48.73,
+        "usage": {
+          "input_tokens": 47833,
+          "cached_input_tokens": 12288,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 1760,
+          "reasoning_output_tokens": 136
+        },
+        "findings": 9,
+        "valid": 9,
+        "harmful": 0,
+        "duplicates": 0,
+        "covered": []
+      }
+    },
+    "arms": {
+      "code-audit": {
+        "recall_per_trial": [
+          1.0,
+          1.0
+        ],
+        "mean_recall": 1.0,
+        "precision_per_repeat": [
+          1.0,
+          1.0
+        ],
+        "mean_precision": 1.0,
+        "harmful": 0,
+        "failed_trials": 0,
+        "recovered_trials": 1,
+        "seconds": [
+          146.782,
+          79.805,
+          84.298,
+          99.428
+        ],
+        "tokens": [
+          57437,
+          56630,
+          55782,
+          58007
+        ]
+      },
+      "coding-debugger": {
+        "recall_per_trial": [
+          1.0,
+          1.0
+        ],
+        "mean_recall": 1.0,
+        "precision_per_repeat": [
+          1.0,
+          1.0
+        ],
+        "mean_precision": 1.0,
+        "harmful": 0,
+        "failed_trials": 0,
+        "recovered_trials": 4,
+        "seconds": [
+          79.776,
+          75.774,
+          71.812,
+          55.241
+        ],
+        "tokens": [
+          55586,
+          55483,
+          56288,
+          55640
+        ]
+      },
+      "code-principles-audit": {
+        "recall_per_trial": [
+          1.0,
+          1.0
+        ],
+        "mean_recall": 1.0,
+        "precision_per_repeat": [
+          1.0,
+          1.0
+        ],
+        "mean_precision": 1.0,
+        "harmful": 0,
+        "failed_trials": 0,
+        "recovered_trials": 3,
+        "seconds": [
+          79.095,
+          84.268,
+          70.513,
+          87.96
+        ],
+        "tokens": [
+          52379,
+          52572,
+          53034,
+          53182
+        ]
+      },
+      "none": {
+        "recall_per_trial": [
+          1.0,
+          1.0
+        ],
+        "mean_recall": 1.0,
+        "precision_per_repeat": [
+          1.0,
+          1.0
+        ],
+        "mean_precision": 1.0,
+        "harmful": 0,
+        "failed_trials": 0,
+        "recovered_trials": 2,
+        "seconds": [
+          80.04,
+          100.25,
+          68.037,
+          48.73
+        ],
+        "tokens": [
+          49886,
+          50514,
+          50865,
+          49593
+        ]
+      }
+    }
+  },
+  "f2": {
+    "trials": [
+      {
+        "trial": "r2-code-audit-1",
+        "case": "R2",
+        "arm": "code-audit",
+        "repeat": 1,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 88.159,
+        "usage": {
+          "input_tokens": 233309,
+          "cached_input_tokens": 208256,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3899,
+          "reasoning_output_tokens": 510
+        },
+        "checks": [
+          "Ran 9 tests in 0.038s",
+          "OK"
+        ],
+        "r1_verification": null
+      },
+      {
+        "trial": "r2-code-audit-2",
+        "case": "R2",
+        "arm": "code-audit",
+        "repeat": 2,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 106.891,
+        "usage": {
+          "input_tokens": 224518,
+          "cached_input_tokens": 197376,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4638,
+          "reasoning_output_tokens": 1124
+        },
+        "checks": [
+          "Ran 9 tests in 0.023s",
+          "OK"
+        ],
+        "r1_verification": null
+      },
+      {
+        "trial": "r2-code-principles-audit-1",
+        "case": "R2",
+        "arm": "code-principles-audit",
+        "repeat": 1,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 103.637,
+        "usage": {
+          "input_tokens": 237017,
+          "cached_input_tokens": 218112,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4563,
+          "reasoning_output_tokens": 844
+        },
+        "checks": [
+          "Ran 9 tests in 0.021s",
+          "OK"
+        ],
+        "r1_verification": null
+      },
+      {
+        "trial": "r2-code-principles-audit-2",
+        "case": "R2",
+        "arm": "code-principles-audit",
+        "repeat": 2,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 97.777,
+        "usage": {
+          "input_tokens": 258722,
+          "cached_input_tokens": 242560,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4528,
+          "reasoning_output_tokens": 721
+        },
+        "checks": [
+          "Ran 9 tests in 0.058s",
+          "OK"
+        ],
+        "r1_verification": null
+      },
+      {
+        "trial": "r2-coding-debugger-1",
+        "case": "R2",
+        "arm": "coding-debugger",
+        "repeat": 1,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 80.335,
+        "usage": {
+          "input_tokens": 206255,
+          "cached_input_tokens": 186752,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4097,
+          "reasoning_output_tokens": 445
+        },
+        "checks": [
+          "Ran 9 tests in 0.034s",
+          "OK"
+        ],
+        "r1_verification": null
+      },
+      {
+        "trial": "r2-coding-debugger-2",
+        "case": "R2",
+        "arm": "coding-debugger",
+        "repeat": 2,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 86.477,
+        "usage": {
+          "input_tokens": 229829,
+          "cached_input_tokens": 206592,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4000,
+          "reasoning_output_tokens": 429
+        },
+        "checks": [
+          "Ran 9 tests in 0.037s",
+          "OK"
+        ],
+        "r1_verification": null
+      },
+      {
+        "trial": "r2-none-1",
+        "case": "R2",
+        "arm": "none",
+        "repeat": 1,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 81.13,
+        "usage": {
+          "input_tokens": 162059,
+          "cached_input_tokens": 147968,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3911,
+          "reasoning_output_tokens": 389
+        },
+        "checks": [
+          "Ran 9 tests in 0.021s",
+          "OK"
+        ],
+        "r1_verification": null
+      },
+      {
+        "trial": "r2-none-2",
+        "case": "R2",
+        "arm": "none",
+        "repeat": 2,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 95.245,
+        "usage": {
+          "input_tokens": 182128,
+          "cached_input_tokens": 154496,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4387,
+          "reasoning_output_tokens": 553
+        },
+        "checks": [
+          "Ran 9 tests in 0.027s",
+          "OK"
+        ],
+        "r1_verification": null
+      },
+      {
+        "trial": "repair-codex-code-audit-1",
+        "case": "R1",
+        "arm": "code-audit",
+        "repeat": 1,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 109.947,
+        "usage": {
+          "input_tokens": 192434,
+          "cached_input_tokens": 179456,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 5370,
+          "reasoning_output_tokens": 639
+        },
+        "checks": null,
+        "r1_verification": {
+          "passed": 18,
+          "tests": 18
+        }
+      },
+      {
+        "trial": "repair-codex-code-audit-2",
+        "case": "R1",
+        "arm": "code-audit",
+        "repeat": 2,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 101.545,
+        "usage": {
+          "input_tokens": 213265,
+          "cached_input_tokens": 185472,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4894,
+          "reasoning_output_tokens": 466
+        },
+        "checks": null,
+        "r1_verification": {
+          "passed": 18,
+          "tests": 18
+        }
+      },
+      {
+        "trial": "repair-codex-code-principles-audit-1",
+        "case": "R1",
+        "arm": "code-principles-audit",
+        "repeat": 1,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 111.854,
+        "usage": {
+          "input_tokens": 214405,
+          "cached_input_tokens": 200832,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 5384,
+          "reasoning_output_tokens": 555
+        },
+        "checks": null,
+        "r1_verification": {
+          "passed": 18,
+          "tests": 18
+        }
+      },
+      {
+        "trial": "repair-codex-code-principles-audit-2",
+        "case": "R1",
+        "arm": "code-principles-audit",
+        "repeat": 2,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 106.775,
+        "usage": {
+          "input_tokens": 182511,
+          "cached_input_tokens": 164224,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 5436,
+          "reasoning_output_tokens": 575
+        },
+        "checks": null,
+        "r1_verification": {
+          "passed": 18,
+          "tests": 18
+        }
+      },
+      {
+        "trial": "repair-codex-coding-debugger-1",
+        "case": "R1",
+        "arm": "coding-debugger",
+        "repeat": 1,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 110.403,
+        "usage": {
+          "input_tokens": 241072,
+          "cached_input_tokens": 212096,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4428,
+          "reasoning_output_tokens": 526
+        },
+        "checks": null,
+        "r1_verification": {
+          "passed": 18,
+          "tests": 18
+        }
+      },
+      {
+        "trial": "repair-codex-coding-debugger-2",
+        "case": "R1",
+        "arm": "coding-debugger",
+        "repeat": 2,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 115.61,
+        "usage": {
+          "input_tokens": 404649,
+          "cached_input_tokens": 374912,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 5021,
+          "reasoning_output_tokens": 544
+        },
+        "checks": null,
+        "r1_verification": {
+          "passed": 18,
+          "tests": 18
+        }
+      },
+      {
+        "trial": "repair-codex-none-1",
+        "case": "R1",
+        "arm": "none",
+        "repeat": 1,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 76.522,
+        "usage": {
+          "input_tokens": 125437,
+          "cached_input_tokens": 104704,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3794,
+          "reasoning_output_tokens": 384
+        },
+        "checks": null,
+        "r1_verification": {
+          "passed": 18,
+          "tests": 18
+        }
+      },
+      {
+        "trial": "repair-codex-none-2",
+        "case": "R1",
+        "arm": "none",
+        "repeat": 2,
+        "status": "completed",
+        "passed": true,
+        "protected_changes": [],
+        "seconds": 95.153,
+        "usage": {
+          "input_tokens": 183986,
+          "cached_input_tokens": 175616,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4395,
+          "reasoning_output_tokens": 569
+        },
+        "checks": null,
+        "r1_verification": {
+          "passed": 18,
+          "tests": 18
+        }
+      }
+    ],
+    "arms": {
+      "code-audit": {
+        "R1": 2,
+        "R2": 2,
+        "pooled": 4,
+        "trials": 4
+      },
+      "coding-debugger": {
+        "R1": 2,
+        "R2": 2,
+        "pooled": 4,
+        "trials": 4
+      },
+      "code-principles-audit": {
+        "R1": 2,
+        "R2": 2,
+        "pooled": 4,
+        "trials": 4
+      },
+      "none": {
+        "R1": 2,
+        "R2": 2,
+        "pooled": 4,
+        "trials": 4
+      }
+    }
+  },
+  "f3": {
+    "code-audit": {
+      "standard": {
+        "positive_queries": 60,
+        "negative_queries": 10,
+        "recall_at_5": 0.35,
+        "mrr": 0.35,
+        "negative_false_return_rate": 0.0,
+        "errors": 0,
+        "recall_at_5_exact": 0.8,
+        "recall_at_5_partial": 0.25,
+        "recall_at_5_cause": 0.0
+      },
+      "indexed": {
+        "positive_queries": 60,
+        "negative_queries": 10,
+        "recall_at_5": 0.183,
+        "mrr": 0.183,
+        "negative_false_return_rate": 0.0,
+        "errors": 0,
+        "recall_at_5_exact": 0.5,
+        "recall_at_5_partial": 0.05,
+        "recall_at_5_cause": 0.0
+      },
+      "runtime_sha256": {
+        "retrieval.js": "f9480c07efd00c28d6430675b30c1ad65a0fd929f104691c3207971e39d4c687",
+        "storage.js": "0665b7309c05001441939870a18c18b3d0e31c1cf268e1bdb51ca14f12bb83ec"
+      },
+      "corpus_coverage": {
+        "loaded": 87,
+        "checked": 100,
+        "skipped": 13
+      }
+    },
+    "coding-debugger": {
+      "standard": {
+        "positive_queries": 60,
+        "negative_queries": 10,
+        "recall_at_5": 0.383,
+        "mrr": 0.383,
+        "negative_false_return_rate": 0.0,
+        "errors": 0,
+        "recall_at_5_exact": 0.85,
+        "recall_at_5_partial": 0.3,
+        "recall_at_5_cause": 0.0
+      },
+      "indexed": {
+        "positive_queries": 60,
+        "negative_queries": 10,
+        "recall_at_5": 0.183,
+        "mrr": 0.183,
+        "negative_false_return_rate": 0.0,
+        "errors": 0,
+        "recall_at_5_exact": 0.5,
+        "recall_at_5_partial": 0.05,
+        "recall_at_5_cause": 0.0
+      },
+      "runtime_sha256": {
+        "retrieval.js": "aa585361bcd54c6639a9a4135584724ed64f3d9f6ae5612b4ec86b2a341bab07",
+        "storage.js": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361"
+      },
+      "corpus_coverage": {
+        "loaded": 100,
+        "checked": null,
+        "skipped": null
+      }
+    },
+    "none": {
+      "keyword": {
+        "positive_queries": 60,
+        "negative_queries": 10,
+        "recall_at_5": 1.0,
+        "mrr": 1.0,
+        "negative_false_return_rate": 0.1,
+        "errors": 0,
+        "recall_at_5_exact": 1.0,
+        "recall_at_5_partial": 1.0,
+        "recall_at_5_cause": 1.0
+      }
+    },
+    "code-principles-audit": {
+      "capability": "absent",
+      "recall_at_5": 0.0,
+      "mrr": 0.0,
+      "negative_false_return_rate": 0.0,
+      "note": "no incident memory in this source"
+    }
+  },
+  "verdicts": {
+    "coding-debugger": {
+      "F1": {
+        "delta_recall": 0.0,
+        "delta_precision": 0.0,
+        "verdict": "parity"
+      },
+      "F2": {
+        "delta_pooled": 0,
+        "delta_per_case": {
+          "R1": 0,
+          "R2": 0
+        },
+        "verdict": "parity"
+      },
+      "F3": {
+        "delta_recall_at_5": -0.033,
+        "delta_negative_false_return": 0.0,
+        "verdict": "parity"
+      }
+    },
+    "code-principles-audit": {
+      "F1": {
+        "delta_recall": 0.0,
+        "delta_precision": 0.0,
+        "verdict": "parity"
+      },
+      "F2": {
+        "delta_pooled": 0,
+        "delta_per_case": {
+          "R1": 0,
+          "R2": 0
+        },
+        "verdict": "parity"
+      },
+      "F3": {
+        "delta_recall_at_5": 0.35,
+        "delta_negative_false_return": 0.0,
+        "verdict": "not applicable (source has no incident memory); code-audit adds the capability"
+      }
+    },
+    "none": {
+      "F1": {
+        "delta_recall": 0.0,
+        "delta_precision": 0.0,
+        "verdict": "parity"
+      },
+      "F2": {
+        "delta_pooled": 0,
+        "delta_per_case": {
+          "R1": 0,
+          "R2": 0
+        },
+        "verdict": "parity"
+      },
+      "F3": {
+        "delta_recall_at_5": -0.65,
+        "delta_negative_false_return": -0.1,
+        "verdict": "worse"
+      }
+    }
+  }
+}
