@@ -1,0 +1,699 @@
+{
+ "version": 1,
+ "date": "2026-10-28",
+ "model": "gpt-6.1-sol",
+ "effort": "medium",
+ "repetitions": 2,
+ "primary_set": {
+  "review": [
+   "H01",
+   "H02",
+   "H03",
+   "H04",
+   "H07",
+   "H08"
+  ],
+  "repair": [
+   "X01",
+   "X02",
+   "X03",
+   "X04"
+  ]
+ },
+ "primary": {
+  "arms": {
+   "code-audit": {
+    "review_trials": 12,
+    "detected": 6,
+    "located": 11,
+    "control_trials": 4,
+    "control_false_positives": 0,
+    "review_invalid": 0,
+    "findings": 41,
+    "repair_trials": 8,
+    "repair_passed": 8,
+    "repair_invalid": 0,
+    "seconds": 1452.6,
+    "tokens": 2925394,
+    "per_case": {
+     "H01": [
+      0,
+      0
+     ],
+     "H02": [
+      1,
+      1
+     ],
+     "H03": [
+      1,
+      1
+     ],
+     "H04": [
+      1,
+      1
+     ],
+     "H07": [
+      0,
+      0
+     ],
+     "H08": [
+      0,
+      0
+     ],
+     "X01": [
+      1,
+      1
+     ],
+     "X02": [
+      1,
+      1
+     ],
+     "X03": [
+      1,
+      1
+     ],
+     "X04": [
+      1,
+      1
+     ]
+    },
+    "detection_rate": 0.5
+   },
+   "coding-debugger": {
+    "review_trials": 12,
+    "detected": 6,
+    "located": 11,
+    "control_trials": 4,
+    "control_false_positives": 0,
+    "review_invalid": 0,
+    "findings": 40,
+    "repair_trials": 8,
+    "repair_passed": 8,
+    "repair_invalid": 0,
+    "seconds": 1554.6,
+    "tokens": 2873906,
+    "per_case": {
+     "H01": [
+      0,
+      0
+     ],
+     "H02": [
+      1,
+      1
+     ],
+     "H03": [
+      1,
+      1
+     ],
+     "H04": [
+      1,
+      1
+     ],
+     "H07": [
+      0,
+      0
+     ],
+     "H08": [
+      0,
+      0
+     ],
+     "X01": [
+      1,
+      1
+     ],
+     "X02": [
+      1,
+      1
+     ],
+     "X03": [
+      1,
+      1
+     ],
+     "X04": [
+      1,
+      1
+     ]
+    },
+    "detection_rate": 0.5
+   },
+   "code-principles-audit": {
+    "review_trials": 12,
+    "detected": 6,
+    "located": 11,
+    "control_trials": 4,
+    "control_false_positives": 0,
+    "review_invalid": 0,
+    "findings": 53,
+    "repair_trials": 8,
+    "repair_passed": 8,
+    "repair_invalid": 0,
+    "seconds": 1892.9,
+    "tokens": 3599106,
+    "per_case": {
+     "H01": [
+      0,
+      0
+     ],
+     "H02": [
+      1,
+      1
+     ],
+     "H03": [
+      1,
+      1
+     ],
+     "H04": [
+      1,
+      1
+     ],
+     "H07": [
+      0,
+      0
+     ],
+     "H08": [
+      0,
+      0
+     ],
+     "X01": [
+      1,
+      1
+     ],
+     "X02": [
+      1,
+      1
+     ],
+     "X03": [
+      1,
+      1
+     ],
+     "X04": [
+      1,
+      1
+     ]
+    },
+    "detection_rate": 0.5
+   },
+   "none": {
+    "review_trials": 12,
+    "detected": 6,
+    "located": 11,
+    "control_trials": 4,
+    "control_false_positives": 0,
+    "review_invalid": 0,
+    "findings": 45,
+    "repair_trials": 8,
+    "repair_passed": 8,
+    "repair_invalid": 0,
+    "seconds": 1520.3,
+    "tokens": 2425615,
+    "per_case": {
+     "H01": [
+      0,
+      0
+     ],
+     "H02": [
+      1,
+      1
+     ],
+     "H03": [
+      1,
+      1
+     ],
+     "H04": [
+      1,
+      1
+     ],
+     "H07": [
+      0,
+      0
+     ],
+     "H08": [
+      0,
+      0
+     ],
+     "X01": [
+      1,
+      1
+     ],
+     "X02": [
+      1,
+      1
+     ],
+     "X03": [
+      1,
+      1
+     ],
+     "X04": [
+      1,
+      1
+     ]
+    },
+    "detection_rate": 0.5
+   }
+  },
+  "verdicts": {
+   "coding-debugger": {
+    "review": {
+     "delta_detection": 0.0,
+     "delta_control_fp": 0,
+     "verdict": "parity"
+    },
+    "repair": {
+     "delta_passes": 0,
+     "worst_case_delta": 0,
+     "verdict": "parity"
+    }
+   },
+   "code-principles-audit": {
+    "review": {
+     "delta_detection": 0.0,
+     "delta_control_fp": 0,
+     "verdict": "parity"
+    },
+    "repair": {
+     "delta_passes": 0,
+     "worst_case_delta": 0,
+     "verdict": "parity"
+    }
+   },
+   "discrimination": {
+    "review_control_below_ceiling": true,
+    "repair_control_below_ceiling": false
+   }
+  }
+ },
+ "all_cases": {
+  "arms": {
+   "code-audit": {
+    "review_trials": 20,
+    "detected": 12,
+    "located": 19,
+    "control_trials": 4,
+    "control_false_positives": 0,
+    "review_invalid": 0,
+    "findings": 66,
+    "repair_trials": 12,
+    "repair_passed": 12,
+    "repair_invalid": 0,
+    "seconds": 2087.4,
+    "tokens": 3937107,
+    "per_case": {
+     "H01": [
+      0,
+      0
+     ],
+     "H02": [
+      1,
+      1
+     ],
+     "H03": [
+      1,
+      1
+     ],
+     "H04": [
+      1,
+      1
+     ],
+     "H05": [
+      1,
+      1
+     ],
+     "H06": [
+      1,
+      1
+     ],
+     "H07": [
+      0,
+      0
+     ],
+     "H08": [
+      0,
+      0
+     ],
+     "H09": [
+      0,
+      0
+     ],
+     "H10": [
+      1,
+      1
+     ],
+     "X01": [
+      1,
+      1
+     ],
+     "X02": [
+      1,
+      1
+     ],
+     "X03": [
+      1,
+      1
+     ],
+     "X04": [
+      1,
+      1
+     ],
+     "X05": [
+      1,
+      1
+     ],
+     "X06": [
+      1,
+      1
+     ]
+    },
+    "detection_rate": 0.6
+   },
+   "coding-debugger": {
+    "review_trials": 20,
+    "detected": 12,
+    "located": 19,
+    "control_trials": 4,
+    "control_false_positives": 0,
+    "review_invalid": 0,
+    "findings": 61,
+    "repair_trials": 12,
+    "repair_passed": 12,
+    "repair_invalid": 0,
+    "seconds": 2190.2,
+    "tokens": 3825566,
+    "per_case": {
+     "H01": [
+      0,
+      0
+     ],
+     "H02": [
+      1,
+      1
+     ],
+     "H03": [
+      1,
+      1
+     ],
+     "H04": [
+      1,
+      1
+     ],
+     "H05": [
+      1,
+      1
+     ],
+     "H06": [
+      1,
+      1
+     ],
+     "H07": [
+      0,
+      0
+     ],
+     "H08": [
+      0,
+      0
+     ],
+     "H09": [
+      0,
+      0
+     ],
+     "H10": [
+      1,
+      1
+     ],
+     "X01": [
+      1,
+      1
+     ],
+     "X02": [
+      1,
+      1
+     ],
+     "X03": [
+      1,
+      1
+     ],
+     "X04": [
+      1,
+      1
+     ],
+     "X05": [
+      1,
+      1
+     ],
+     "X06": [
+      1,
+      1
+     ]
+    },
+    "detection_rate": 0.6
+   },
+   "code-principles-audit": {
+    "review_trials": 20,
+    "detected": 13,
+    "located": 19,
+    "control_trials": 4,
+    "control_false_positives": 0,
+    "review_invalid": 0,
+    "findings": 83,
+    "repair_trials": 12,
+    "repair_passed": 12,
+    "repair_invalid": 0,
+    "seconds": 2551.4,
+    "tokens": 4392005,
+    "per_case": {
+     "H01": [
+      0,
+      0
+     ],
+     "H02": [
+      1,
+      1
+     ],
+     "H03": [
+      1,
+      1
+     ],
+     "H04": [
+      1,
+      1
+     ],
+     "H05": [
+      1,
+      1
+     ],
+     "H06": [
+      1,
+      1
+     ],
+     "H07": [
+      0,
+      0
+     ],
+     "H08": [
+      0,
+      0
+     ],
+     "H09": [
+      0,
+      1
+     ],
+     "H10": [
+      1,
+      1
+     ],
+     "X01": [
+      1,
+      1
+     ],
+     "X02": [
+      1,
+      1
+     ],
+     "X03": [
+      1,
+      1
+     ],
+     "X04": [
+      1,
+      1
+     ],
+     "X05": [
+      1,
+      1
+     ],
+     "X06": [
+      1,
+      1
+     ]
+    },
+    "detection_rate": 0.65
+   },
+   "none": {
+    "review_trials": 20,
+    "detected": 13,
+    "located": 19,
+    "control_trials": 4,
+    "control_false_positives": 0,
+    "review_invalid": 0,
+    "findings": 68,
+    "repair_trials": 12,
+    "repair_passed": 12,
+    "repair_invalid": 0,
+    "seconds": 2120.8,
+    "tokens": 3022731,
+    "per_case": {
+     "H01": [
+      0,
+      0
+     ],
+     "H02": [
+      1,
+      1
+     ],
+     "H03": [
+      1,
+      1
+     ],
+     "H04": [
+      1,
+      1
+     ],
+     "H05": [
+      1,
+      1
+     ],
+     "H06": [
+      1,
+      1
+     ],
+     "H07": [
+      0,
+      0
+     ],
+     "H08": [
+      0,
+      0
+     ],
+     "H09": [
+      0,
+      1
+     ],
+     "H10": [
+      1,
+      1
+     ],
+     "X01": [
+      1,
+      1
+     ],
+     "X02": [
+      1,
+      1
+     ],
+     "X03": [
+      1,
+      1
+     ],
+     "X04": [
+      1,
+      1
+     ],
+     "X05": [
+      1,
+      1
+     ],
+     "X06": [
+      1,
+      1
+     ]
+    },
+    "detection_rate": 0.65
+   }
+  },
+  "verdicts": {
+   "coding-debugger": {
+    "review": {
+     "delta_detection": 0.0,
+     "delta_control_fp": 0,
+     "verdict": "parity"
+    },
+    "repair": {
+     "delta_passes": 0,
+     "worst_case_delta": 0,
+     "verdict": "parity"
+    }
+   },
+   "code-principles-audit": {
+    "review": {
+     "delta_detection": -0.05,
+     "delta_control_fp": 0,
+     "verdict": "parity"
+    },
+    "repair": {
+     "delta_passes": 0,
+     "worst_case_delta": 0,
+     "verdict": "parity"
+    }
+   },
+   "discrimination": {
+    "review_control_below_ceiling": true,
+    "repair_control_below_ceiling": false
+   }
+  }
+ },
+ "pilot": {
+  "arm": "none",
+  "review_detected": "7/10",
+  "control_false_positives": "0/2",
+  "repair_passed": "6/6",
+  "trials": 18,
+  "seconds": 983,
+  "tokens": 1370694
+ },
+ "repair_oracle_preflight": {
+  "X01": {
+   "parent": "failed",
+   "fix": "passed",
+   "withheld_sha256": "b59e2f2fec308c9af7381679319f6aa2a7e2a88b22e319412ea855cb88e3f525"
+  },
+  "X02": {
+   "parent": "failed",
+   "fix": "passed",
+   "withheld_sha256": "3dd859bbfc5778c0f1b6703782c7b244f1d9602e09e19658b6cea682a9d936f2"
+  },
+  "X03": {
+   "parent": "failed",
+   "fix": "passed",
+   "withheld_sha256": "ce71d15e986b7ef504d9081069148abf80c98dac76b251f9fb5fbd00d790fda1"
+  },
+  "X04": {
+   "parent": "failed",
+   "fix": "passed",
+   "withheld_sha256": "e9dbc131eb0914de7c079d078d760eae14b2ae3d64c35e6aa93d129a573b0f8e"
+  },
+  "X05": {
+   "parent": "failed",
+   "fix": "passed",
+   "withheld_sha256": "1aeb5d9cdda71c8da9a4bd2260104e3fcbf7d8c607be5818c81b96a5de7d8100"
+  },
+  "X06": {
+   "parent": "failed",
+   "fix": "passed",
+   "withheld_sha256": "e783b014b1f67693bbda7ef9a47116aaf68148443ccda1c1b7810014a4579df3"
+  }
+ },
+ "validity": {
+  "review_schema_invalid": 0,
+  "review_tool_use": 0,
+  "repair_host_failures": 0,
+  "network_audit_bare_word_flags": "10/48 (all false positives on inspection)",
+  "network_audit_invocation_flags": "0/54"
+ },
+ "judging": {
+  "judges": 3,
+  "model": "claude-opus-5-5",
+  "packets": 12,
+  "blinded": true,
+  "two_part_partial_matches": "counted as match per judge instruction; H09 detections (code-principles-audit rep 2, none rep 2) rest only on the splice half; H02 has 2 single-half matches in trials already detected by full matches"
+ },
+ "raw_outputs": "outside the repository (.build-loop/evals/hard)"
+}
