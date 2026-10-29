@@ -84,9 +84,9 @@ def judge_packets(out, judges, labels_file, rng=None):
         rng.shuffle(rows); findings = []
         for t in rows:
             label = 'T' + secrets.token_hex(3); labels[label] = t['folder']
-            for f in t['answer']['findings']:
+            for n, f in enumerate(t['answer']['findings']):
                 if cites_file(f, oracle):
-                    findings.append({'label': label, 'finding_id': f['id'], 'cause': f['cause'], 'locations': f['locations'], 'suggested_change': f['suggested_change']})
+                    findings.append({'label': label, 'finding_id': finding_key(n, f), 'cause': f['cause'], 'locations': f['locations'], 'suggested_change': f['suggested_change']})
         rng.shuffle(findings)
         source = git_show(case['repo'], case['revision'], oracle['file']).decode().splitlines()
         a = max(1, min(x for x, _ in oracle['lines']) - 15); b = min(len(source), max(y for _, y in oracle['lines']) + 15)
@@ -109,6 +109,11 @@ def load_judgments(judgments_dir, labels):
     return matches
 
 
+def finding_key(index, finding):
+    """Position-qualified key: the schema does not force unique finding ids, so one judgment must never cover two findings."""
+    return f'{index}:{finding.get("id")}'
+
+
 def usage_tokens(meta):
     u = meta.get('usage') or {}
     return (u.get('input_tokens') or 0) + (u.get('output_tokens') or 0)
@@ -116,17 +121,21 @@ def usage_tokens(meta):
 
 def aggregate(out, matches, case_ids=None):
     arms = {arm: {'review_trials': 0, 'detected': 0, 'located': 0, 'control_trials': 0, 'control_false_positives': 0, 'review_invalid': 0,
-                  'findings': 0, 'repair_trials': 0, 'repair_passed': 0, 'seconds': 0.0, 'tokens': 0, 'per_case': {}} for arm in ARMS}
+                  'findings': 0, 'repair_trials': 0, 'repair_passed': 0, 'repair_invalid': 0, 'seconds': 0.0, 'tokens': 0, 'per_case': {}} for arm in ARMS}
     for t in trials(out):
         if case_ids and t['case_id'] not in case_ids: continue
         a = arms[t['arm']]; a['seconds'] += t.get('elapsed_seconds') or 0; a['tokens'] += usage_tokens(t)
         if t['family'] == 'repair':
-            a['repair_trials'] += 1; a['repair_passed'] += bool(t.get('passed'))
-            a['per_case'].setdefault(t['case_id'], []).append(int(bool(t.get('passed')))); continue
-        case, oracle = case_info(t['case_id']); found = (t.get('answer') or {}).get('findings') or []
+            # Invalid trials (host failure, timeout, network or other tool use) are excluded from the denominator and counted.
+            if not t.get('valid', t.get('status') == 'completed'): a['repair_invalid'] += 1; continue
+            passed = bool(t.get('passed_final', t.get('passed')))
+            a['repair_trials'] += 1; a['repair_passed'] += passed
+            a['per_case'].setdefault(t['case_id'], []).append(int(passed)); continue
+        case, oracle = case_info(t['case_id'])
+        if t['status'] != 'completed': a['review_invalid'] += 1; continue
+        found = (t.get('answer') or {}).get('findings') or []
         a['findings'] += len(found)
-        if t['status'] != 'completed': a['review_invalid'] += 1
-        judged = [f for f in found if matches.get((t['folder'], f['id']))]
+        judged = [f for n, f in enumerate(found) if matches.get((t['folder'], finding_key(n, f)))]
         if case['role'] == 'control':
             a['control_trials'] += 1; a['control_false_positives'] += bool(judged); continue
         a['review_trials'] += 1

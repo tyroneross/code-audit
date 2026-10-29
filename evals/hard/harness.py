@@ -196,7 +196,56 @@ def verify(case, files, protected, timeout=VERIFY_TIMEOUT):
             return {'status': 'timeout'}
         text = (result.stdout + result.stderr).decode(errors='replace')
         tail = [l.strip() for l in text.splitlines() if l.strip().startswith(('Ran ', 'OK', 'FAILED', 'FAIL:', 'ERROR:', '# tests', '# pass', '# fail', 'not ok'))]
-        return {'status': 'passed' if result.returncode == 0 else 'failed', 'exit_code': result.returncode, 'summary': tail[-12:]}
+        counted = test_counts(text)
+        ok = result.returncode == 0 and counted['ran'] > 0 and counted['failed'] == 0
+        return {'status': 'passed' if ok else 'failed', 'exit_code': result.returncode, 'counts': counted, 'summary': tail[-12:]}
+
+
+def test_counts(text):
+    """Tests the runner reported, so an exit code alone (for example os._exit(0) on import) cannot pass."""
+    import re
+    ran = failed = 0
+    if (m := re.findall(r'^Ran (\d+) tests?', text, re.M)): ran = int(m[-1])
+    if (m := re.findall(r'^FAILED \((.*)\)', text, re.M)): failed = sum(int(x) for x in re.findall(r'(?:failures|errors)=(\d+)', m[-1]))
+    elif ran and not re.search(r'^OK\b', text, re.M): failed = 1
+    if (m := re.findall(r'^# tests (\d+)', text, re.M)): ran = int(m[-1])
+    if (m := re.findall(r'^# fail (\d+)', text, re.M)): failed = int(m[-1])
+    return {'ran': ran, 'failed': failed}
+
+
+NETWORK = None
+
+
+def network_commands(host_output):
+    """Model shell commands that could reach the network or another checkout; any one invalidates a repair trial.
+    The lane cannot deny network to model commands without also denying the Codex API, so access is audited instead."""
+    import re
+    global NETWORK
+    NETWORK = NETWORK or re.compile(r'\b(curl|wget|gh|ssh|scp|rsync|nc|ncat|telnet|pip3?|npm|npx|pnpm|yarn|brew|urllib|requests|httpx|aiohttp|socket|fetch\(|http\.client|https?\.(get|request))\b|https?://|\bgit\s+(clone|fetch|pull|ls-remote|remote|submodule|archive)\b|github\.com')
+    flagged, tools = [], []
+    for line in host_output.splitlines():
+        if not line.startswith('{'): continue
+        row = json.loads(line); item = row.get('item') or {}
+        if row.get('type') != 'item.completed': continue
+        if item.get('type') == 'command_execution' and NETWORK.search(item.get('command', '')): flagged.append(item['command'][:200])
+        elif item.get('type') not in (None, 'command_execution', 'agent_message', 'reasoning', 'file_change', 'todo_list'): tools.append(item.get('type'))
+    return {'network_commands': flagged, 'other_tools': tools}
+
+
+def reverify(out):
+    """Re-run verification and the network audit on every saved repair candidate with the current rules."""
+    rows = {}
+    for meta_path in sorted(Path(out).glob('X*/meta.json')):
+        meta = json.loads(meta_path.read_text()); case = case_by_id('repair', meta['case_id']); baseline = workspace_files(case, 'parent')
+        saved = meta_path.parent / 'candidate'
+        files = {r: ((saved / r).read_bytes() if r in case['editable'] and (saved / r).is_file() else baseline[r]) for r in baseline}
+        audit = network_commands((meta_path.parent / 'host-output.jsonl').read_text(errors='replace'))
+        check = verify(case, files, [EVALS.parent, ROOT, Path(out).resolve()]) if meta.get('status') == 'completed' else {'status': 'not_run'}
+        meta.update({'reverification': check, 'audit': audit,
+                     'valid': meta.get('status') == 'completed' and not audit['network_commands'] and not audit['other_tools'],
+                     'passed_final': meta.get('status') == 'completed' and not meta.get('protected_changes') and check['status'] == 'passed' and not audit['network_commands'] and not audit['other_tools']})
+        meta_path.write_text(json.dumps(meta, indent=2) + '\n'); rows[meta_path.parent.name] = (meta['valid'], meta['passed_final'])
+    return rows
 
 
 def preflight(protected):
@@ -259,7 +308,7 @@ def schedule(families, arms, repeats, ids):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('command', choices=['preflight', 'run'])
+    p.add_argument('command', choices=['preflight', 'run', 'reverify'])
     p.add_argument('--out', type=Path, required=True)
     p.add_argument('--families', nargs='*', default=['review', 'repair'])
     p.add_argument('--arms', nargs='*', default=ARMS)
@@ -273,6 +322,8 @@ def main():
         rows = preflight([EVALS.parent, ROOT, out]); (out / 'preflight.json').write_text(json.dumps(rows, indent=2) + '\n')
         print(json.dumps({k: (v['oracle_valid'], v['parent']['status'], v['fix']['status']) for k, v in rows.items()}))
         raise SystemExit(0 if all(v['oracle_valid'] for v in rows.values()) else 1)
+    if a.command == 'reverify':
+        print(json.dumps(reverify(out), indent=1)); return
     lock = threading.Lock()
     def one(job):
         family, case, arm, repeat = job

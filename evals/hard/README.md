@@ -85,3 +85,12 @@ The pilot ran the `none` arm once per case on 2026-10-28. All 12 reviews complet
 - **Repair.** `none` passed all 6. Under the pilot rule, the primary set is **X01–X04**. The repair family is therefore expected to sit at ceiling. If it does, the result will say the family does not discriminate, rather than claim parity as evidence.
 
 Cases were not edited. Scored runs cover all 12 review and 6 repair cases for all four arms, with 2 repetitions each.
+
+## Addendum 2: trial-validity rules (committed during scored runs, before any scored output was graded)
+
+An independent review of the pre-registration found three validity gaps. These rules apply to every scored trial alike:
+
+- **Network.** The repair lane cannot deny network to model commands without also blocking the Codex API: a nested `sandbox-exec` is refused, and the Codex command sandbox cannot run inside the outer one. The source repositories are public, so a model could fetch a fix. `harness.py reverify` therefore audits every model command. Any command that could reach the network or another checkout (curl, wget, gh, package managers, URL literals, `git clone/fetch/pull/remote`, HTTP or socket libraries), and any tool other than shell or file edits, makes the trial **invalid**. The audit reads command text, so obfuscated access would escape it. That residual risk is reported.
+- **Invalid trials.** A trial that is invalid (host failure, timeout, schema-invalid answer, or flagged by the audit) is excluded from that arm's denominator and counted separately. It is not scored as a miss. Host failures and timeouts are rerun once. A trial still invalid after the rerun stays excluded.
+- **Repair pass** additionally needs the test runner to report more than zero tests and zero failures. Exit code 0 alone no longer passes. Saved candidates are re-verified under this rule.
+- **Judge keys** qualify each finding by its position, because the output schema does not force unique finding IDs.
