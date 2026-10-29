@@ -91,15 +91,17 @@ Cases were not edited. Scored runs cover all 12 review and 6 repair cases for al
 An independent review of the pre-registration found three validity gaps. These rules apply to every scored trial alike:
 
 - **Network.** The repair lane cannot deny network to model commands without also blocking the Codex API: a nested `sandbox-exec` is refused, and the Codex command sandbox cannot run inside the outer one. The source repositories are public, so a model could fetch a fix. `harness.py reverify` therefore audits every model command. Any command that could reach the network or another checkout (curl, wget, gh, package managers, URL literals, `git clone/fetch/pull/remote`, HTTP or socket libraries), and any tool other than shell or file edits, makes the trial **invalid**. The audit reads command text, so obfuscated access would escape it. That residual risk is reported.
-- **Invalid trials.** A trial that is invalid (host failure, timeout, schema-invalid answer, or flagged by the audit) is excluded from that arm's denominator and counted separately. It is not scored as a miss. Host failures and timeouts are rerun once. A trial still invalid after the rerun stays excluded.
+- **Invalid trials.** A trial that is invalid (host failure, timeout, schema-invalid answer, or flagged by the audit) is excluded from that arm's denominator and counted separately. It is not scored as a miss. Host failures and timeouts are rerun once (`harness.py set-aside-invalid`, then `run`). A trial still invalid after the rerun stays excluded. No scored trial needed a rerun.
 - **Repair pass** additionally needs the test runner to report more than zero tests and zero failures. Exit code 0 alone no longer passes. Saved candidates are re-verified under this rule.
 - **Judge keys** qualify each finding by its position, because the output schema does not force unique finding IDs.
 
-## Addendum 3: network-audit precision (decided after the audit ran, before any scores were computed)
+## Addendum 3: network-audit precision (decided after repair pass results were visible in the run log, before review grading)
 
 The Addendum 2 audit matched bare words. It flagged 10 of 48 scored repair trials, and an inspection of every flagged command found all 10 were false positives:
 - a `yarn.lock` exclusion glob in `rg --files`, 8 trials;
 - the word "requests" in a test name the model wrote, 1 trial;
 - a GitHub no-reply e-mail address in a copyright header, 1 trial.
 
-No trial ran curl, wget, a package manager or a git network verb, and none imported a network library. The audit now matches invocations only: a tool used as a command word, an imported network library, or `git clone/fetch/pull/ls-remote/remote add/submodule`. Its tests keep four true-positive fixtures and add the three observed false-positive shapes. Under the refined audit, 0 of 54 repair trials (pilot and scored) are flagged. Because this rule changed after the flags were seen, both counts are reported.
+No trial ran curl, wget, a package manager or a git network verb, and none imported a network library. The audit now matches invocations only: a tool used as a command word, an imported network library, or `git clone/fetch/pull/ls-remote/remote add/submodule`. Its tests keep four true-positive fixtures and add the three observed false-positive shapes. Under the refined audit, 0 of 54 repair trials (pilot and scored) are flagged. Because this rule changed after the flags were seen, both counts are reported. Excluding the 10 first-audit trials leaves every verdict at parity.
+
+A later review found the refined audit had dropped detection it did not need to drop (URL literals, `git -C <dir> fetch`, comma import lists, path-prefixed tools, Node ESM imports, `__import__`, `fetch(variable)`). Those patterns were restored or added, with 16 true-positive and 9 false-positive fixtures. The expanded audit also flags 0 of 54 trials.
