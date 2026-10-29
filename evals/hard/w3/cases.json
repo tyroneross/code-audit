@@ -356,6 +356,9 @@
    "contract": "For every script in scripts/, the self-review detector emits a missing-test finding if and only if the re-validator finds no test for it. A differently named test that imports the script counts as coverage; an unimported script is still flagged. New modules under scripts/self_review/ are allowed.",
    "fix_files": [
     "scripts/self_review/coverage_lookup.py"
+   ],
+   "allowed_new": [
+    "scripts/self_review/*.py"
    ]
   },
   {
@@ -391,5 +394,9 @@
    "symptom": "After host surfaces are regenerated, the mini-loop and rally-workflows sub-skills reappear in the host slash menu, and the drift check reports the hand-maintained SKILL.md as the stale side.",
    "contract": "Rendering mini-loop and rally-workflows for both claude_code and codex emits `user-invocable: false` in frontmatter; the agent-rally-point router is not hidden; rendering does not change the hidden flag of the checked-in SKILL.md. Edit only the generator and its config."
   }
- ]
+ ],
+ "repair_rule": {
+  "passes": 2,
+  "case_guard": null
+ }
 }

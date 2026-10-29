@@ -1,0 +1,402 @@
+{
+ "version": 1,
+ "repos_root": "/Users/tyroneross/dev/git-folder",
+ "oracles": "w3/private/oracles-corrected.json",
+ "arms": [
+  "code-audit-w3",
+  "code-audit",
+  "coding-debugger",
+  "code-principles-audit",
+  "none"
+ ],
+ "subject": "code-audit-w3",
+ "comparators": [
+  "none",
+  "coding-debugger",
+  "code-principles-audit",
+  "code-audit"
+ ],
+ "review": [
+  {
+   "id": "W01",
+   "key": "ibr-version-literals",
+   "repo": "interface-built-right",
+   "revision": "720dfeac7e4424157f78ad196a25ba0a0688388c",
+   "role": "defect",
+   "files": [
+    {
+     "path": "src/bin/ibr.ts",
+     "ranges": [
+      [
+       1,
+       40
+      ],
+      [
+       225,
+       260
+      ]
+     ]
+    },
+    {
+     "path": "src/mcp/server.ts"
+    },
+    {
+     "path": "package.json"
+    }
+   ]
+  },
+  {
+   "id": "W02",
+   "key": "bl-maintainer-path-default",
+   "repo": "build-loop",
+   "revision": "0a7aa7e29de4ea44e4d3fb6ee25e4dc10c7f8f23",
+   "role": "defect",
+   "files": [
+    {
+     "path": "scripts/assumption_register.py",
+     "ranges": [
+      [
+       1,
+       140
+      ]
+     ]
+    },
+    {
+     "path": "skills/silent-assumptions/SKILL.md",
+     "ranges": [
+      [
+       180,
+       215
+      ]
+     ]
+    },
+    {
+     "path": "scripts/check_portability.py"
+    }
+   ]
+  },
+  {
+   "id": "W03",
+   "key": "nav-receiver-regex",
+   "repo": "NavGator",
+   "revision": "e6034d5930327477e810748de08a0b4a330848d8",
+   "role": "defect",
+   "files": [
+    {
+     "path": "src/scanners/connections/llm-call-tracer.ts",
+     "ranges": [
+      [
+       1,
+       240
+      ],
+      [
+       380,
+       560
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "W04",
+   "key": "arp-factkind-spelling",
+   "repo": "agent-rally-point",
+   "revision": "78db6c961ed15171ebdf6f8e3e4033d43ccc47c3",
+   "role": "defect",
+   "files": [
+    {
+     "path": "crates/rally-cli/src/cli.rs",
+     "ranges": [
+      [
+       1880,
+       1905
+      ]
+     ]
+    },
+    {
+     "path": "crates/rally-cli/src/store.rs",
+     "ranges": [
+      [
+       120,
+       400
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "W05",
+   "key": "bl-codex-manifest-version",
+   "repo": "build-loop",
+   "revision": "52adc29961057f789fea2957320dc733d5099d66",
+   "role": "defect",
+   "files": [
+    {
+     "path": "scripts/bump_version.py"
+    },
+    {
+     "path": ".claude-plugin/plugin.json"
+    },
+    {
+     "path": ".codex-plugin/plugin.json"
+    },
+    {
+     "path": "package.json"
+    }
+   ]
+  },
+  {
+   "id": "W06",
+   "key": "bl-rally-kind-allowlist",
+   "repo": "build-loop",
+   "revision": "3276d12f039b30a63d7eac243b2f35f23a490e37",
+   "role": "defect",
+   "files": [
+    {
+     "path": "scripts/rally_point/post.py"
+    },
+    {
+     "path": "scripts/rally_point/discovery_bridge.py",
+     "ranges": [
+      [
+       300,
+       460
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "W07",
+   "key": "bl-learn-wrong-duplicate-row",
+   "repo": "build-loop",
+   "revision": "ebef1da677c5ad4c7970d7aa2196fbe9e1b69d3a",
+   "role": "defect",
+   "files": [
+    {
+     "path": "scripts/write_run_entry/iohelpers.py"
+    },
+    {
+     "path": "scripts/learn/runner.py",
+     "ranges": [
+      [
+       440,
+       560
+      ],
+      [
+       640,
+       720
+      ]
+     ]
+    },
+    {
+     "path": "scripts/run_close_lint.py",
+     "ranges": [
+      [
+       230,
+       310
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "W08",
+   "key": "arp-daemon-hop-drops-fields",
+   "repo": "agent-rally-point",
+   "revision": "269800e0bc9d6a949960e4805f98aa8c9040553e",
+   "role": "defect",
+   "files": [
+    {
+     "path": "crates/rally-cli/src/lib.rs",
+     "ranges": [
+      [
+       2150,
+       2165
+      ],
+      [
+       2995,
+       3010
+      ],
+      [
+       7070,
+       7090
+      ]
+     ]
+    },
+    {
+     "path": "crates/rally-cli/src/store_client.rs",
+     "ranges": [
+      [
+       300,
+       490
+      ]
+     ]
+    },
+    {
+     "path": "crates/rally-cli/src/rallyd_core.rs",
+     "ranges": [
+      [
+       530,
+       700
+      ]
+     ]
+    },
+    {
+     "path": "crates/rally-cli/src/store.rs",
+     "ranges": [
+      [
+       436,
+       540
+      ],
+      [
+       630,
+       665
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "WC1",
+   "key": "ibr-version-literals",
+   "repo": "interface-built-right",
+   "revision": "9d5cb19a88af4c32b35278592742e079ea113ffc",
+   "role": "control",
+   "files": [
+    {
+     "path": "src/bin/ibr.ts",
+     "ranges": [
+      [
+       1,
+       40
+      ],
+      [
+       225,
+       260
+      ]
+     ]
+    },
+    {
+     "path": "src/mcp/server.ts"
+    },
+    {
+     "path": "package.json"
+    }
+   ]
+  },
+  {
+   "id": "WC2",
+   "key": "bl-learn-wrong-duplicate-row",
+   "repo": "build-loop",
+   "revision": "dbb9d9ec44d02043bda8c98f959690a0cfe66dcb",
+   "role": "control",
+   "files": [
+    {
+     "path": "scripts/write_run_entry/iohelpers.py"
+    },
+    {
+     "path": "scripts/learn/runner.py",
+     "ranges": [
+      [
+       440,
+       560
+      ],
+      [
+       640,
+       720
+      ]
+     ]
+    },
+    {
+     "path": "scripts/run_close_lint.py",
+     "ranges": [
+      [
+       230,
+       310
+      ]
+     ]
+    }
+   ]
+  }
+ ],
+ "repair": [
+  {
+   "id": "WX2",
+   "key": "bl-selfreview-coverage-rule",
+   "repo": "build-loop",
+   "parent": "825c7a28a8b8bc55c4376e9dec3dc3cb035eb4c5",
+   "fix": "03b082acaea3e2978139a07574eacd0c92403956",
+   "files": [
+    "scripts/revalidate_self_review_findings.py",
+    "scripts/self_review/__init__.py",
+    "scripts/self_review/__main__.py",
+    "scripts/self_review/efficiency.py",
+    "scripts/self_review/gather.py",
+    "scripts/self_review/generated_paths.py",
+    "scripts/self_review/output.py",
+    "scripts/self_review/selfscan.py"
+   ],
+   "editable": [
+    "scripts/self_review/selfscan.py",
+    "scripts/revalidate_self_review_findings.py"
+   ],
+   "withheld": {
+    "private": "w3/private/tests/test_r2_coverage_agreement.py",
+    "name": "test_withheld_r2.py"
+   },
+   "cwd": ".",
+   "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_withheld_r2"
+   ],
+   "symptom": "The deep self-review files about 66 \"No test file for X\" findings, and the re-validator closes 80% of them as already covered in the same session.",
+   "contract": "For every script in scripts/, the self-review detector emits a missing-test finding if and only if the re-validator finds no test for it. A differently named test that imports the script counts as coverage; an unimported script is still flagged. New modules under scripts/self_review/ are allowed.",
+   "fix_files": [
+    "scripts/self_review/coverage_lookup.py"
+   ],
+   "allowed_new": [
+    "scripts/self_review/*.py"
+   ]
+  },
+  {
+   "id": "WX3",
+   "key": "arp-generator-drops-hidden-flag",
+   "repo": "agent-rally-point",
+   "parent": "2e2b686cf0c2053f876f56fdac42429a6a5b1a05",
+   "fix": "7f04a2ed925e184175b79831404276e43470224c",
+   "files": [
+    "scripts/generate_host_surfaces.py",
+    "config/host-integrations.json",
+    "skills/agent-rally-point/SKILL.md",
+    "skills/launch-terminal/SKILL.md",
+    "skills/mini-loop/SKILL.md",
+    "skills/rally-workflows/SKILL.md",
+    "skills/rally-workflows/references/decomposition.md"
+   ],
+   "editable": [
+    "scripts/generate_host_surfaces.py",
+    "config/host-integrations.json"
+   ],
+   "withheld": {
+    "private": "w3/private/tests/test_r3_hidden_skills_survive_regen.py",
+    "name": "test_withheld_r3.py"
+   },
+   "cwd": ".",
+   "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_withheld_r3"
+   ],
+   "symptom": "After host surfaces are regenerated, the mini-loop and rally-workflows sub-skills reappear in the host slash menu, and the drift check reports the hand-maintained SKILL.md as the stale side.",
+   "contract": "Rendering mini-loop and rally-workflows for both claude_code and codex emits `user-invocable: false` in frontmatter; the agent-rally-point router is not hidden; rendering does not change the hidden flag of the checked-in SKILL.md. Edit only the generator and its config."
+  }
+ ],
+ "repair_rule": {
+  "passes": 2,
+  "case_guard": null
+ }
+}

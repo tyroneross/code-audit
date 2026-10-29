@@ -179,6 +179,17 @@ def workspace_files(case, side='parent'):
     return files
 
 
+def new_files(case, candidate, baseline):
+    """Files the candidate added that the case permits (`allowed_new` globs); anything else new is ignored."""
+    import fnmatch
+    out = {}
+    for pattern in case.get('allowed_new', []):
+        for p in candidate.glob('**/*'):
+            rel = p.relative_to(candidate).as_posix()
+            if rel not in baseline and fnmatch.fnmatch(rel, pattern) and p.is_file() and not p.is_symlink(): out[rel] = p.read_bytes()
+    return out
+
+
 def withheld_test(case):
     w = case['withheld']
     if 'git' in w: return Path(w['git']).name, git_show(case['repo'], case['fix'], w['git'])
@@ -215,6 +226,7 @@ def test_counts(text):
     if (m := re.findall(r'^=*\s*(?:(\d+) failed, )?(\d+) passed', text, re.M)):  # pytest summary
         failed_py, passed_py = m[-1]; ran = int(passed_py) + int(failed_py or 0); failed = int(failed_py or 0)
     elif (m := re.findall(r'^=*\s*(\d+) failed', text, re.M)): ran = failed = int(m[-1])
+    if (m := re.findall(r'\b(\d+) errors?\b', text)) and re.search(r'\b\d+ (?:passed|failed)\b.*\bin [\d.]+s', text): failed += int(m[-1]); ran += int(m[-1])
     if (m := re.findall(r'^# tests (\d+)', text, re.M)): ran = int(m[-1])
     if (m := re.findall(r'^# fail (\d+)', text, re.M)): failed = int(m[-1])
     return {'ran': ran, 'failed': failed}
@@ -247,70 +259,110 @@ def _tokens(segment):
     except ValueError: return segment.split()
 
 
+KEYWORDS = {'do', 'then', 'else', 'elif', 'if', 'while', 'until', '!', '{', '}', 'time'}
+
+
+OPTION_ARGS = {'-u', '--unset', '-C', '--chdir', '-S', '--split-string', '-n', '-I', '-P', '-L', '-s', '-d'}
+
+
 def _strip_prefix(words):
-    """Drop leading VAR=value assignments, wrappers such as env/sudo/xargs and their flags."""
-    while words and (('=' in words[0] and not words[0].startswith('-')) or Path(words[0]).name in PREFIXES or words[0].startswith('-')):
-        words = words[1:]
+    """Drop leading VAR=value assignments, shell keywords, wrappers such as env/sudo/xargs and their options."""
+    wrapped = False
+    while words:
+        w = words[0]
+        if ('=' in w and not w.startswith('-')) or w in KEYWORDS: words = words[1:]
+        elif Path(w).name in PREFIXES: words = words[1:]; wrapped = True
+        elif w.startswith('-'): words = words[2:] if wrapped and w in OPTION_ARGS else words[1:]
+        else: break
     return words
 
 
-def _segment_hits(segment):
-    """True when one simple command invokes a network tool or git network verb (its arguments are data)."""
-    words = _strip_prefix(_tokens(segment))
+def _segment_hits(words):
+    """True when one simple command invokes a network tool, a package installer or a git network verb."""
     if not words: return False
     tool = Path(words[0]).name
     if tool == 'git':
-        rest = [w for w in words[1:]]
+        rest = list(words[1:])
         while rest and rest[0] in ('-C', '-c'): rest = rest[2:]
         while rest and rest[0].startswith('-'): rest = rest[1:]
-        return bool(rest) and (rest[0] in GIT_NETWORK or rest[0] == 'archive' and '--remote' in ' '.join(rest))
+        return bool(rest) and (rest[0] in GIT_NETWORK or rest[0] == 'archive' and '--remote' in rest)
+    if tool.startswith('python') and words[1:3] in (['-m', 'pip'], ['-m', 'pip3']): return True
+    if tool in ('uv', 'pipx') and any(w in ('pip', 'install', 'add', 'run', 'tool') for w in words[1:]): return True
     if tool not in NETWORK_TOOLS: return False
     subs = NETWORK_SUBCOMMANDS.get(tool)
-    return subs is None or any(w in subs for w in words[1:3])
+    return subs is None or any(w in subs for w in words[1:])
+
+
+HEREDOC = None
+
+
+def _segments(line):
+    """Split one shell line at command boundaries (; & | && || ( ) $( `), ignoring separators inside quotes."""
+    out, cur, quote, i = [], [], None, 0
+    while i < len(line):
+        ch = line[i]
+        if quote:
+            if ch == quote: quote = None
+            elif ch == '\\' and quote == '"' and i + 1 < len(line): cur.append(ch); i += 1; ch = line[i]
+            cur.append(ch); i += 1; continue
+        if ch in ('"', "'"): quote = ch; cur.append(ch); i += 1; continue
+        if line.startswith('$(', i) and not line.startswith('$((', i): out.append(''.join(cur)); cur = []; i += 2; continue
+        if ch in ';&|()`': out.append(''.join(cur)); cur = []; i += 1; continue
+        cur.append(ch); i += 1
+    out.append(''.join(cur))
+    return out
 
 
 def _split_commands(text):
-    """Simple commands, with heredoc bodies attached to the command that reads them."""
+    """Simple commands, with heredoc bodies attached to the command that reads them. Command substitutions,
+    subshells and backticks open new commands; `<<<` here-strings and `<<` inside arithmetic are not heredocs."""
     import re
+    global HEREDOC
+    HEREDOC = HEREDOC or re.compile(r"(?:^|\s)<<-?\s*['\"]?([A-Za-z_]\w*)['\"]?")
     lines = text.split('\n'); out = []; i = 0
     while i < len(lines):
-        line = lines[i]; m = re.search(r"<<-?\s*['\"]?(\w+)['\"]?", line); body = []
+        line = lines[i]; m = HEREDOC.search(line); body = []
         if m:
             j = i + 1
             while j < len(lines) and lines[j].strip() != m.group(1): body.append(lines[j]); j += 1
             i = j
-        for seg in re.split(r'&&|\|\||;|\|', line):
-            out.append((seg.strip(), '\n'.join(body)))
+        for seg in _segments(line):
+            if seg.strip(): out.append((seg.strip(), '\n'.join(body)))
         i += 1
     return out
+
+
+def _flagged(command, depth=0):
+    import re
+    global LIBRARY
+    LIBRARY = LIBRARY or re.compile('|'.join(f'(?:{p})' for p in LIBRARY_PATTERNS))
+    for segment, heredoc in _split_commands(command):
+        words = _strip_prefix(_tokens(segment))
+        if not words: continue
+        tool = Path(words[0]).name
+        if tool in SHELLS:
+            inner = next((words[k + 1] for k, w in enumerate(words[:-1]) if re.fullmatch(r'-\w*c', w)), None)
+            if inner is not None and depth < 3 and _flagged(inner, depth + 1): return True
+            if heredoc and depth < 3 and _flagged(heredoc, depth + 1): return True
+            continue
+        if _segment_hits(words): return True
+        if tool.startswith(INTERPRETERS) and (LIBRARY.search(segment) or LIBRARY.search(heredoc)): return True
+    return False
 
 
 def network_commands(host_output):
     """Model shell commands that could reach the network or another checkout; any one invalidates a repair trial.
     The lane cannot deny network to model commands without also denying the Codex API, so access is audited instead.
-    Each simple command is judged by what it executes: a network tool or git network verb, or an interpreter (inline
-    code or a heredoc it reads) that imports a network library, calls fetch or names a URL. Arguments to other tools,
-    such as `echo 'curl ...'`, `rg 'import urllib'` or a heredoc written to a file, are data, not access."""
-    import re
-    global LIBRARY
-    LIBRARY = LIBRARY or re.compile('|'.join(f'(?:{p})' for p in LIBRARY_PATTERNS))
-    def flagged_text(command):
-        inner = command
-        m = re.match(r"^\S*/(?:bash|sh|zsh)\s+-l?c\s+(['\"])(.*)\1\s*$", command.strip(), re.S)
-        if m: inner = m.group(2)
-        for segment, heredoc in _split_commands(inner):
-            if _segment_hits(segment): return True
-            words = _strip_prefix(_tokens(segment))
-            tool = Path(words[0]).name if words else ''
-            if tool.startswith(INTERPRETERS) and (LIBRARY.search(segment) or LIBRARY.search(heredoc)): return True
-            if tool in SHELLS and heredoc and any(_segment_hits(s) for s, _ in _split_commands(heredoc)): return True
-        return False
+    Each simple command is judged by what it executes: a network tool, package installer or git network verb, or an
+    interpreter (inline code or a heredoc it reads) that imports a network library, calls fetch or names a URL. Shell
+    `-c` strings and heredocs fed to a shell are audited recursively. Arguments to other tools, such as
+    `echo 'curl ...'`, `rg 'import urllib'` or a heredoc written to a file, are data, not access."""
     flagged, tools = [], []
     for line in host_output.splitlines():
         if not line.startswith('{'): continue
         row = json.loads(line); item = row.get('item') or {}
         if row.get('type') != 'item.completed': continue
-        if item.get('type') == 'command_execution' and flagged_text(item.get('command', '')): flagged.append(item['command'][:200])
+        if item.get('type') == 'command_execution' and _flagged(item.get('command', '')): flagged.append(item['command'][:200])
         elif item.get('type') not in (None, 'command_execution', 'agent_message', 'reasoning', 'file_change', 'todo_list'): tools.append(item.get('type'))
     return {'network_commands': flagged, 'other_tools': tools}
 
@@ -335,6 +387,7 @@ def reverify(out):
         case = case_by_id('repair', meta['case_id']); baseline = workspace_files(case, 'parent')
         saved = meta_path.parent / 'candidate'
         files = {r: ((saved / r).read_bytes() if r in case['editable'] and (saved / r).is_file() else baseline[r]) for r in baseline}
+        files.update(new_files(case, saved, baseline))
         audit = network_commands((meta_path.parent / 'host-output.jsonl').read_text(errors='replace'))
         check = verify(case, files, [EVALS.parent, ROOT, Path(out).resolve()]) if meta.get('status') == 'completed' else {'status': 'not_run'}
         meta.update({'reverification': check, 'audit': audit,
@@ -374,13 +427,16 @@ def run_repair(case, arm, repeat, out):
                 p = candidate / rel
                 if p.is_symlink() or not p.is_file(): produced[rel] = None
                 else: produced[rel] = p.read_bytes()
+            added = new_files(case, candidate, baseline)
         changed = sorted(r for r in baseline if produced.get(r) != baseline[r])
         meta['changed_files'] = changed; meta['protected_changes'] = [r for r in changed if r not in case['editable']]
+        meta['added_files'] = sorted(added)
         (dest / 'candidate').mkdir()
-        for rel in case['editable']:
-            if produced.get(rel) is not None:
-                t = dest / 'candidate' / rel; t.parent.mkdir(parents=True, exist_ok=True); t.write_bytes(produced[rel])
+        for rel, data in [*[(r, produced.get(r)) for r in case['editable']], *added.items()]:
+            if data is not None:
+                t = dest / 'candidate' / rel; t.parent.mkdir(parents=True, exist_ok=True); t.write_bytes(data)
         files = {r: (produced[r] if r in case['editable'] and produced.get(r) is not None else baseline[r]) for r in baseline}
+        files.update(added)
         meta['verification'] = verify(case, files, protected)
         meta['status'] = 'completed' if meta['completed'] else ('host_timeout' if meta['host_status'] == 'timeout' else 'host_failed')
         meta['passed'] = meta['status'] == 'completed' and not meta['protected_changes'] and meta['verification']['status'] == 'passed'
@@ -407,7 +463,7 @@ def main():
     p.add_argument('command', choices=['preflight', 'run', 'reverify', 'set-aside-invalid'])
     p.add_argument('--out', type=Path, required=True)
     p.add_argument('--families', nargs='*', default=['review', 'repair'])
-    p.add_argument('--arms', nargs='*', default=ARMS)
+    p.add_argument('--arms', nargs='*', default=CASES.get('arms', ARMS))
     p.add_argument('--repeats', type=int, default=2)
     p.add_argument('--cases', nargs='*', default=None)
     p.add_argument('--jobs', type=int, default=4)
