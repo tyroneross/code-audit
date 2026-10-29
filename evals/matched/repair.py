@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import time
 import stat
-from isolation import sandbox_command, check_boundary, run_bounded
+from isolation import sandbox_command, check_boundary, run_bounded, lane_env
 
 ROOT=Path(__file__).resolve().parent
 BASELINE=ROOT.parent/'timeout-retry/baseline'
@@ -82,19 +82,20 @@ def run(host,arm,repeat,out,model,timeout,frozen=None):
     try:
         with tempfile.TemporaryDirectory(prefix='code-audit-repair-') as folder:
             work=Path(folder).resolve();candidate=work/'candidate';materialize(baseline,candidate)
-            env=os.environ.copy();env.update({'RALLY_HOOKS':'off','PYTHONDONTWRITEBYTECODE':'1','TMPDIR':str(work/'tmp'),'CLAUDE_CODE_TMPDIR':str(work/'claude-tmp')});(work/'tmp').mkdir();(work/'claude-tmp').mkdir()
+            env=lane_env(work,TMPDIR=work/'tmp',CLAUDE_CODE_TMPDIR=work/'claude-tmp');(work/'tmp').mkdir();(work/'claude-tmp').mkdir()
+            auth=Path(os.environ.get('CODEX_HOME',Path.home()/'.codex'))/'auth.json';readable=[auth.resolve()] if auth.exists() else []
             protected=[ROOT.parents[1],out.resolve()]
-            meta['kernel_canary']=check_boundary(work,VERIFIER,protected)
+            meta['kernel_canary']=check_boundary(work,VERIFIER,protected,readable)
             if host=='claude':
                 cmd=['claude','-p','--safe-mode','--setting-sources','','--settings','{"disableAllHooks":true}','--disable-slash-commands','--no-session-persistence','--tools','Read,Write,Edit,Bash','--allowedTools','Read,Write,Edit,Bash','--strict-mcp-config','--mcp-config','{"mcpServers":{}}','--output-format','stream-json','--verbose','--effort','medium','--model',model]
             else:
-                home=work/'codex-home';home.mkdir();auth=Path(os.environ.get('CODEX_HOME',Path.home()/'.codex'))/'auth.json'
+                home=work/'codex-home';home.mkdir()
                 if auth.exists():(home/'auth.json').symlink_to(auth)
                 env['CODEX_HOME']=str(home)
                 cmd=['codex','exec','--ephemeral','--ignore-user-config','--skip-git-repo-check','--json','-s','danger-full-access','-m',model,'-c','approval_policy="never"','-c','cli_auth_credentials_store="file"','-c','model_reasoning_effort="medium"','-']
             meta['command']=cmd
             try:
-                result=run_bounded(sandbox_command(cmd,work,protected),input=prompt.encode(),text=False,env=env,cwd=candidate,timeout=timeout)
+                result=run_bounded(sandbox_command(cmd,work,protected,readable),input=prompt.encode(),text=False,env=env,cwd=candidate,timeout=timeout)
                 (dest/'host-output.jsonl').write_bytes(result.stdout if isinstance(result.stdout,bytes) else result.stdout.encode());(dest/'stderr.txt').write_bytes(result.stderr if isinstance(result.stderr,bytes) else result.stderr.encode());meta['exit_code']=result.returncode
                 rows=[json.loads(line) for line in output_text(result.stdout).splitlines() if line.strip()]
                 if not all(isinstance(row,dict) for row in rows):raise ValueError('host event must be an object')

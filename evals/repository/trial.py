@@ -13,16 +13,16 @@ MATCHED=Path(__file__).resolve().parents[1]/'matched'
 spec=importlib.util.spec_from_file_location('repository_matched_run',MATCHED/'run.py')
 matched=importlib.util.module_from_spec(spec);spec.loader.exec_module(matched)
 sys.path.insert(0,str(MATCHED))
-from isolation import profile,run_bounded
+from isolation import profile,run_bounded,lane_env
 
 
 def sha(data):
     return hashlib.sha256(data if isinstance(data,bytes) else data.encode()).hexdigest()
 
 
-def protected_profile(work,protected):
+def protected_profile(work,protected,readable=()):
     # Deny credential UI/helper execution and Keychain file access, even on unexpected fallback.
-    rules=profile(work,protected)
+    rules=profile(work,protected,readable)
     keychains=Path.home()/'Library/Keychains'
     return rules+'(deny process-exec (literal "/usr/bin/security"))\n'+f'(deny file-read* (subpath {json.dumps(str(keychains))}))\n'
 
@@ -40,8 +40,8 @@ def call(prompt,destination,model='gpt-6.1-sol',timeout=240,auth_file=None):
         if not sandbox:raise RuntimeError('OS read isolation unavailable; no prompt-only fallback')
         with tempfile.TemporaryDirectory(prefix='code-audit-repository-') as folder:
             work=Path(folder).resolve();home=work/'codex-home';home.mkdir();(home/'auth.json').symlink_to(auth.resolve())
-            env={**os.environ,'CODEX_HOME':str(home),'TMPDIR':str(work),'RALLY_HOOKS':'off'}
-            rules=work/'review.sb';rules.write_text(protected_profile(work,[Path(__file__).resolve().parents[2],destination.resolve().parent]))
+            env=lane_env(work,CODEX_HOME=home)
+            rules=work/'review.sb';rules.write_text(protected_profile(work,[Path(__file__).resolve().parents[2],destination.resolve().parent],[auth.resolve()]))
             command=['codex','exec','--ephemeral','--ignore-user-config','--skip-git-repo-check','--json','-s','read-only','-m',model,'-c','cli_auth_credentials_store="file"','-c','model_reasoning_effort="medium"','-']
             meta['command']=command;meta['sandbox_sha256']=sha(rules.read_bytes())
             result=run_bounded([sandbox,'-f',str(rules),*command],input=prompt.encode(),text=False,cwd=work,env=env,timeout=timeout)

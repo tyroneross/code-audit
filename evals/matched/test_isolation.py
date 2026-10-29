@@ -8,7 +8,23 @@ class Isolation(unittest.TestCase):
     def test_kernel_denies_foreign_reads_and_writes(self):
         with tempfile.TemporaryDirectory() as folder:
             result=check_boundary(Path(folder),Path(__file__).resolve())
-            self.assertEqual(result,{'own_read':'allowed','protected_read':'denied','foreign_temp_read':'denied','outside_write':'denied'})
+            self.assertEqual(result,{'own_read':'allowed','protected_read':'denied','foreign_temp_read':'denied','outside_write':'denied','home_read':'denied','parent_env':'absent'})
+
+    def test_lanes_get_a_minimal_environment_and_no_home_reads(self):
+        # CODE-EVALS-m62jfj8m5c0sm2k23dz3t: lanes once inherited the full parent environment and could read the home folder.
+        import isolation,os,subprocess
+        with tempfile.TemporaryDirectory() as folder:
+            work=Path(folder).resolve();os.environ['CODE_AUDIT_TEST_TOKEN']='x'
+            try:env=isolation.lane_env(work,CODEX_HOME=work/'h')
+            finally:os.environ.pop('CODE_AUDIT_TEST_TOKEN')
+            self.assertNotIn('CODE_AUDIT_TEST_TOKEN',env);self.assertEqual(env['HOME'],str(work));self.assertEqual(env['CODEX_HOME'],str(work/'h'))
+            allowed=Path(tempfile.mkdtemp(dir=isolation.REAL_HOME/'Library/Caches'))
+            try:
+                ok=allowed/'auth';ok.write_text('a');no=allowed/'other';no.write_text('b')
+                run=lambda p:subprocess.run(isolation.sandbox_command(['/bin/cat',str(p)],work,[],[ok]),capture_output=True,timeout=5)
+                self.assertEqual(run(ok).stdout,b'a');self.assertNotEqual(run(no).returncode,0)
+            finally:
+                import shutil;shutil.rmtree(allowed)
 
     def test_baseline_comparison_uses_frozen_bytes(self):
         baseline,_=repair.snapshot()
