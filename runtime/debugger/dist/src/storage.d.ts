@@ -17,6 +17,12 @@ export declare function storeIncident(incident: Incident, options?: StorageOptio
     file_path: string;
 }>;
 /**
+ * Validate incident ID format to prevent path traversal attacks.
+ * New IDs use INC_; older Coding Debugger records use INCIDENT_. Both admit only word characters and hyphens.
+ */
+export declare const INCIDENT_ID_PATTERN: RegExp;
+export declare function isValidIncidentId(incident_id: unknown): incident_id is string;
+/**
  * Load an incident by ID
  */
 export declare function loadIncident(incident_id: string, config?: MemoryConfig): Promise<Incident | null>;

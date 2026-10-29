@@ -106,4 +106,18 @@ process.stdout.write(JSON.stringify([standard,detail.timestamp]));
         self.assertEqual(stamp, 1792454400000 - 5*86400000)
         self.assertEqual(standard['coverage']['incidents']['skipped'], 1)
 
+    def test_legacy_incident_prefix_loads_and_traversal_stays_refused(self):
+        rows = self.probe("""
+await write('INCIDENT_1760000000_legacy.json', {...incident('INCIDENT_1760000000_legacy',3)});
+const st = require(""" + json.dumps(str(ROOT / 'runtime/debugger/dist/src/storage.js')) + """);
+const standard=await checkMemory('alpha beta gamma delta',{memoryConfig,max_results:20});
+const refused=[];for (const id of ['INCIDENT_../x','../INC_x','INCIDENTAL_x','INC_a/b']) refused.push(st.isValidIncidentId(id));
+let threw=false;try{await st.loadIncident('INCIDENT_../../etc',memoryConfig)}catch{threw=true}
+process.stdout.write(JSON.stringify([standard.incidents.map(r=>r.incident_id),refused,threw]));
+""")
+        ids, refused, threw = rows
+        self.assertEqual(ids, ['INCIDENT_1760000000_legacy'])
+        self.assertEqual(refused, [False, False, False, False])
+        self.assertTrue(threw)
+
 if __name__ == '__main__': unittest.main()

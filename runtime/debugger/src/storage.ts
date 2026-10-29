@@ -104,11 +104,12 @@ export async function storeIncident(
 }
 
 /**
- * Validate incident ID format to prevent path traversal attacks
- * Supports both formats: INC_YYYYMMDD_HHMMSS_xxxx and INC_CATEGORY_YYYYMMDD_HHMMSS_xxxx
+ * Validate incident ID format to prevent path traversal attacks.
+ * New IDs use INC_; older Coding Debugger records use INCIDENT_. Both admit only word characters and hyphens.
  */
-function isValidIncidentId(incident_id: string): boolean {
-  return typeof incident_id === 'string' && /^INC_[\w\-]+$/.test(incident_id);
+export const INCIDENT_ID_PATTERN = /^(?:INC|INCIDENT)_[\w\-]+$/;
+export function isValidIncidentId(incident_id: unknown): incident_id is string {
+  return typeof incident_id === 'string' && INCIDENT_ID_PATTERN.test(incident_id);
 }
 
 /**
@@ -327,7 +328,7 @@ export function validateIncident(incident: Incident): VerificationResult {
  *
  * The trailing suffix is 6 hex characters of crypto entropy plus a 3-character
  * base36 process sequence. Existing shorter IDs still load: isValidIncidentId
- * accepts any /^INC_[\w\-]+$/ and nothing parses the suffix by length.
+ * accepts any INC_ or legacy INCIDENT_ word/hyphen ID and nothing parses the suffix by length.
  */
 // Monotonic within this process. An incident ID is a FILENAME, so two incidents
 // that collide do not merely share a label -- the second overwrites the first and

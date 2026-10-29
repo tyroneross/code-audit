@@ -14,6 +14,7 @@ import {
   loadIndex,
   loadAllPatterns,
   validIncidentRecord,
+  isValidIncidentId,
   toCompactPattern,
   recordOutcome,
   emptyCorpusCoverage,
@@ -516,7 +517,7 @@ async function handleDetail(
     return textResponse(lines.join('\n'));
   }
 
-  if (id.startsWith('INC_')) {
+  if (isValidIncidentId(id)) {
     const incident = await loadIncident(id, config);
     if (!incident) return errorResponse(`Incident not found: ${id}`);
 
@@ -663,7 +664,7 @@ async function handleList(
   const coverage = emptyCorpusCoverage();
   for (const id of incidentIds) {
     coverage.checked++;
-    if (typeof id !== 'string' || !/^INC_[\w\-]+$/.test(id)) { recordCorpusSkip(coverage, String(id), 'invalid_record'); continue; }
+    if (!isValidIncidentId(id)) { recordCorpusSkip(coverage, String(id), 'invalid_record'); continue; }
     try {
       const incident = await loadIncident(id, config);
       if (!incident) { recordCorpusSkip(coverage, id, 'read_failed'); continue; }
