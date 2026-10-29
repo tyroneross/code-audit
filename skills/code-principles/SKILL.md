@@ -8,6 +8,8 @@ user-invocable: false
 
 Review the requested operation against its explicit contract. Inspect changed code and affected callers, state owners, registration and failure paths. Use source evidence, not a checklist hit alone, to confirm a trigger, cause and consequence. Consider counterevidence and intentional behavior; clean code needs no finding. Missing a preferred technique alone is not a defect.
 
+A value frozen in code is a defect when it has a live source of truth (manifest, config, environment, database, API or a sibling constant) or varies by machine, deployment, tenant or date; find every copy, compare them, and name the context in which the copy breaks. Real protocol and policy constants stay, and a value that looks wrong may be newer than your knowledge. A layer, wrapper, factory, second state owner or service split is a defect when it adds a failure point or a copy of state and no named capability.
+
 Trace the simplest adequate correction across affected paths. Preserve output semantics, ordering, error contracts, supported consumers, operation identity, retry ownership, deadlines and recovery behavior. An error handler is defective when it loses required behavior or hides incomplete work; an intentional terminal or best-effort handler can be valid. Sequential work and fixed limits can be intentional. Only claim measured performance gains from actual comparable measurements.
 
 For cleanup, check dynamic registrations, external consumers, flag prerequisite edges and emergency paths before calling code unused. Absence in sampled telemetry is not proof of disuse. Remove only behavior the supplied contract permits removing.
@@ -22,6 +24,7 @@ Return material findings with trigger, causal explanation, location, consequence
 
 - Re-review, disputed findings, changed closure premises or review-budget decisions: [review feedback](references/review-feedback.md).
 - Agent communication, dependency readiness or handoff acceptance: [dependency handoff checks](references/challenge-guidance.md#agent-communication-and-dependency-handoffs).
+- Configuration, versions, ids, hosts, paths or limits in the change, or a new layer, wrapper, service or state owner: [frozen values and path length](references/frozen-values-and-path-length.md). Ask whether each literal has a source of truth or varies by context; count the hops from request to outcome and name what each layer adds.
 - A concrete performance, retry, concurrency, failure or contract concern: the relevant section of [focused checklist](references/focused-checklist.md), then its linked rule cards. Do not load all cards for a small review.
 - Choosing correction scope or engineering tradeoffs: [foundations](references/engineering-foundations.md), [whole-system repair](references/whole-system-repair.md) and [challenge guidance](references/challenge-guidance.md) as applicable.
 - Available incident memory: follow [debugging memory](../debugging-memory/SKILL.md), check actual project scope, and load [incident learning](references/incident-learning.md) for lifecycle or recording questions. If unavailable, continue source investigation and disclose that limit.
