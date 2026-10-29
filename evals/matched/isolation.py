@@ -7,8 +7,10 @@ import tempfile
 import os
 import signal
 
-# Resolved once at import, before any lane rewrites HOME for a child.
-REAL_HOME=Path.home().resolve()
+# The account's home from the user database, not $HOME: lanes rewrite HOME for children, and a child that imports
+# this module (the R1 verifier bridge) must still deny the real home folder.
+import pwd
+REAL_HOME=Path(pwd.getpwuid(os.getuid()).pw_dir).resolve()
 # The only parent variables a model lane receives; everything else (tokens, API keys, agent hooks) is dropped.
 LANE_PATH='/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
 

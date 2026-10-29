@@ -10,6 +10,13 @@ class Isolation(unittest.TestCase):
             result=check_boundary(Path(folder),Path(__file__).resolve())
             self.assertEqual(result,{'own_read':'allowed','protected_read':'denied','foreign_temp_read':'denied','outside_write':'denied','home_read':'denied','parent_env':'absent'})
 
+    def test_real_home_survives_a_rewritten_home_variable(self):
+        # A verifier child imports isolation with HOME pointing at the lane workspace; the deny must still target the real home.
+        import subprocess,isolation
+        with tempfile.TemporaryDirectory() as folder:
+            seen=subprocess.run([sys.executable,'-c','import isolation;print(isolation.REAL_HOME)'],cwd=str(Path(__file__).parent),env={'HOME':folder,'PATH':'/usr/bin:/bin'},capture_output=True,text=True,timeout=10).stdout.strip()
+        self.assertEqual(seen,str(isolation.REAL_HOME));self.assertNotEqual(seen,str(Path(folder).resolve()))
+
     def test_lanes_get_a_minimal_environment_and_no_home_reads(self):
         # CODE-EVALS-m62jfj8m5c0sm2k23dz3t: lanes once inherited the full parent environment and could read the home folder.
         import isolation,os,subprocess
