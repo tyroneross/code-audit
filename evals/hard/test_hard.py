@@ -103,12 +103,28 @@ class Repair(unittest.TestCase):
         self.assertEqual(harness.test_counts('Ran 11 tests in 0.1s\n\nFAILED (failures=2, errors=1)\n'), {'ran': 11, 'failed': 3})
         self.assertEqual(harness.test_counts('# tests 3\n# pass 3\n# fail 0\n'), {'ran': 3, 'failed': 0})
         row = lambda c: json.dumps({'type': 'item.completed', 'item': {'type': 'command_execution', 'command': c}})
-        flagged = [row('git clone https://github.com/x/y'), row("python3 -c 'import urllib.request'"), row("/bin/zsh -lc 'cd x && curl -s https://example.com'"), row("node -e 'require(\"https\")'")]
+        flagged = [row(c) for c in ['git clone https://github.com/x/y', "python3 -c 'import urllib.request'", "/bin/zsh -lc 'cd x && curl -s https://example.com'",
+                   "node -e 'require(\"https\")'", 'python3 -c "import json, urllib.request"', "python3 -c \"__import__('urllib.request')\"",
+                   'git -C repo fetch', '/usr/bin/curl -s x', 'echo u | xargs curl', "node --input-type=module -e \"import https from 'https'\"",
+                   "node -e \"import('node:https')\"", 'node -e "fetch(u)"', 'python3 -c "from http import client"', 'perl -MIO::Socket -e 1',
+                   'python3 - <<EOF\nimport json\nprint(open(\"https://example.com/x\"))\nEOF', 'npm install left-pad']]
         # Observed false positives from real trials: a yarn.lock glob, a test named after requests, a copyright e-mail domain.
         clean = [row("/bin/zsh -lc 'git status --short'"), row('sed -n 1,20p a.py'), row("rg --files -g '!yarn.lock' -g '!node_modules'"),
-                 row('cat > t.mjs <<EOF\ntest("close rejects queued requests")\nEOF'), row('# <46267523+x@users.noreply.github.com>')]
-        self.assertEqual(len(harness.network_commands('\n'.join(flagged))['network_commands']), 4)
+                 row('cat > t.mjs <<EOF\ntest("close rejects queued requests")\nEOF'), row('# <46267523+x@users.noreply.github.com>'), row('npm test'), row('grep -rn gh src'),
+                 row('cat > a.py <<EOF\n# docs: https://example.com\nEOF'), row('node -e "pool.fetch(1)"')]
+        self.assertEqual(len(harness.network_commands('\n'.join(flagged))['network_commands']), len(flagged))
         self.assertEqual(harness.network_commands('\n'.join(clean))['network_commands'], [])
+
+
+class Rerun(unittest.TestCase):
+    def test_invalid_trials_are_set_aside_once(self):
+        with tempfile.TemporaryDirectory() as folder:
+            out = Path(folder)
+            for name, status in [('H01-none-1', 'completed'), ('H01-none-2', 'host_timeout'), ('X01-none-1', 'host_failed')]:
+                (out / name).mkdir(); (out / name / 'meta.json').write_text(json.dumps({'status': status}))
+            self.assertEqual(harness.set_aside_invalid(out), ['H01-none-2', 'X01-none-1'])
+            (out / 'H01-none-2').mkdir(); (out / 'H01-none-2' / 'meta.json').write_text(json.dumps({'status': 'host_timeout'}))
+            self.assertEqual(harness.set_aside_invalid(out), [])  # the rerun failed too: it stays, counted invalid
 
 
 class Verdicts(unittest.TestCase):

@@ -216,26 +216,58 @@ def test_counts(text):
 NETWORK = None
 
 
+NETWORK_PATTERNS = [
+    # A network tool used as a command word, with or without a path prefix or xargs.
+    r'(?:^|[\s;&|(`\'"])(?:xargs\s+)?(?:\S*/)?(?:curl|wget|ssh|scp|rsync|nc|ncat|telnet|ftp|sftp|pip3?|brew|npx)(?=\s|$)',
+    r'(?:^|[\s;&|(`\'"])(?:\S*/)?gh\s+(?:api|repo|pr|issue|release|gist|run|search|browse|auth)\b',
+    r'(?:^|[\s;&|(`\'"])(?:\S*/)?(?:npm|pnpm|yarn)\s+(?:i|install|add|ci|view|info|pack|publish|exec|dlx|create)\b',
+    # Python network libraries: import lists with aliases, from-imports, __import__.
+    r'\bimport\s+(?:[\w.]+(?:\s+as\s+\w+)?\s*,\s*)*(?:urllib|requests|httpx|aiohttp|socket|http|ftplib|smtplib)\b',
+    r'\bfrom\s+(?:urllib|requests|httpx|aiohttp|socket|http|ftplib|smtplib)\b',
+    r'__import__\(\s*[\'"](?:urllib|requests|httpx|aiohttp|socket|http)',
+    # Node: require, static and dynamic import of network modules, and any bare fetch() call.
+    r'require\(\s*[\'"](?:node:)?(?:https?|net|dgram|tls|undici)[\'"]',
+    r'\bimport\b[^\n;]*[\'"](?:node:)?(?:https?|net|dgram|tls|undici)[\'"]',
+    r'(?<![\w.])fetch\(',
+    # Perl network modules.
+    r'-M(?:IO::Socket|LWP|HTTP::Tiny|Net::)',
+    # Git network verbs, including `git -C <dir>` forms.
+    r'\bgit\s+(?:-[Cc]\s+\S+\s+)*(?:clone|fetch|pull|push|ls-remote|remote|submodule|archive\s+--remote)\b',
+]
+URL = None
+
+
 def network_commands(host_output):
     """Model shell commands that could reach the network or another checkout; any one invalidates a repair trial.
-    The lane cannot deny network to model commands without also denying the Codex API, so access is audited instead."""
+    The lane cannot deny network to model commands without also denying the Codex API, so access is audited instead.
+    Invocation-shaped patterns plus URL literals outside comment lines; bare words such as a `yarn.lock` glob, a test
+    named after "requests" or an e-mail domain in a copyright header are not access."""
     import re
-    global NETWORK
-    # Invocation-shaped only: a tool used as a command word, a network library imported, a git network verb. Bare words
-    # (a "requests" test name, a "yarn.lock" glob, an e-mail domain in a copyright header) are not access.
-    NETWORK = NETWORK or re.compile(
-        r'(?:^|[\s;&|(`\'"])(?:curl|wget|gh|ssh|scp|rsync|nc|ncat|telnet|pip3?|npm|npx|pnpm|yarn|brew)\s'
-        r'|\b(?:import|from)\s+(?:urllib|requests|httpx|aiohttp|socket|http\.client)\b'
-        r'|require\(\s*[\'"](?:node:)?(?:https?|net|dgram)[\'"]|\bfetch\(\s*[\'"`]https?:'
-        r'|\bgit\s+(?:clone|fetch|pull|ls-remote|remote\s+add|submodule)\b')
+    global NETWORK, URL
+    NETWORK = NETWORK or re.compile('|'.join(f'(?:{p})' for p in NETWORK_PATTERNS))
+    URL = URL or re.compile(r'https?://')
+    def flagged_text(command):
+        if NETWORK.search(command): return True
+        return any(URL.search(line) for line in command.splitlines() if not line.lstrip().startswith(('#', '//', '*', '/*')))
     flagged, tools = [], []
     for line in host_output.splitlines():
         if not line.startswith('{'): continue
         row = json.loads(line); item = row.get('item') or {}
         if row.get('type') != 'item.completed': continue
-        if item.get('type') == 'command_execution' and NETWORK.search(item.get('command', '')): flagged.append(item['command'][:200])
+        if item.get('type') == 'command_execution' and flagged_text(item.get('command', '')): flagged.append(item['command'][:200])
         elif item.get('type') not in (None, 'command_execution', 'agent_message', 'reasoning', 'file_change', 'todo_list'): tools.append(item.get('type'))
     return {'network_commands': flagged, 'other_tools': tools}
+
+
+def set_aside_invalid(out):
+    """Move host-failed, timed-out or schema-invalid trials aside once so `run` repeats them; a second failure stays.
+    Repair trials invalidated by the network audit are not rerun: the audit result is the trial's outcome."""
+    out = Path(out); aside = out / 'invalid-attempts'; moved = []
+    for meta_path in sorted(out.glob('[HCX]*/meta.json')):
+        meta = json.loads(meta_path.read_text()); name = meta_path.parent.name
+        if meta.get('status') == 'completed' or (aside / name).exists(): continue
+        aside.mkdir(exist_ok=True); meta_path.parent.rename(aside / name); moved.append(name)
+    return moved
 
 
 def reverify(out):
@@ -314,7 +346,7 @@ def schedule(families, arms, repeats, ids):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('command', choices=['preflight', 'run', 'reverify'])
+    p.add_argument('command', choices=['preflight', 'run', 'reverify', 'set-aside-invalid'])
     p.add_argument('--out', type=Path, required=True)
     p.add_argument('--families', nargs='*', default=['review', 'repair'])
     p.add_argument('--arms', nargs='*', default=ARMS)
@@ -328,6 +360,8 @@ def main():
         rows = preflight([EVALS.parent, ROOT, out]); (out / 'preflight.json').write_text(json.dumps(rows, indent=2) + '\n')
         print(json.dumps({k: (v['oracle_valid'], v['parent']['status'], v['fix']['status']) for k, v in rows.items()}))
         raise SystemExit(0 if all(v['oracle_valid'] for v in rows.values()) else 1)
+    if a.command == 'set-aside-invalid':
+        print(json.dumps(set_aside_invalid(out))); return
     if a.command == 'reverify':
         print(json.dumps(reverify(out), indent=1)); return
     lock = threading.Lock()

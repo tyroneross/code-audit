@@ -685,8 +685,8 @@
   "review_schema_invalid": 0,
   "review_tool_use": 0,
   "repair_host_failures": 0,
-  "network_audit_bare_word_flags": "10/48 (all false positives on inspection)",
-  "network_audit_invocation_flags": "0/54"
+  "network_audit_bare_word_flags": "10/48 (all false positives on inspection; excluding them leaves every verdict at parity)",
+  "network_audit_invocation_flags": "0/54 (refined and expanded audits)"
  },
  "judging": {
   "judges": 3,
