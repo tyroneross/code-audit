@@ -303,6 +303,10 @@ function normalizeLegacyIncident(value, sourceFile) {
         verification.status = 'unverified';
     }
     const fix = record.fix;
+    if (fix !== null && typeof fix === 'object' && !Array.isArray(fix) && fix.notes !== undefined && !Array.isArray(fix.notes)) {
+        legacy.fix_notes = fix.notes;
+        fix.notes = textParts(fix.notes);
+    }
     if (fix !== null && typeof fix === 'object' && Array.isArray(fix.changes) && !fix.changes.every((c) => c && typeof c === 'object' && typeof c.file === 'string')) {
         const changes = [], notes = [];
         let mapped = true;
@@ -325,12 +329,8 @@ function normalizeLegacyIncident(value, sourceFile) {
         if (mapped) {
             legacy.fix_changes = fix.changes;
             fix.changes = changes;
-            if (notes.length) {
-                if (fix.notes !== undefined && !Array.isArray(fix.notes))
-                    legacy.fix_notes = fix.notes;
-                const prior = Array.isArray(fix.notes) ? fix.notes : textParts(fix.notes);
-                fix.notes = [...prior, ...notes];
-            }
+            if (notes.length)
+                fix.notes = [...(Array.isArray(fix.notes) ? fix.notes : []), ...notes];
         }
     }
     if (Object.keys(legacy).length)

@@ -235,6 +235,10 @@ export function normalizeLegacyIncident<T>(value: T, sourceFile?: string): T {
     verification.status = 'unverified';
   }
   const fix = record.fix;
+  if (fix !== null && typeof fix === 'object' && !Array.isArray(fix) && fix.notes !== undefined && !Array.isArray(fix.notes)) {
+    legacy.fix_notes = fix.notes;
+    fix.notes = textParts(fix.notes);
+  }
   if (fix !== null && typeof fix === 'object' && Array.isArray(fix.changes) && !fix.changes.every((c: any) => c && typeof c === 'object' && typeof c.file === 'string')) {
     const changes: unknown[] = [], notes: string[] = [];
     let mapped = true;
@@ -250,11 +254,7 @@ export function normalizeLegacyIncident<T>(value: T, sourceFile?: string): T {
     if (mapped) {
       legacy.fix_changes = fix.changes;
       fix.changes = changes;
-      if (notes.length) {
-        if (fix.notes !== undefined && !Array.isArray(fix.notes)) legacy.fix_notes = fix.notes;
-        const prior = Array.isArray(fix.notes) ? fix.notes : textParts(fix.notes);
-        fix.notes = [...prior, ...notes];
-      }
+      if (notes.length) fix.notes = [...(Array.isArray(fix.notes) ? fix.notes : []), ...notes];
     }
   }
   if (Object.keys(legacy).length) record.legacy = { ...(record.legacy && typeof record.legacy === 'object' ? record.legacy : {}), ...legacy };
