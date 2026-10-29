@@ -110,16 +110,29 @@ class Repair(unittest.TestCase):
             "node --input-type=module -e \"import https from 'https'\"", "node -e \"import('node:https')\"", 'node -e "fetch(u)"',
             'python3 -c "from http import client"', 'perl -MIO::Socket -e 1', 'npm install left-pad', 'bash <<EOF\ncurl -s x\nEOF',
             'python3 - <<EOF\nimport json\nprint(open("https://example.com/x"))\nEOF',
-            "python3 -c 'import os, urllib.request as u; u.urlopen(\"https://example.com\")'"]]
+            "python3 -c 'import os, urllib.request as u; u.urlopen(\"https://example.com\")'",
+            "bash -lc 'curl -s x'", 'sh -c "wget x"', 'echo $(curl -s x)', '(curl -s x)', 'for u in a b; do curl $u; done',
+            'if true; then curl x; fi', 'python3 -m pip install x', 'uv pip install x', 'npm --prefix x install',
+            'cat <<< "x"\ncurl -s y', 'echo $((1<<2))\ncurl -s y', 'env -u TOKEN curl x', 'bash -c \'curl x\'']]
         # Observed or reported false positives: arguments and file contents that mention network tools are data.
         clean = [row(c) for c in [
             "/bin/zsh -lc 'git status --short'", 'sed -n 1,20p a.py', "rg --files -g '!yarn.lock' -g '!node_modules'",
             'cat > t.mjs <<EOF\ntest("close rejects queued requests")\nEOF', '# <46267523+x@users.noreply.github.com>', 'npm test',
             'grep -rn gh src', 'cat > a.py <<EOF\n# docs: https://example.com\nEOF', 'node -e "pool.fetch(1)"', "echo 'curl is unavailable'",
-            "rg -n 'import urllib' README.md", 'cat > notes.md <<EOF\nrun curl -s https://x to check\nEOF', "/bin/zsh -lc \"sed -n '1,9p' x; git diff --stat\""]]
+            "rg -n 'import urllib' README.md", 'cat > notes.md <<EOF\nrun curl -s https://x to check\nEOF', "/bin/zsh -lc \"sed -n '1,9p' x; git diff --stat\"", 'echo "ok; curl x"', "printf '%s' 'a && wget b'"]]
         missed = [c for c in flagged if not harness.network_commands(c)['network_commands']]
         self.assertEqual(missed, [])
         self.assertEqual(harness.network_commands('\n'.join(clean))['network_commands'], [])
+
+
+class RepairFiles(unittest.TestCase):
+    def test_permitted_new_modules_reach_verification(self):
+        with tempfile.TemporaryDirectory() as folder:
+            cand = Path(folder); (cand / 'scripts/self_review').mkdir(parents=True)
+            (cand / 'scripts/self_review/coverage_lookup.py').write_text('x = 1\n'); (cand / 'stray.py').write_text('y\n')
+            case = {'allowed_new': ['scripts/self_review/*.py']}
+            self.assertEqual(list(harness.new_files(case, cand, {})), ['scripts/self_review/coverage_lookup.py'])
+        self.assertEqual(harness.test_counts('3 passed, 1 error in 0.5s'), {'ran': 4, 'failed': 1})
 
 
 class Rerun(unittest.TestCase):

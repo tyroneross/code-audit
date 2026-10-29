@@ -27,6 +27,8 @@ TOLERANCE = 10
 ARMS = CASES.get('arms', ['code-audit', 'coding-debugger', 'code-principles-audit', 'none'])
 SUBJECT = CASES.get('subject', 'code-audit')
 SOURCES = CASES.get('comparators', ['coding-debugger', 'code-principles-audit'])
+# Pre-registered repair rule per case set: W2 uses +/-3 passes with a per-case guard of -2; W3 uses +/-2 and no guard.
+REPAIR_RULE = CASES.get('repair_rule', {'passes': 3, 'case_guard': -2})
 
 JUDGE_PROMPT = '''You are grading code-review findings against one known historical defect. Decide for each finding whether it identifies THIS defect: the same trigger and mechanism, at or calling into the defective code. A finding about a different problem, or one that names the location but a different mechanism, does not match. Severity, wording and fix quality do not matter. For a CONTROL packet the defect was already fixed in the reviewed code: mark a finding as matching only if it claims this same defect is still present.
 Return only JSON {"judgments":[{"label":"...","finding_id":"...","matches":true|false,"reason":"one sentence"}]} with one row per finding supplied.
@@ -124,6 +126,10 @@ def finding_key(index, finding):
     return f'{index}:{finding.get("id")}'
 
 
+def is_control(trial):
+    return trial.get('family') == 'review' and any(c['id'] == trial['case_id'] and c['role'] == 'control' for c in CASES['review'])
+
+
 def usage_tokens(meta):
     u = meta.get('usage') or {}
     return (u.get('input_tokens') or 0) + (u.get('output_tokens') or 0)
@@ -134,7 +140,7 @@ def aggregate(out, matches, case_ids=None):
                   'findings': 0, 'repair_trials': 0, 'repair_passed': 0, 'repair_invalid': 0, 'seconds': 0.0, 'tokens': 0, 'per_case': {}} for arm in ARMS}
     for t in trials(out):
         # Selecting a primary set never drops the controls: their false positives are part of every review verdict.
-        if case_ids and t['case_id'] not in case_ids and not t['case_id'].startswith('C'): continue
+        if case_ids and t['case_id'] not in case_ids and not is_control(t): continue
         a = arms[t['arm']]; a['seconds'] += t.get('elapsed_seconds') or 0; a['tokens'] += usage_tokens(t)
         if t['family'] == 'repair':
             # Invalid trials (host failure, timeout, network or other tool use) are excluded from the denominator and counted.
@@ -173,9 +179,11 @@ def verdicts(arms):
         if ca['repair_trials'] and s['repair_trials']:
             d = ca['repair_passed'] - s['repair_passed']
             cases = set(ca['per_case']) | set(s['per_case'])
-            worst = min((sum(ca['per_case'].get(c, [])) - sum(s['per_case'].get(c, [])) for c in cases if c.startswith('X')), default=0)
+            repair_ids = {c['id'] for c in CASES['repair']}
+            worst = min((sum(ca['per_case'].get(c, [])) - sum(s['per_case'].get(c, [])) for c in cases if c in repair_ids), default=0)
+            need = REPAIR_RULE['passes']; guard = REPAIR_RULE.get('case_guard')
             row['repair'] = {'delta_passes': d, 'worst_case_delta': worst,
-                             'verdict': 'outperforms' if d >= 3 and worst > -2 else 'worse' if d <= -3 or worst <= -2 else 'parity'}
+                             'verdict': 'outperforms' if d >= need and (guard is None or worst > guard) else 'worse' if d <= -need or (guard is not None and worst <= guard) else 'parity'}
         out[source] = row
     none = arms['none']
     out['discrimination'] = {'review_control_below_ceiling': none['detection_rate'] is not None and none['detection_rate'] <= 0.75,
