@@ -213,42 +213,91 @@ def test_counts(text):
     return {'ran': ran, 'failed': failed}
 
 
-NETWORK = None
-
-
-NETWORK_PATTERNS = [
-    # A network tool used as a command word, with or without a path prefix or xargs.
-    r'(?:^|[\s;&|(`\'"])(?:xargs\s+)?(?:\S*/)?(?:curl|wget|ssh|scp|rsync|nc|ncat|telnet|ftp|sftp|pip3?|brew|npx)(?=\s|$)',
-    r'(?:^|[\s;&|(`\'"])(?:\S*/)?gh\s+(?:api|repo|pr|issue|release|gist|run|search|browse|auth)\b',
-    r'(?:^|[\s;&|(`\'"])(?:\S*/)?(?:npm|pnpm|yarn)\s+(?:i|install|add|ci|view|info|pack|publish|exec|dlx|create)\b',
-    # Python network libraries: import lists with aliases, from-imports, __import__.
+NETWORK_TOOLS = {'curl', 'wget', 'ssh', 'scp', 'rsync', 'nc', 'ncat', 'telnet', 'ftp', 'sftp', 'pip', 'pip3', 'brew', 'npx', 'gh', 'npm', 'pnpm', 'yarn'}
+NETWORK_SUBCOMMANDS = {'gh': {'api', 'repo', 'pr', 'issue', 'release', 'gist', 'run', 'search', 'browse', 'auth'},
+                       'npm': {'i', 'install', 'add', 'ci', 'view', 'info', 'pack', 'publish', 'exec', 'create'},
+                       'pnpm': {'i', 'install', 'add', 'dlx', 'create', 'view'}, 'yarn': {'add', 'install', 'dlx', 'create', 'info'}}
+GIT_NETWORK = {'clone', 'fetch', 'pull', 'push', 'ls-remote', 'remote', 'submodule'}
+PREFIXES = {'env', 'sudo', 'time', 'xargs', 'nohup', 'command', 'exec'}
+INTERPRETERS = ('python', 'node', 'deno', 'bun', 'perl', 'ruby')
+SHELLS = ('bash', 'sh', 'zsh')
+LIBRARY_PATTERNS = [
     r'\bimport\s+(?:[\w.]+(?:\s+as\s+\w+)?\s*,\s*)*(?:urllib|requests|httpx|aiohttp|socket|http|ftplib|smtplib)\b',
     r'\bfrom\s+(?:urllib|requests|httpx|aiohttp|socket|http|ftplib|smtplib)\b',
     r'__import__\(\s*[\'"](?:urllib|requests|httpx|aiohttp|socket|http)',
-    # Node: require, static and dynamic import of network modules, and any bare fetch() call.
     r'require\(\s*[\'"](?:node:)?(?:https?|net|dgram|tls|undici)[\'"]',
     r'\bimport\b[^\n;]*[\'"](?:node:)?(?:https?|net|dgram|tls|undici)[\'"]',
     r'(?<![\w.])fetch\(',
-    # Perl network modules.
     r'-M(?:IO::Socket|LWP|HTTP::Tiny|Net::)',
-    # Git network verbs, including `git -C <dir>` forms.
-    r'\bgit\s+(?:-[Cc]\s+\S+\s+)*(?:clone|fetch|pull|push|ls-remote|remote|submodule|archive\s+--remote)\b',
+    r'https?://',
 ]
-URL = None
+LIBRARY = None
+
+
+def _tokens(segment):
+    import shlex
+    try: return shlex.split(segment, comments=True)
+    except ValueError: return segment.split()
+
+
+def _strip_prefix(words):
+    """Drop leading VAR=value assignments, wrappers such as env/sudo/xargs and their flags."""
+    while words and (('=' in words[0] and not words[0].startswith('-')) or Path(words[0]).name in PREFIXES or words[0].startswith('-')):
+        words = words[1:]
+    return words
+
+
+def _segment_hits(segment):
+    """True when one simple command invokes a network tool or git network verb (its arguments are data)."""
+    words = _strip_prefix(_tokens(segment))
+    if not words: return False
+    tool = Path(words[0]).name
+    if tool == 'git':
+        rest = [w for w in words[1:]]
+        while rest and rest[0] in ('-C', '-c'): rest = rest[2:]
+        while rest and rest[0].startswith('-'): rest = rest[1:]
+        return bool(rest) and (rest[0] in GIT_NETWORK or rest[0] == 'archive' and '--remote' in ' '.join(rest))
+    if tool not in NETWORK_TOOLS: return False
+    subs = NETWORK_SUBCOMMANDS.get(tool)
+    return subs is None or any(w in subs for w in words[1:3])
+
+
+def _split_commands(text):
+    """Simple commands, with heredoc bodies attached to the command that reads them."""
+    import re
+    lines = text.split('\n'); out = []; i = 0
+    while i < len(lines):
+        line = lines[i]; m = re.search(r"<<-?\s*['\"]?(\w+)['\"]?", line); body = []
+        if m:
+            j = i + 1
+            while j < len(lines) and lines[j].strip() != m.group(1): body.append(lines[j]); j += 1
+            i = j
+        for seg in re.split(r'&&|\|\||;|\|', line):
+            out.append((seg.strip(), '\n'.join(body)))
+        i += 1
+    return out
 
 
 def network_commands(host_output):
     """Model shell commands that could reach the network or another checkout; any one invalidates a repair trial.
     The lane cannot deny network to model commands without also denying the Codex API, so access is audited instead.
-    Invocation-shaped patterns plus URL literals outside comment lines; bare words such as a `yarn.lock` glob, a test
-    named after "requests" or an e-mail domain in a copyright header are not access."""
+    Each simple command is judged by what it executes: a network tool or git network verb, or an interpreter (inline
+    code or a heredoc it reads) that imports a network library, calls fetch or names a URL. Arguments to other tools,
+    such as `echo 'curl ...'`, `rg 'import urllib'` or a heredoc written to a file, are data, not access."""
     import re
-    global NETWORK, URL
-    NETWORK = NETWORK or re.compile('|'.join(f'(?:{p})' for p in NETWORK_PATTERNS))
-    URL = URL or re.compile(r'https?://')
+    global LIBRARY
+    LIBRARY = LIBRARY or re.compile('|'.join(f'(?:{p})' for p in LIBRARY_PATTERNS))
     def flagged_text(command):
-        if NETWORK.search(command): return True
-        return any(URL.search(line) for line in command.splitlines() if not line.lstrip().startswith(('#', '//', '*', '/*')))
+        inner = command
+        m = re.match(r"^\S*/(?:bash|sh|zsh)\s+-l?c\s+(['\"])(.*)\1\s*$", command.strip(), re.S)
+        if m: inner = m.group(2)
+        for segment, heredoc in _split_commands(inner):
+            if _segment_hits(segment): return True
+            words = _strip_prefix(_tokens(segment))
+            tool = Path(words[0]).name if words else ''
+            if tool.startswith(INTERPRETERS) and (LIBRARY.search(segment) or LIBRARY.search(heredoc)): return True
+            if tool in SHELLS and heredoc and any(_segment_hits(s) for s, _ in _split_commands(heredoc)): return True
+        return False
     flagged, tools = [], []
     for line in host_output.splitlines():
         if not line.startswith('{'): continue
