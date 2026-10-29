@@ -76,3 +76,12 @@ Two repetitions per arm per case. Arm order rotates per case and repetition. Let
 A family discriminates only if the `none` arm scores at most 0.75 on it. If it scores higher, the family is near ceiling and parity there is weak evidence. With 2 repetitions over 6–10 cases, a difference of one or two trials is within noise. The thresholds are set above that, but these runs estimate no population rate.
 
 Retirement still needs, per source: parity or better on every family where the source has the capability; no unaccounted capability (`docs/source-provenance.json`); and the owner's approval.
+
+## Addendum: pilot result and primary set (committed before scored runs)
+
+The pilot ran the `none` arm once per case on 2026-10-28. All 12 reviews completed against the schema; none needed recovery. A single blinded Opus judge graded the pilot. Raw output and judgments are outside the repository.
+
+- **Review.** `none` detected 7 of 10 defect cases and missed H01, H07 and H08. It raised no control false positive. Under the pilot rule, the primary set is **H01, H07, H08** plus H02, H03 and H04, the first detected cases in ID order, to reach 6.
+- **Repair.** `none` passed all 6. Under the pilot rule, the primary set is **X01–X04**. The repair family is therefore expected to sit at ceiling. If it does, the result will say the family does not discriminate, rather than claim parity as evidence.
+
+Cases were not edited. Scored runs cover all 12 review and 6 repair cases for all four arms, with 2 repetitions each.
