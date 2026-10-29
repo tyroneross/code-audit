@@ -18,7 +18,7 @@ else: load ../code-principles/SKILL.md for focused review
 load relevant challenge details
 if agent dependencies or handoffs: read ../code-principles/references/challenge-guidance.md#agent-communication-and-dependency-handoffs
 if unused code, stale experiments or constant flags: read ../code-principles/references/removal-evidence.md
-if literals with a source of truth, environment-specific values, or extra layers/services: read ../code-principles/references/frozen-values-and-path-length.md
+if literals with a source of truth, environment-specific values, or extra layers/services: read ../code-principles/references/frozen-values-and-path-length.md; compare each version, path, id, name table and copied list with its source in every supplied file
 trace callers, state owners, boundaries and failure paths
 compare a local patch with the simplest adequate shared correction and the shortest correct path
 if repair authorized: fix the confirmed cause and preserve valid behavior

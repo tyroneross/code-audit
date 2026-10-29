@@ -63,7 +63,7 @@ A value is a lead when it has a live source of truth or varies by context but is
 - **F3 Don't copy the manifest version.** Read `__version__`, CLI `--version` and client/server info from the package manifest or generate them.
 - **F4 Limits, timeouts and thresholds that differ by deployment come from config,** with the default justified (see B2).
 - **F5 Model ids, prices, regions, account/project/tenant ids and dates have an owner.** Read the catalog, config or clock; check the live source before calling a recent-looking value wrong.
-- **F6 Feature toggles read their flag.** A toggle fixed to a constant is dead code or a hidden switch.
+- **F6 Feature toggles read their flag.** A toggle fixed to a constant may be dead code, a hidden switch or a deliberate kill switch; check [removal evidence](removal-evidence.md) before calling it unused.
 - **F7 One owner per shared identifier.** File names, schema ids, env-var names, wire names and URLs used by several modules or languages come from one definition, are generated from it, or are checked for drift.
 
 ## G. Path length and brittle structure
