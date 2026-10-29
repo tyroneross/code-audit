@@ -54,6 +54,24 @@ Write the comparison as a differential check: run old and new over the same inpu
 - **E7 Pin dependencies; read a dependency's code and transitive deps before adopting it.**
 - **E8 Hand-written parsers of standard formats** (PDF, CSV, HTML, ZIP, dates, source code) need tests for escapes, nesting, string literals and encodings, or a maintained library. Regex over source code matches inside strings and comments unless it accounts for them.
 
+## F. Frozen values that should be dynamic
+
+A value is a lead when it has a live source of truth or varies by context but is frozen in code; a literal alone is not. Procedure, harm order and the scanner's measured precision: [frozen values and path length](frozen-values-and-path-length.md).
+
+- **F1 No machine-specific absolute paths.** Home paths and checkout paths break on the next machine; derive them from the repo root, an argument or config.
+- **F2 No environment-specific hosts in code.** `localhost`, ports, private IPs and preview-deploy hosts belong in config or env; a fallback after reading env must be safe where it applies.
+- **F3 Don't copy the manifest version.** Read `__version__`, CLI `--version` and client/server info from the package manifest or generate them.
+- **F4 Limits, timeouts and thresholds that differ by deployment come from config,** with the default justified (see B2).
+- **F5 Model ids, prices, regions, account/project/tenant ids and dates have an owner.** Read the catalog, config or clock; check the live source before calling a recent-looking value wrong.
+- **F6 Feature toggles read their flag.** A toggle fixed to a constant is dead code or a hidden switch.
+- **F7 One owner per shared identifier.** File names, schema ids, env-var names, wire names and URLs used by several modules or languages come from one definition, are generated from it, or are checked for drift.
+
+## G. Path length and brittle structure
+
+- **G1 Count the hops from request to outcome** and name the shortest correct path that meets the same requirements.
+- **G2 Every layer names its capability:** isolation, independent scale or deploy (P29), a real alternative (P09), a real boundary seam, a stable contract, or a simpler whole operation (P13). Pass-through wrappers, single-implementation factories, speculative plugin systems, duplicate state owners and service splits without isolation or scale need are leads.
+- **G3 Judge brittleness by failure points and coupling:** dropped fields at a serialization hop, two tie-break rules for one record set, partial updates between owners, version skew, retries at two layers. Taste is not a finding.
+
 ## Quick pick: checklist item → cards
 
 Read the referenced principle in the [canonical rule cards](../../audit/references/cards/).
@@ -70,5 +88,7 @@ Read the referenced principle in the [canonical rule cards](../../audit/referenc
 | C5 | P20 async ownership, P21 |
 | D1–D5 | P10 substitution, P27 compatibility, P23 verification |
 | E1–E8 | P08, P13, P22, P24, P25, P26, P30 |
+| F1–F7 | P06 meaning and validation, P27 compatibility, P07 |
+| G1–G3 | P09 extension points, P13 splitting, P29 separate services, P18 |
 
 For a full 30-principle audit of a codebase, a pre-build plan, or a multi-batch repository campaign, use the workflows at `../../audit/SKILL.md`, `../../plan/SKILL.md` or `../../improve/SKILL.md` (relative to this skill's real folder).

@@ -150,6 +150,38 @@ class S {
         self.assertNotIn(("src/pages.ts", 4), {(h["file"], h["line"]) for h in r["items"].get("A3", [])})
         self.assertEqual([(h["file"], h["line"]) for h in r["items"]["A4"]], [("src/lines.ts", 3)])
 
+    def test_frozen_values_are_found_and_sources_examples_and_tests_are_not(self):
+        files = {
+            "pyproject.toml": 'name = "demo"\nversion = "1.2.3"\n',
+            "app.py": "\n".join([
+                'CORPUS = "/Users/alice2/dev/corpus"',            # F1: machine-specific path
+                'EXAMPLE = "/Users/example/dev/x"',                # placeholder user
+                'PATTERN = re.compile(r"/Users/[a-z]+/")',        # a detector, not a use
+                'OLLAMA = "http://localhost:11434"',               # F2
+                'url = f"http://127.0.0.1:{port}/x"',              # a server this code started
+                'base = os.environ.get("BASE", "http://localhost:3000")',  # env read with fallback
+                '_DISK_CACHE_ENABLED = False',                     # F7
+                '__version__ = "1.2.3"',                           # F3: copies pyproject
+                'LOCK_NAME = "projects.json.lock"',                # F8 with web/lock.ts
+                'MAX_ITEMS = 5',                                   # numeric limits are not shared identifiers
+            ]) + "\n",
+            "web/lock.ts": "export const REGISTRY_LOCK = 'projects.json.lock';\nconst MAX_ITEMS = 5;\nconst u = new URL(req.url, 'http://localhost');\n",
+            "config/settings.py": 'OLLAMA = "http://localhost:11434"\n',
+            "src/lib.rs": 'fn a() {}\n#[cfg(test)]\nmod tests {\n    const P: &str = "/Users/real/x";\n}\n',
+            "tests/test_x.py": 'P = "/Users/real/x"\n',
+        }
+        with tempfile.TemporaryDirectory() as d:
+            for rel, text in files.items():
+                path = Path(d, rel); path.parent.mkdir(parents=True, exist_ok=True); path.write_text(text)
+            _, out = run_scan([d])
+        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F1"]], [("app.py", 1)])
+        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F2"]], [("app.py", 4)])
+        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F6"]], [("app.py", 7)])
+        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F3"]], [("app.py", 8)])
+        # app.py:4 copies the URL that config/settings.py owns; the config file itself is not flagged.
+        self.assertEqual(sorted((h["file"], h["line"]) for h in out["items"]["F7"]), [("app.py", 4), ("app.py", 9), ("web/lock.ts", 1)])
+        self.assertEqual(set(out["items"]) & {"F4", "F5", "G1", "G2"}, set())
+
     def test_unreadable_input_is_reported_not_counted(self):
         (self.root / "src" / "bad.ts").write_bytes(b"\xff\xfe fetch(u)")
         locked = self.root / "locked"

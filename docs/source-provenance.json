@@ -1445,8 +1445,8 @@
       "path": "skills/audit/references/cards/P06.md",
       "source": "code-principles-audit",
       "source_sha256": "33ee3d299388da978e5cb00eae251d8932f2939fe969f02cbd7b2e9002c23364",
-      "current_sha256": "33ee3d299388da978e5cb00eae251d8932f2939fe969f02cbd7b2e9002c23364",
-      "modified_from_import": false
+      "current_sha256": "e6a278ab50a06f232759571c6c9efc21110862d0960de1bff6ebae1c0db133b2",
+      "modified_from_import": true
     },
     {
       "path": "skills/audit/references/cards/P07.md",
@@ -1466,8 +1466,8 @@
       "path": "skills/audit/references/cards/P09.md",
       "source": "code-principles-audit",
       "source_sha256": "02b0bd9efbdc090a86c2a8cd79f9942f5dee0a4f943a94ac33b9fc350d5ef5df",
-      "current_sha256": "02b0bd9efbdc090a86c2a8cd79f9942f5dee0a4f943a94ac33b9fc350d5ef5df",
-      "modified_from_import": false
+      "current_sha256": "18488058f064bb252e5fb8ae3e08e38af201c1b588f801a800e472e025cbe2c7",
+      "modified_from_import": true
     },
     {
       "path": "skills/audit/references/cards/P10.md",
@@ -1494,8 +1494,8 @@
       "path": "skills/audit/references/cards/P13.md",
       "source": "code-principles-audit",
       "source_sha256": "19be27eef653c24d0c734d5df8d718f2cee44ffdb5145768738319ff6ae5304d",
-      "current_sha256": "19be27eef653c24d0c734d5df8d718f2cee44ffdb5145768738319ff6ae5304d",
-      "modified_from_import": false
+      "current_sha256": "0463b0d62266500c1283eb6422fc2f58d98bf35b8d8549e25f64a1c8242eeee3",
+      "modified_from_import": true
     },
     {
       "path": "skills/audit/references/cards/P14.md",
@@ -1606,8 +1606,8 @@
       "path": "skills/audit/references/cards/P29.md",
       "source": "code-principles-audit",
       "source_sha256": "c346ebcdf058c750afa19546790c46179eb689c6e9972dd95e4c1d17917b392d",
-      "current_sha256": "c346ebcdf058c750afa19546790c46179eb689c6e9972dd95e4c1d17917b392d",
-      "modified_from_import": false
+      "current_sha256": "57ae6a5698530cb73a390bb7ba211caadb69dcf55abac3944c7d4e19c31345d2",
+      "modified_from_import": true
     },
     {
       "path": "skills/audit/references/cards/P30.md",
@@ -1739,7 +1739,7 @@
       "path": "skills/code-principles/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "d27f3b1bcdbe9c7f828c5785652dd5f3fb19ff5e69641aeb325095d417dc4d7d",
+      "current_sha256": "0f6fd51d6d96f7e9f756bed68275fd3230d633385a8eb039322735c649aa9f00",
       "modified_from_import": true
     },
     {
@@ -1802,15 +1802,15 @@
       "path": "skills/code-principles/scripts/scan.py",
       "source": "code-principles-audit",
       "source_sha256": "97cf11fcb5f0da3f47d9423f32ccc5b6d3ccbefbfdac3565333dc88d3a763cd0",
-      "current_sha256": "97cf11fcb5f0da3f47d9423f32ccc5b6d3ccbefbfdac3565333dc88d3a763cd0",
-      "modified_from_import": false
+      "current_sha256": "8129c5169c981783be81b1e948253e55dc177455265d7d8f1ee88097998db17b",
+      "modified_from_import": true
     },
     {
       "path": "skills/code-principles/scripts/test_code_principles.py",
       "source": "code-principles-audit",
       "source_sha256": "9c80362958d93924a150b65478c7140fd7c087c761fd53d96032c82eeb9932ae",
-      "current_sha256": "9c80362958d93924a150b65478c7140fd7c087c761fd53d96032c82eeb9932ae",
-      "modified_from_import": false
+      "current_sha256": "13400c2089ae3927051a0344887010eea70c0e96ae0687f042270a7decedd733",
+      "modified_from_import": true
     },
     {
       "path": "skills/debug-loop/SKILL.md",
@@ -1887,7 +1887,7 @@
       "source": "code-principles-audit",
       "source_path": "skills/code-principles/SKILL.md",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "199c25cbe67d952f04cee0a9a28e2b86c6c84916bfce31c3f411624c802246c0",
+      "current_sha256": "62aa541c002ff32d08581e2ff89ce4af9c5f2833d45ff7250e78e9434943a457",
       "modified_from_import": true,
       "adaptation": "Checklist extracted from the imported focused skill; contextual failure-handler wording and relative links updated."
     },
@@ -1954,7 +1954,8 @@
     "2026-10-28: storage reads legacy ISO-8601 string incident timestamps as epoch milliseconds (normalizeLegacyIncident) instead of rejecting them. Correction: on the real comparison corpus this alone loaded no additional records; the measured skips were legacy INCIDENT_ IDs and schema variants.",
     "2026-10-28: incident IDs accept the legacy INCIDENT_ prefix through one exported isValidIncidentId (storage, MCP list and detail routing), still restricted to word characters and hyphens. On the 100-file comparison corpus code-audit loads 87 records; 13 remain visibly skipped for non-string symptoms (10), non-enum verification status (4), fix shape (2) and filename/ID mismatch (1); coding-debugger loads all 100 without validation.",
     "2026-10-28: read-time normalization maps the remaining legacy incident shapes without rewriting files: a structured symptom becomes its description (else a fixed-order join of its text fields) with the object kept in legacy.symptom; a verification status outside the enum reads as unverified with the raw value kept; path-like string changes become {file} and command/summary or prose entries become fix.notes; a missing incident_id comes from a filename that matches the ID pattern, and a missing timestamp from the ID's embedded creation time (never file mtime). SESSION_ files (the debugger's temporary session namespace) and filename/ID mismatches stay skipped with named reasons. On the 100-file comparison corpus code-audit now loads 98; the two skips are one SESSION_ record and one filename/ID mismatch.",
-    "2026-10-28 (review fixes): a string change maps to {file} only when it has a directory separator or a file extension, so single words such as 'Refactored' become notes; a prior non-array fix.notes is kept (as the first note and in legacy.fix_notes); INCIDENT_ IDs with a 13-digit millisecond epoch also supply a timestamp. Normalization never rewrites files on read; an explicit user-initiated store of a normalized record (for example batch review) saves the normalized shape with its legacy block."
+    "2026-10-28 (review fixes): a string change maps to {file} only when it has a directory separator or a file extension, so single words such as 'Refactored' become notes; a prior non-array fix.notes is kept (as the first note and in legacy.fix_notes); INCIDENT_ IDs with a 13-digit millisecond epoch also supply a timestamp. Normalization never rewrites files on read; an explicit user-initiated store of a normalized record (for example batch review) saves the normalized shape with its legacy block.",
+    "2026-10-28 (W3): code-principles gains checklist sections F (frozen values that should be dynamic) and G (path length and brittle structure), a procedure reference (frozen-values-and-path-length.md), a P06 card section on values with a source of truth, P09/P13/P29 links to the path-length procedure, and scan.py section F signals in scripts/frozen.py (home paths, environment hosts, copied manifest version, fixed toggles, shared identifiers defined in several files). Model-id, generic account-id, date-constructor, pass-through and single-implementation detectors were measured on real repositories and cut for low precision. scan.py also treats capitalized Tests/ directories, *Tests.swift and Rust #[cfg(test)] modules as tests."
   ],
   "removed_imports": [
     {

@@ -12,6 +12,9 @@ import re
 import sys
 from collections import defaultdict
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import frozen  # noqa: E402
+
 SKIP_DIRS = {
     ".git", "node_modules", "dist", "build", "out", ".next", "vendor", "target",
     "__pycache__", ".venv", "venv", ".tox", ".mypy_cache", ".pytest_cache",
@@ -24,16 +27,18 @@ CODE_EXT = {
 MAX_FILE_BYTES = 2_000_000
 LOOKAHEAD = 10  # lines checked for a timeout/limit set in a multi-line call
 LOOKAHEAD_ITEMS = {"B2", "B5", "B7"}
-TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|fixtures?|spec|e2e)(/|$)|\.(test|spec)\.\w+$|(^|/)test_\w+\.py$|_test\.(py|go)$")
+TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|fixtures?|spec|e2e)(/|$)|\.(test|spec)\.\w+$|(^|/)test_\w+\.py$|_test\.(py|go)$|(^|/)\w*Tests?/|Tests?\.swift$|(^|/)tests?\.rs$", re.I)
 
-# Report order: untrusted input and security first, then load, then speed, then hygiene.
-PRIORITY = ["D6", "B7", "C1", "A1", "A6", "A2", "B2", "B5", "A5", "B1", "B6", "B3", "C2", "C5", "A3", "A4"]
+# Report order by likely harm: untrusted input first; values that break on another machine or deployment; load;
+# speed; then structure signals, which are the weakest evidence.
+PRIORITY = ["D6", "F1", "F2", "B7", "C1", "F3", "F7", "A1", "A6", "A2", "B2", "B5", "F5", "A5", "B1", "B6", "B3", "C2", "C5", "F6", "A3", "A4"]
 
 SECTIONS = {
     "A": "Speed and efficiency",
     "B": "Scale and load",
     "C": "Failure handling",
     "D": "Contract gate",
+    "F": "Frozen values that should be dynamic",
 }
 
 # (item, label, compiled regex, optional "unless" regex on the same line)
@@ -82,7 +87,7 @@ def indent(line):
     return len(line) - len(line.lstrip(" \t"))
 
 
-def scan_file(path, rel, skipped):
+def scan_file(path, rel, skipped, store=None):
     try:
         if os.path.getsize(path) > MAX_FILE_BYTES:
             skipped.append((rel, "larger than 2 MB"))
@@ -98,8 +103,11 @@ def scan_file(path, rel, skipped):
     hits = []
     parse_lines = []
     loop_stack = []  # (indent, line_no)
+    inline_tests = False  # Rust test modules sit at the end of the file they test
     for no, line in enumerate(lines, 1):
         stripped = line.strip()
+        if stripped.startswith("#[cfg(test)]"):
+            inline_tests = True
         if not stripped or stripped.startswith(("#", "//", "*", "/*")):
             continue
         ind = indent(line)
@@ -112,6 +120,8 @@ def scan_file(path, rel, skipped):
             window = call_window(lines, no - 1) if item in LOOKAHEAD_ITEMS else line
             if unless and unless.search(window):
                 continue
+            hits.append((item, label, rel, no, stripped[:160]))
+        for item, label in frozen.line_hits(rel, no, line, inline_tests):
             hits.append((item, label, rel, no, stripped[:160]))
         if PARSE_CALL.search(line):
             parse_lines.append((no, stripped[:160]))
@@ -126,6 +136,8 @@ def scan_file(path, rel, skipped):
     if len(parse_lines) >= 2:
         for no, text in parse_lines:
             hits.append(("A1", f"one of {len(parse_lines)} parse calls in this file", rel, no, text))
+    if store is not None:
+        frozen.collect(rel, lines, store)
     same = same_input_fetches(lines)
     if same:
         flagged = {no for no, _ in same}
@@ -213,12 +225,13 @@ def main(argv=None):
         if not os.path.exists(p):
             print(f"scan.py: no such path: {p}", file=sys.stderr)
             return 2
-    hits, files, skipped = [], 0, []
+    hits, files, skipped, store = [], 0, [], frozen.new_store()
     for full, rel in iter_files(args.paths, args.include_tests, skipped):
-        found = scan_file(full, rel, skipped)
+        found = scan_file(full, rel, skipped, store)
         if found is not None:
             files += 1
             hits.extend(found)
+    hits.extend(frozen.cross_file_hits(store, args.paths))
     by_item = defaultdict(list)
     for h in hits:
         by_item[h[0]].append(h)
@@ -228,13 +241,15 @@ def main(argv=None):
         return 0
     print(f"Scanned {files} files. Read checklist sections: " + (", ".join(f"{s} {SECTIONS[s]}" for s in sorted({k[0] for k in by_item})) or "none matched"))
     print("Always apply section D before shipping a fast path, and section E to the change itself.")
+    if any(k[0] == "F" for k in by_item):
+        print("F hits are leads: confirm the value has a source of truth or varies by context before reporting it.")
     if skipped:
         print(f"NOT SCANNED ({len(skipped)}): " + "; ".join(f"{p} ({r})" for p, r in skipped[:10]) + (" …" if len(skipped) > 10 else ""))
     order = sorted(by_item, key=lambda i: (PRIORITY.index(i) if i in PRIORITY else len(PRIORITY), i))
     for item in order:
         rows = by_item[item]
         print(f"\n{item} ({len(rows)} hits)")
-        rows = sorted(rows, key=lambda h: "fetching helpers" not in h[1])
+        rows = sorted(rows, key=lambda h: not ("fetching helpers" in h[1] or "different values" in h[1]))
         for _, label, f, n, text in rows[: args.max_hits]:
             print(f"  {f}:{n}  [{label}]  {text}")
         if len(rows) > args.max_hits:
