@@ -1,0 +1,451 @@
+{
+ "version": 1,
+ "repos_root": "/Users/tyroneross/dev/git-folder",
+ "review": [
+  {
+   "id": "H01",
+   "key": "ng-gate-timeout-nonretryable",
+   "repo": "NavGator",
+   "revision": "3723d05f786447ca61fead8f02bd6364d2c59c3d",
+   "role": "defect",
+   "files": [
+    {
+     "path": "src/cli/commands/scan.ts"
+    },
+    {
+     "path": "src/scan-lock.ts"
+    },
+    {
+     "path": "src/freshness/drainer.ts"
+    }
+   ]
+  },
+  {
+   "id": "H02",
+   "key": "ng-dashboard-registry-torn-write",
+   "repo": "NavGator",
+   "revision": "6f0f4d94ebb11813645e020a33f02f823b17eda2",
+   "role": "defect",
+   "files": [
+    {
+     "path": "src/projects.ts"
+    },
+    {
+     "path": "web/app/api/projects/route.ts"
+    },
+    {
+     "path": "web/app/api/coverage/route.ts"
+    }
+   ]
+  },
+  {
+   "id": "H03",
+   "key": "ibr-extractor-stale-cache",
+   "repo": "interface-built-right",
+   "revision": "fba24704841c508c0049bdb59e4e232a2383eff0",
+   "role": "defect",
+   "files": [
+    {
+     "path": "src/native/swift/ibr-ax-extract/Sources/Keyboard.swift"
+    },
+    {
+     "path": "src/native/extract.ts"
+    },
+    {
+     "path": "src/native/preflight.ts"
+    }
+   ]
+  },
+  {
+   "id": "H04",
+   "key": "spectra-envelope-missing-operation",
+   "repo": "spectra",
+   "revision": "3fcc0838e053ac3d32d268cc73b0d346ddc63b8b",
+   "role": "defect",
+   "files": [
+    {
+     "path": "macos/Spectra/DaemonCore/HandlerRegistry.swift"
+    },
+    {
+     "path": "macos/Spectra/DaemonCore/ProxyClient.swift"
+    },
+    {
+     "path": "src/daemon/server.ts"
+    },
+    {
+     "path": "src/client/transport.ts"
+    }
+   ]
+  },
+  {
+   "id": "H05",
+   "key": "bl-handoff-queue-cap",
+   "repo": "build-loop",
+   "revision": "3431a18553f2faf0550df2fcb7f0f29ef32ff725",
+   "role": "defect",
+   "files": [
+    {
+     "path": "scripts/handoff/__main__.py"
+    },
+    {
+     "path": "scripts/backlog.py",
+     "ranges": [
+      [
+       1,
+       200
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "H06",
+   "key": "bl-experiment-upsert-first-only",
+   "repo": "build-loop",
+   "revision": "5ce58e42ffc8cc14ddf5292ede4af86b7588bb39",
+   "role": "defect",
+   "files": [
+    {
+     "path": "scripts/learn/runner.py",
+     "ranges": [
+      [
+       620,
+       760
+      ]
+     ]
+    },
+    {
+     "path": "scripts/write_run_entry/iohelpers.py"
+    },
+    {
+     "path": "scripts/atomic_io.py"
+    }
+   ]
+  },
+  {
+   "id": "H07",
+   "key": "arp-writeln-two-syscalls",
+   "repo": "agent-rally-point",
+   "revision": "25fc7e5b38ca037c1842e32b23fdaf90926e0399",
+   "role": "defect",
+   "files": [
+    {
+     "path": "crates/rally-cli/src/lib.rs",
+     "ranges": [
+      [
+       600,
+       760
+      ]
+     ]
+    },
+    {
+     "path": "crates/rally-cli/src/store.rs",
+     "ranges": [
+      [
+       1040,
+       1300
+      ]
+     ]
+    },
+    {
+     "path": "crates/rally-cli/src/rotate.rs",
+     "ranges": [
+      [
+       1,
+       260
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "H08",
+   "key": "arp-ack-timeout-error",
+   "repo": "agent-rally-point",
+   "revision": "babc9b069413e25c73ea045d905b66dff76dcead",
+   "role": "defect",
+   "files": [
+    {
+     "path": "crates/rally-cli/src/lib.rs",
+     "ranges": [
+      [
+       1700,
+       1800
+      ],
+      [
+       2120,
+       2215
+      ]
+     ]
+    },
+    {
+     "path": "crates/rally-cli/src/backends.rs"
+    }
+   ]
+  },
+  {
+   "id": "H09",
+   "key": "bl-procgov-unlocked-rmw",
+   "repo": "build-loop",
+   "revision": "0f06eb2e2bf66f021d45e71c79dca8573d851f0d",
+   "role": "defect",
+   "files": [
+    {
+     "path": "scripts/procedural_governance.py"
+    },
+    {
+     "path": "scripts/atomic_io.py"
+    }
+   ]
+  },
+  {
+   "id": "H10",
+   "key": "ng-atomic-tmp-collision",
+   "repo": "NavGator",
+   "revision": "1f3a08a5170a1f29025fa3187384e47ea8719129",
+   "role": "defect",
+   "files": [
+    {
+     "path": "src/projects.ts"
+    },
+    {
+     "path": "src/storage.ts",
+     "ranges": [
+      [
+       1700,
+       1850
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C01",
+   "key": "ng-gate-timeout-nonretryable",
+   "repo": "NavGator",
+   "revision": "765c027291942ab15994803be722c76105a4125a",
+   "role": "control",
+   "files": [
+    {
+     "path": "src/cli/commands/scan.ts"
+    },
+    {
+     "path": "src/scan-lock.ts"
+    },
+    {
+     "path": "src/freshness/drainer.ts"
+    }
+   ]
+  },
+  {
+   "id": "C02",
+   "key": "bl-handoff-queue-cap",
+   "repo": "build-loop",
+   "revision": "4d5bf827b1bb31606d07706961b115a1e5012c76",
+   "role": "control",
+   "files": [
+    {
+     "path": "scripts/handoff/__main__.py"
+    },
+    {
+     "path": "scripts/backlog.py",
+     "ranges": [
+      [
+       1,
+       200
+      ]
+     ]
+    }
+   ]
+  }
+ ],
+ "repair": [
+  {
+   "id": "X01",
+   "key": "bl-review-gate-status-priority",
+   "repo": "build-loop",
+   "parent": "fcd1c1ba065fbfe7e51281ebf02c191ed8394f39",
+   "fix": "46b3bab3dcbdf17d344df0dafdc3477b1ab353ad",
+   "files": [
+    "scripts/review_finding_gate.py",
+    "scripts/test_review_finding_gate.py"
+   ],
+   "editable": [
+    "scripts/review_finding_gate.py",
+    "scripts/test_review_finding_gate.py"
+   ],
+   "withheld": {
+    "git": "scripts/test_review_finding_gate.py"
+   },
+   "cwd": "scripts",
+   "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_review_finding_gate"
+   ],
+   "symptom": "The review finding gate lets a confirmed, in-scope finding pass even though its status says it was never repaired (for example accepted, waived, escalated, blocked or open), as long as the record also carries closed or resolved flags or resolution=fixed.",
+   "contract": "When repair is required, an explicit unrepaired status keeps the finding blocking regardless of any closed, resolved or resolution fields. Keep the existing CLI, exit codes and output shape."
+  },
+  {
+   "id": "X02",
+   "key": "bl-frontier-edge-vocabulary",
+   "repo": "build-loop",
+   "parent": "3b5c44061c8a4bc4beb0d6472447cc161e233296",
+   "fix": "2cf51fdba715ba1b71f01a488351c0430f379165",
+   "files": [
+    "scripts/frontier_gate.py",
+    "scripts/test_frontier_gate.py"
+   ],
+   "editable": [
+    "scripts/frontier_gate.py",
+    "scripts/test_frontier_gate.py"
+   ],
+   "withheld": {
+    "git": "scripts/test_frontier_gate.py"
+   },
+   "cwd": "scripts",
+   "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_frontier_gate"
+   ],
+   "symptom": "For a repository whose NavGator architecture graph has hundreds of internal edges, the frontier gate reports a coupling density of 0.00 and treats the repository as loosely coupled.",
+   "contract": "Coupling density counts an internal edge whether the graph writes it as from/to or as source/target, including both forms mixed in one graph. Keep every existing signal, field and CLI behavior."
+  },
+  {
+   "id": "X03",
+   "key": "bl-routing-rank-vs-recency",
+   "repo": "build-loop",
+   "parent": "c6cec31cf88f8963e7907b8cd4e6935d6cba3633",
+   "fix": "834e6611d813a7c58a4fdb502a0a67c5306a1cd2",
+   "files": [
+    "scripts/model_overrides.py",
+    "scripts/model_taxonomy.py",
+    "scripts/model_resolver.py",
+    "scripts/model_availability_store.py",
+    "references/model-taxonomy.json",
+    "scripts/test_model_overrides.py"
+   ],
+   "editable": [
+    "scripts/model_overrides.py",
+    "scripts/model_taxonomy.py",
+    "scripts/test_model_overrides.py"
+   ],
+   "withheld": {
+    "git": "scripts/test_model_overrides.py"
+   },
+   "cwd": "scripts",
+   "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_model_overrides.EntryPointAgreementTests.test_role_and_tier_paths_agree_on_every_rung",
+    "test_model_overrides.TwoAxisRoleTests"
+   ],
+   "symptom": "For the same tier, resolve_role and the tier-fallback resolver return different models: at the two lowest tiers a newer but lower-ranked model wins over the head of the preferred list.",
+   "contract": "For every tier, resolve_role for the generative-reasoning role returns the same model as resolve_with_tier_fallback for that tier, and the preferred-list order decides the model whether or not recency tie-breaking is enabled. Do not edit the taxonomy JSON."
+  },
+  {
+   "id": "X04",
+   "key": "bl-backlog-atomic-create",
+   "repo": "build-loop",
+   "parent": "cc75031571e7ffa354de9c94c831c580bf87c4b3",
+   "fix": "1a057e91ab7f080bd3ac15aa6ac12e3730778205",
+   "files": [
+    "scripts/backlog.py",
+    "scripts/test_backlog.py"
+   ],
+   "editable": [
+    "scripts/backlog.py",
+    "scripts/test_backlog.py"
+   ],
+   "withheld": {
+    "git": "scripts/test_backlog.py"
+   },
+   "cwd": "scripts",
+   "command": [
+    "python3",
+    "-m",
+    "unittest",
+    "test_backlog"
+   ],
+   "symptom": "When several agents run `backlog.py new` in the same area at the same time, some new items disappear and item ids are not unique.",
+   "contract": "N concurrent `new` processes in one area produce N distinct files with N unique ids that run 1..N in sequence, each file's frontmatter id matching its filename, with nothing lost; sequential creates keep incrementing. Keep the CLI and file format."
+  },
+  {
+   "id": "X05",
+   "key": "ibr-browserpool-ticket-lock",
+   "repo": "interface-built-right",
+   "parent": "3196ed6a99f678b97a6563e76ca8fb21d04ea31e",
+   "fix": "ed6e8a490c959f53f19398579ae542aa755d4b71",
+   "files": [
+    "src/engine/browser-pool.ts"
+   ],
+   "place": {
+    "src/engine/browser-pool.ts": "browser-pool.ts"
+   },
+   "fixtures": {
+    "driver.js": "fixtures/pool-driver.js"
+   },
+   "editable": [
+    "browser-pool.ts"
+   ],
+   "withheld": {
+    "private": "private/tests/pool.test.mjs"
+   },
+   "cwd": ".",
+   "command": [
+    "node",
+    "--experimental-strip-types",
+    "--no-warnings",
+    "--test",
+    "withheld.test.mjs"
+   ],
+   "symptom": "After the browser pool is closed while a scan holds the browser, other pending scans never return. Under contention, a scan that arrives late sometimes runs before one that was already waiting.",
+   "contract": "acquire() grants strictly in arrival order. close() makes every pending and future acquire() reject with an error whose message contains \"closed\", never hang, and never launch a driver after close. release() stays valid for the current holder. driver.js is a stand-in for the real driver and must not be edited. Run TypeScript with `node --experimental-strip-types`."
+  },
+  {
+   "id": "X06",
+   "key": "dd-grounding-rrf-floor",
+   "repo": "decision-doctor-cc",
+   "parent": "16818b73ffb1d7387d3affa28f63ef9bbb9c25c1",
+   "fix": "1522b237acb33a576d39cfd7790e557a9fcd0827",
+   "files": [
+    "lib/qa/grounding.ts",
+    "lib/corpus/body-kind.ts",
+    "lib/ai-knowledge/search/rrf-fusion.ts"
+   ],
+   "place": {
+    "lib/qa/grounding.ts": "grounding.ts",
+    "lib/corpus/body-kind.ts": "body-kind.ts",
+    "lib/ai-knowledge/search/rrf-fusion.ts": "rrf-fusion.ts"
+   },
+   "transform": {
+    "lib/qa/grounding.ts": [
+     [
+      "\"@/lib/corpus/body-kind\"",
+      "\"./body-kind.ts\""
+     ]
+    ]
+   },
+   "editable": [
+    "grounding.ts"
+   ],
+   "withheld": {
+    "private": "private/tests/grounding.test.mjs"
+   },
+   "cwd": ".",
+   "command": [
+    "node",
+    "--experimental-strip-types",
+    "--no-warnings",
+    "--test",
+    "withheld.test.mjs"
+   ],
+   "symptom": "The Q&A endpoint answers \"no grounded sources\" even for questions whose search results are clearly strong, top-ranked hits.",
+   "contract": "shouldEmitEmptyGrounding(sources) receives sources whose score is copied verbatim from rrfFuse (k=60). It returns true when there are fewer than 2 sources or when every source is only a deep-tail hit, and false for top-ranked hits. Edit only grounding.ts. Run TypeScript with `node --experimental-strip-types`."
+  }
+ ]
+}

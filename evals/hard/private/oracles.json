@@ -1,0 +1,142 @@
+{
+ "ng-gate-timeout-nonretryable": {
+  "fix": "765c027291942ab15994803be722c76105a4125a",
+  "file": "src/scan-lock.ts",
+  "lines": [
+   [
+    457,
+    459
+   ],
+   [
+    363,
+    367
+   ]
+  ],
+  "cls": "retry/timeout semantics",
+  "mechanism": "When a contender loses the acquisition-gate turnstile under load, acquireAcquisitionGate returns an untyped {ok:false} at its deadline and acquireScanLease maps every gate failure to retryable:false, so ordinary contention is reported as a non-retryable fault and callers give up instead of retrying."
+ },
+ "ng-dashboard-registry-torn-write": {
+  "fix": "0cc7d77665f39c6cf4fba94ff7913fb5e8dc8406",
+  "file": "web/app/api/projects/route.ts",
+  "lines": [
+   [
+    73,
+    76
+   ]
+  ],
+  "cls": "concurrency / non-atomic cross-process write",
+  "mechanism": "The dashboard route writes the shared projects registry in place with fs.writeFile; a concurrent CLI loadRegistry reads a partial file, JSON.parse throws, the catch returns an empty registry, and the next save clobbers every other registration."
+ },
+ "ibr-extractor-stale-cache": {
+  "fix": "96318f6c64b4f03892ab644a1b62a4a50e44d14a",
+  "file": "src/native/extract.ts",
+  "lines": [
+   [
+    98,
+    109
+   ]
+  ],
+  "cls": "cache invalidation",
+  "mechanism": "isFileFresh compares the cached extractor binary only against main.swift and Package.swift, so edits to other Swift sources (such as Keyboard.swift) never trigger a rebuild and the stale binary keeps running."
+ },
+ "spectra-envelope-missing-operation": {
+  "fix": "486cafb1508e08fdaefe2fa4fa16d1f191f42821",
+  "file": "macos/Spectra/DaemonCore/ProxyClient.swift",
+  "lines": [
+   [
+    335,
+    341
+   ],
+   [
+    300,
+    305
+   ]
+  ],
+  "cls": "cross-language contract drift",
+  "mechanism": "shadowCall and syntheticRequest build request envelopes without the operation field that the TypeScript server requires, so the backend rejects them as bad_request; the try? health probe silently falls back and every shadow call errors."
+ },
+ "bl-handoff-queue-cap": {
+  "fix": "4d5bf827b1bb31606d07706961b115a1e5012c76",
+  "file": "scripts/handoff/__main__.py",
+  "lines": [
+   [
+    68,
+    79
+   ],
+   [
+    293,
+    299
+   ]
+  ],
+  "cls": "partial coverage reported as complete",
+  "mechanism": "_queue_titles stops at a display limit of 5 and lists only top-level *.md files, while compose reports len(titles) as the queue count, so larger queues are under-counted and the backlog items/ subfolder is missed."
+ },
+ "bl-experiment-upsert-first-only": {
+  "fix": "be96661284367b9b34f5e796b830484668c86e94",
+  "file": "scripts/write_run_entry/iohelpers.py",
+  "lines": [
+   [
+    241,
+    251
+   ]
+  ],
+  "cls": "partial dedup inflates samples",
+  "mechanism": "The experiment-row upsert replaces only the first (event, run_id) match and keeps any other existing duplicates, so the learn runner, which counts and averages rows, can treat one run as several samples."
+ },
+ "arp-writeln-two-syscalls": {
+  "fix": "3e263c72982eb2c7c37532e46aaf2a3377796ebe",
+  "file": "crates/rally-cli/src/store.rs",
+  "lines": [
+   [
+    1180,
+    1191
+   ]
+  ],
+  "cls": "atomic append / torn JSONL",
+  "mechanism": "writeln! on an O_APPEND file issues the record and the newline as separate write calls, so concurrent appenders interleave between them and tear segment lines."
+ },
+ "arp-ack-timeout-error": {
+  "fix": "4840ce648c6799bb046bc9d415b75433bd051ec6",
+  "file": "crates/rally-cli/src/lib.rs",
+  "lines": [
+   [
+    2198,
+    2209
+   ],
+   [
+    1765,
+    1780
+   ]
+  ],
+  "cls": "retry/timeout semantics",
+  "mechanism": "After the message has already been delivered and recorded, an ack-wait timeout returns Err, which the inject caller propagates as a failure; callers retry and the message is delivered twice."
+ },
+ "bl-procgov-unlocked-rmw": {
+  "fix": "1d63c71ba6ba2aeba4bea6071cd436dbfd3bb95a",
+  "file": "scripts/procedural_governance.py",
+  "lines": [
+   [
+    136,
+    142
+   ],
+   [
+    126,
+    126
+   ]
+  ],
+  "cls": "lost update / torn JSONL",
+  "mechanism": "The candidate dedup read and read-modify-write run without a lock, so concurrent writers overwrite each other's rows, and a prior file lacking a trailing newline gets its last row spliced onto the first new row."
+ },
+ "ng-atomic-tmp-collision": {
+  "fix": "218cec01e3480a407991836061ddcbadd1cac6e2",
+  "file": "src/storage.ts",
+  "lines": [
+   [
+    1769,
+    1778
+   ]
+  ],
+  "cls": "concurrency / atomic write",
+  "mechanism": "The temp path target.tmp.<pid>.<Date.now()> is unique per millisecond, not per call, so two same-target writes in one process within a millisecond share a temp file and one truncates the other before rename, publishing torn JSON."
+ }
+}
