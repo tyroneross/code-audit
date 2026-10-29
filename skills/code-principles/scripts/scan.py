@@ -28,7 +28,7 @@ MAX_FILE_BYTES = 2_000_000
 LOOKAHEAD = 10  # lines checked for a timeout/limit set in a multi-line call
 LOOKAHEAD_ITEMS = {"B2", "B5", "B7"}
 # Test conventions are case-sensitive: `Tests/` and `FooTests.swift` (Swift), `tests.rs` (Rust); `src/latest/` is source.
-TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|fixtures?|spec|e2e)(/|$)|\.(test|spec)\.\w+$|(^|/)test_\w+\.py$|_test\.(py|go)$|(^|/)([A-Z]\w*)?Tests/|[A-Z]\w*Tests?\.swift$|(^|/)tests?\.rs$")
+TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|fixtures?|spec|e2e)(/|$)|\.(test|spec)\.\w+$|(^|/)test_\w+\.py$|_test\.(py|go)$|(^|/)([A-Z]\w*)?Tests/|(^|/)(Test|Fixtures?|TestData)/|[A-Z]\w*Tests?\.swift$|(^|/)tests?\.rs$")
 
 # Report order by likely harm: untrusted input first; values that break on another machine or deployment; load;
 # speed; then structure signals, which are the weakest evidence.
@@ -197,12 +197,13 @@ def same_input_fetches(lines):
     return sorted(set(found))
 
 
-def iter_files(paths, include_tests=False, skipped=None):
+def iter_files(paths, include_tests=False, skipped=None, roots=None):
     def on_error(err):
         if skipped is not None:
             skipped.append((err.filename, f"directory not readable: {err.strerror}"))
     for root in paths:
         if os.path.isfile(root):
+            if roots is not None: roots[os.path.basename(root)] = root
             yield root, os.path.basename(root)
             continue
         for dirpath, dirnames, filenames in os.walk(root, followlinks=False, onerror=on_error):
@@ -211,6 +212,7 @@ def iter_files(paths, include_tests=False, skipped=None):
                 full = os.path.join(dirpath, name)
                 rel = os.path.relpath(full, root)
                 if os.path.splitext(name)[1] in CODE_EXT and not os.path.islink(full) and (include_tests or not TEST_PATH.search(rel)):
+                    if roots is not None: roots[rel] = root
                     yield full, rel
 
 
@@ -226,7 +228,7 @@ def main(argv=None):
             print(f"scan.py: no such path: {p}", file=sys.stderr)
             return 2
     hits, files, skipped, store = [], 0, [], frozen.new_store()
-    for full, rel in iter_files(args.paths, args.include_tests, skipped):
+    for full, rel in iter_files(args.paths, args.include_tests, skipped, store["file_roots"]):
         found = scan_file(full, rel, skipped, store)
         if found is not None:
             files += 1

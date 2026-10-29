@@ -71,23 +71,34 @@ def line_hits(rel, no, line, in_test=False):
 
 
 class RustTestScope:
-    """Tracks `#[cfg(test)]` scope: the attributed item only, or a whole `mod … { }` block by brace depth."""
+    """Tracks `#[cfg(test)]` scope: the attributed item, through the end of its block when it opens one (`mod`, `fn`,
+    `impl`, ...). Comments and further attributes between the attribute and its item are skipped, and braces inside
+    string and char literals are not counted."""
+    LITERALS = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])\'')
+
     def __init__(self):
-        self.pending = False; self.depth = 0; self.single = False
+        self.pending = False; self.depth = 0
+
+    def _braces(self, text):
+        text = self.LITERALS.sub('""', text.split("//", 1)[0])
+        return text.count("{") - text.count("}")
 
     def update(self, stripped):
         """Feed one stripped line; return True when the line belongs to test-only code."""
         if self.depth:
-            self.depth += stripped.count("{") - stripped.count("}")
+            self.depth = max(0, self.depth + self._braces(stripped))
             return True
-        if stripped.startswith("#[cfg(test)]"):
+        rest = stripped
+        if rest.startswith("#[cfg(test)]"):
             self.pending = True
-            return True
-        if self.pending and stripped and not stripped.startswith("#["):
+            rest = rest[len("#[cfg(test)]"):].strip()
+            if not rest:
+                return True
+        if self.pending:
+            if not rest or rest.startswith(("//", "#[", "/*", "*")):
+                return True
             self.pending = False
-            opened = stripped.count("{") - stripped.count("}")
-            if stripped.startswith(("mod ", "pub mod ", "pub(crate) mod ")) and opened > 0:
-                self.depth = opened
+            self.depth = max(0, self._braces(rest))
             return True
         return False
 
@@ -114,7 +125,7 @@ def collect_line(rel, no, line, store, in_test=False):
 
 
 def new_store():
-    return {"consts": defaultdict(list), "self_versions": [], "version_context": {}, "server_context": {}}
+    return {"consts": defaultdict(list), "self_versions": [], "version_context": {}, "server_context": {}, "file_roots": {}}
 
 
 # The version a CLI or server reports about itself. Script-local `__version__` values and the versions that test or
@@ -164,9 +175,9 @@ def nearest_manifest_versions(root, rel, cache):
 def cross_file_hits(store, roots):
     """F3 version claims that copy or contradict the owning manifest, and F7 shared identifiers defined in several files."""
     hits = []; cache = {}
-    root = roots[0] if len(roots) == 1 else None
-    for rel, no, version, text, server in store["self_versions"] if root else []:
-        if CONSTANTS_PATH.search(rel):
+    for rel, no, version, text, server in store["self_versions"]:
+        root = store.get("file_roots", {}).get(rel) or (roots[0] if len(roots) == 1 else None)
+        if root is None or CONSTANTS_PATH.search(rel):
             continue
         manifests, where = nearest_manifest_versions(root, rel, cache)
         if not manifests:

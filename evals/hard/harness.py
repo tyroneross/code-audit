@@ -262,6 +262,8 @@ def _tokens(segment):
 KEYWORDS = {'do', 'then', 'else', 'elif', 'if', 'while', 'until', '!', '{', '}', 'time'}
 
 
+# Wrappers whose first non-option argument is a duration or priority, not the command.
+VALUE_WRAPPERS = {'timeout', 'gtimeout', 'nice', 'ionice', 'stdbuf', 'caffeinate', 'chrt'}
 OPTION_ARGS = {'-u', '--unset', '-C', '--chdir', '-S', '--split-string', '-n', '-I', '-P', '-L', '-s', '-d'}
 
 
@@ -272,6 +274,10 @@ def _strip_prefix(words):
         w = words[0]
         if ('=' in w and not w.startswith('-')) or w in KEYWORDS: words = words[1:]
         elif Path(w).name in PREFIXES: words = words[1:]; wrapped = True
+        elif Path(w).name in VALUE_WRAPPERS:
+            words = words[1:]; wrapped = True
+            while words and words[0].startswith('-'): words = words[1:]
+            if Path(w).name in ('timeout', 'gtimeout', 'chrt') and words and words[0][:1].isdigit(): words = words[1:]
         elif w.startswith('-'): words = words[2:] if wrapped and w in OPTION_ARGS else words[1:]
         else: break
     return words
@@ -294,6 +300,19 @@ def _segment_hits(words):
 
 
 HEREDOC = None
+
+
+def _logical_lines(text):
+    """Lines of shell text, keeping newlines that sit inside quotes (a multi-line `python3 -c "..."`) in one line."""
+    out, cur, quote = [], [], None
+    for ch in text:
+        if quote:
+            if ch == quote: quote = None
+        elif ch in ('"', "'"): quote = ch
+        elif ch == '\n': out.append(''.join(cur)); cur = []; continue
+        cur.append(ch)
+    out.append(''.join(cur))
+    return out
 
 
 def _segments(line):
@@ -319,7 +338,7 @@ def _split_commands(text):
     import re
     global HEREDOC
     HEREDOC = HEREDOC or re.compile(r"(?:^|\s)<<-?\s*['\"]?([A-Za-z_]\w*)['\"]?")
-    lines = text.split('\n'); out = []; i = 0
+    lines = _logical_lines(text); out = []; i = 0
     while i < len(lines):
         line = lines[i]; m = HEREDOC.search(line); body = []
         if m:
@@ -340,6 +359,7 @@ def _flagged(command, depth=0):
         words = _strip_prefix(_tokens(segment))
         if not words: continue
         tool = Path(words[0]).name
+        if tool == 'eval' and depth < 3 and _flagged(' '.join(words[1:]), depth + 1): return True
         if tool in SHELLS:
             inner = next((words[k + 1] for k, w in enumerate(words[:-1]) if re.fullmatch(r'-\w*c', w)), None)
             if inner is not None and depth < 3 and _flagged(inner, depth + 1): return True
