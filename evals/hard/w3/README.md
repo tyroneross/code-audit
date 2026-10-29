@@ -54,3 +54,9 @@ Two repetitions per arm per case. The **primary set** is chosen by the pilot rul
 **The claim under test:** `code-audit-w3` outperforms `none` and both sources on review. If it does not, one guidance iteration is permitted. The iterated bundle is rebuilt at a new commit and run on every case for the subject arm only, with the other arms' results reused. The iterated result is reported separately, as post-hoc: its author has seen these cases.
 
 Bounds are those of the hard benchmark: review 300 s, repair 480 s per call. Seconds and tokens are recorded.
+
+## Addendum: pilot result and primary set (committed before scored runs)
+
+The `none` pilot (one run per case, 2026-10-28) detected 3 of 8 review defects, W02, W07 and W08. It raised no control false positive and passed both repairs. One review trial (W04) failed with "Selected model is at capacity" and was rerun once under the rule.
+
+Under the pilot rule, the primary review set is **W01, W03, W04, W05, W06**, the cases `none` missed, plus **W02**, the first detected case in ID order, to reach 6. That makes the primary set all six class-A cases. W07 and W08 (class B) are scored in the all-case result only. Both repair cases stay; `none` passed them, so repair is expected near ceiling. Cases were not edited.
