@@ -60,3 +60,11 @@ Bounds are those of the hard benchmark: review 300 s, repair 480 s per call. Sec
 The `none` pilot (one run per case, 2026-10-28) detected 3 of 8 review defects, W02, W07 and W08. It raised no control false positive and passed both repairs. One review trial (W04) failed with "Selected model is at capacity" and was rerun once under the rule.
 
 Under the pilot rule, the primary review set is **W01, W03, W04, W05, W06**, the cases `none` missed, plus **W02**, the first detected case in ID order, to reach 6. That makes the primary set all six class-A cases. W07 and W08 (class B) are scored in the all-case result only. Both repair cases stay; `none` passed them, so repair is expected near ceiling. Cases were not edited.
+
+## Addendum 2: what the bundle contains, the oracle correction, and the iteration
+
+**What is under test.** A bundle holds only the four SKILL.md files. Checklist sections F and G and the frozen-values and path-length procedure are only linked from them, and the bundle header says links do not resolve. The W3 arm therefore measures the inline W3 text: one routing line in `code-audit/SKILL.md` and one paragraph in `code-principles/SKILL.md`. The checklist and procedure themselves are not measured here.
+
+**Oracle correction (decided after scores were seen).** The W02 oracle omitted the second hard-coded maintainer path, in `skills/silent-assumptions/SKILL.md`. Fix commit 1d476a1 corrected that path too and names it in its message. Both W3 subject repetitions reported that copy and not the one in the Python file. `cases-corrected.json` therefore extends every window to all lines the fix commit changed in the packet files. Only W02 gains newly cited findings, and a fresh blinded Opus-tier judge re-graded its whole packet. Results are reported under both the pre-registered oracle and the corrected one.
+
+**Iteration (post-hoc).** The subject did not outperform. Under the iteration rule, the inline text was revised once, in commit 2389d96: it now tells reviewers to confirm a frozen value by comparing it with its source in the other supplied files. The bundle `code-audit-w3b` was built at that commit and runs on every case for that arm only, graded with the corrected oracle. The author had seen these cases, so a gain here is not independent evidence.
