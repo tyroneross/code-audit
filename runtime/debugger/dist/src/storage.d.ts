@@ -25,6 +25,12 @@ export declare function loadIncident(incident_id: string, config?: MemoryConfig)
  */
 export declare function emptyCorpusCoverage(): CorpusCoverage;
 export declare function recordCorpusSkip(coverage: CorpusCoverage, file: string, reason: CorpusCoverage['examples'][number]['reason']): void;
+/**
+ * Coding Debugger records written before numeric timestamps store ISO-8601 strings.
+ * Read a parseable string as epoch milliseconds so those incidents stay retrievable;
+ * an unparseable value is left unchanged and still fails validation visibly.
+ */
+export declare function normalizeLegacyIncident<T>(value: T): T;
 export declare function validIncidentRecord(value: any): value is Incident;
 export declare function loadAllIncidents(config?: MemoryConfig, coverage?: CorpusCoverage): Promise<Incident[]>;
 /**

@@ -780,28 +780,28 @@
       "path": "runtime/debugger/dist/src/storage.d.ts",
       "source": "coding-debugger",
       "source_sha256": "a3abcb137bc90719cb0366dc41237b888f5907964052d810269f68073cb4d024",
-      "current_sha256": "39ba2419ef9c63649806728812f926114052f5a7c2aeb2ac0fa94b4668ce23a5",
+      "current_sha256": "f4abd9058044c7b0e0a1f7502713a1178a103eb1c793a670f637203dbf71fdab",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "ee54c36bd7d6e6a7cb57254c6bb3602b66d48a7ba9297d0ec750abb195f28e0c",
-      "current_sha256": "b7d697a26a2221922d48898b0eb3314d9ee726ae2e82d76cc334247de0d59a8a",
+      "current_sha256": "20ba2f53b83cddf50e438a491ab155122205fb4556e20d4ecbe3a6a861a810cd",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js",
       "source": "coding-debugger",
       "source_sha256": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361",
-      "current_sha256": "c94c24d6d01ef0bea1bfa1f5ef6eae5bfd27d0d07376605f96f2d9743e2335cd",
+      "current_sha256": "c4a74dc7c43f7c933fb6e00d06383a793f663f65a8f37fdfcadb649e2fcf3a5f",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js.map",
       "source": "coding-debugger",
       "source_sha256": "81f7bba12869371e93f1d59a4e7851ce9e6cb2a169e0170e52487ece2a0448ca",
-      "current_sha256": "b512b714fc5a9c94c2bc950454de981fcc909481693aedb5b35edd6af4cd3461",
+      "current_sha256": "d849f85d6d7c5a9951fbf504670789104e2d1a0f1c7679379dccbc7648600417",
       "modified_from_import": true
     },
     {
@@ -1291,7 +1291,7 @@
       "path": "runtime/debugger/src/storage.ts",
       "source": "coding-debugger",
       "source_sha256": "a384fde223a93df9ae02596cd74f50e7e041f191b6c201c089194224ea59d3dc",
-      "current_sha256": "836f3036d92a9d1cbffd80415f64085af857e8bf0d4eb73e5509b801ac2cda18",
+      "current_sha256": "afc959e43a4ce376ec145e11c662abb2b8d79edf2b33df7bbbd6d9984f354b53",
       "modified_from_import": true
     },
     {
@@ -1950,7 +1950,8 @@
     "Debugger package and lockfile remove automatic install setup; compiled runtime rebuilt from copied source.",
     "2026-10-17: Add review convergence, evidence-sensitive finding reopening, incident applicability and negative-outcome guidance, research limits and a held-out synthetic review evaluation; MCP schemas and runtime unchanged.",
     "2026-10-28: Re-recorded current hashes after adding the 2026-10-25 agent communication and dependency handoff checks to code-principles SKILL.md and challenge-guidance.md; source bytes unchanged.",
-    "2026-10-28: Imported the seven debugger agents into agents/ for Claude Code: replaced the npx memory search with caller-supplied incident candidates, added a code-audit adaptation note (evidence-ranked hypotheses, read-only unless authorized), pinned fix-critique to model opus as a judge, and qualified its symptom-fix table with contract context. Skills now reference the agents; Codex and other hosts follow the same procedures directly. Commands, the mining hook and debugger packaging scripts are recorded in removed_imports with reasons."
+    "2026-10-28: Imported the seven debugger agents into agents/ for Claude Code: replaced the npx memory search with caller-supplied incident candidates, added a code-audit adaptation note (evidence-ranked hypotheses, read-only unless authorized), pinned fix-critique to model opus as a judge, and qualified its symptom-fix table with contract context. Skills now reference the agents; Codex and other hosts follow the same procedures directly. Commands, the mining hook and debugger packaging scripts are recorded in removed_imports with reasons.",
+    "2026-10-28: storage reads legacy ISO-8601 string incident timestamps as epoch milliseconds (normalizeLegacyIncident) instead of skipping them; found by the source-retirement retrieval comparison, where 12 of 100 real records were skipped. Rebuilt with TypeScript 5.9.3 from the pinned lockfile versions."
   ],
   "removed_imports": [
     {

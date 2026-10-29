@@ -127,7 +127,7 @@ export async function loadIncident(incident_id: string, config?: MemoryConfig): 
 
   try {
     const content = await fs.readFile(filepath, 'utf-8');
-    return JSON.parse(content) as Incident;
+    return normalizeLegacyIncident(JSON.parse(content)) as Incident;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return null; // File not found
@@ -154,6 +154,20 @@ const stringArray = (value: unknown): boolean => value === undefined || (Array.i
 const optionalRate = (value: unknown): boolean => value == null || (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1);
 function optionalFields(value: any, fields: Record<string, (value: any) => boolean>): boolean {
   return value == null || (typeof value === 'object' && !Array.isArray(value) && Object.entries(fields).every(([key,valid]) => valid(value[key])));
+}
+
+/**
+ * Coding Debugger records written before numeric timestamps store ISO-8601 strings.
+ * Read a parseable string as epoch milliseconds so those incidents stay retrievable;
+ * an unparseable value is left unchanged and still fails validation visibly.
+ */
+export function normalizeLegacyIncident<T>(value: T): T {
+  const record = value as any;
+  if (record !== null && typeof record === 'object' && typeof record.timestamp === 'string') {
+    const ms = Date.parse(record.timestamp);
+    if (Number.isFinite(ms)) record.timestamp = ms;
+  }
+  return value;
 }
 
 export function validIncidentRecord(value: any): value is Incident {
@@ -206,7 +220,7 @@ async function loadCorpus<T>(directory: string, valid: (value: unknown) => value
 }
 
 export async function loadAllIncidents(config?: MemoryConfig, coverage = emptyCorpusCoverage()): Promise<Incident[]> {
-  return loadCorpus(getMemoryPaths(config).incidents, validIncidentRecord, coverage, incident => incident.incident_id);
+  return loadCorpus(getMemoryPaths(config).incidents, (value: unknown): value is Incident => validIncidentRecord(normalizeLegacyIncident(value)), coverage, incident => incident.incident_id);
 }
 
 /**
