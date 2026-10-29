@@ -83,10 +83,24 @@ class Blinding(unittest.TestCase):
             rows = json.loads((judges / f'{packet}.json').read_text().split('PACKET\n', 1)[1])['findings']
             judgments = Path(folder) / 'j'; judgments.mkdir()
             (judgments / f'{packet}.json').write_text(json.dumps({'judgments': [{'label': r['label'], 'finding_id': r['finding_id'], 'matches': True, 'reason': 'r'} for r in rows]}))
+            bad = out / 'H01-coding-debugger-1'; bad.mkdir()
+            (bad / 'meta.json').write_text(json.dumps({'family': 'review', 'case_id': 'H01', 'arm': 'coding-debugger', 'repeat': 1, 'status': 'host_failed'}))
             arms = score.aggregate(out, score.load_judgments(judgments, mapping))
+            # An invalid trial is excluded from the denominator, not scored as a miss.
+            self.assertEqual((arms['coding-debugger']['review_trials'], arms['coding-debugger']['review_invalid']), (0, 1))
             # Both judged as matching, but only the finding inside the oracle window counts as detected.
             self.assertEqual((arms['code-audit']['detected'], arms['none']['detected']), (1, 0))
             self.assertEqual(arms['code-audit']['tokens'], 6)
+
+
+class Repair(unittest.TestCase):
+    def test_exit_zero_without_tests_does_not_pass_and_network_commands_are_flagged(self):
+        self.assertEqual(harness.test_counts('Ran 0 tests in 0.0s\n\nOK\n'), {'ran': 0, 'failed': 0})
+        self.assertEqual(harness.test_counts('Ran 11 tests in 0.1s\n\nFAILED (failures=2, errors=1)\n'), {'ran': 11, 'failed': 3})
+        self.assertEqual(harness.test_counts('# tests 3\n# pass 3\n# fail 0\n'), {'ran': 3, 'failed': 0})
+        row = lambda c: json.dumps({'type': 'item.completed', 'item': {'type': 'command_execution', 'command': c}})
+        out = '\n'.join([row("/bin/zsh -lc 'git status --short'"), row('git clone https://github.com/x/y'), row("python3 -c 'import urllib.request'"), row('sed -n 1,20p a.py')])
+        self.assertEqual(len(harness.network_commands(out)['network_commands']), 2)
 
 
 class Verdicts(unittest.TestCase):
