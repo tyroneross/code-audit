@@ -787,21 +787,21 @@
       "path": "runtime/debugger/dist/src/storage.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "ee54c36bd7d6e6a7cb57254c6bb3602b66d48a7ba9297d0ec750abb195f28e0c",
-      "current_sha256": "938d5761aea9ba5abcb1b817dcb56f66a01fd0d35c0f16dc6e949fed33578d0d",
+      "current_sha256": "75e09bbf530b5d0ec311f5faadb26103da336a30cd05820f3cba580f8bd0ea96",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js",
       "source": "coding-debugger",
       "source_sha256": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361",
-      "current_sha256": "1ab037996a032af9df4c112222548722c2afec3c0eba99b2a94d585cadd8dc3d",
+      "current_sha256": "07633e9ccc6ffdd87fb5be2980ead52ab6b52914435befd96c4b57a040c05bd7",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js.map",
       "source": "coding-debugger",
       "source_sha256": "81f7bba12869371e93f1d59a4e7851ce9e6cb2a169e0170e52487ece2a0448ca",
-      "current_sha256": "4fa2cdd97a33989fe7627048a1aac22904eb86d6617791cf5e049a9aceae3e17",
+      "current_sha256": "7b4f790c498d60f5c2274e78008cebe0befa52c258c0f85d6f7a0f2d595b5cc2",
       "modified_from_import": true
     },
     {
@@ -1291,7 +1291,7 @@
       "path": "runtime/debugger/src/storage.ts",
       "source": "coding-debugger",
       "source_sha256": "a384fde223a93df9ae02596cd74f50e7e041f191b6c201c089194224ea59d3dc",
-      "current_sha256": "22ace16bcff96f5b65115ccf7ed4ce9fd2b9f34ed1784d6c1854431090449951",
+      "current_sha256": "e0574ee4581bbf9b6f6e766ef9ed1260708420ab7c21ff17f703123a430084aa",
       "modified_from_import": true
     },
     {
@@ -1802,14 +1802,14 @@
       "path": "skills/code-principles/scripts/scan.py",
       "source": "code-principles-audit",
       "source_sha256": "97cf11fcb5f0da3f47d9423f32ccc5b6d3ccbefbfdac3565333dc88d3a763cd0",
-      "current_sha256": "8129c5169c981783be81b1e948253e55dc177455265d7d8f1ee88097998db17b",
+      "current_sha256": "129e85a8b21e2c5083aae5bdee6e609d2e4dbd6f879966f358da4309fb4073d4",
       "modified_from_import": true
     },
     {
       "path": "skills/code-principles/scripts/test_code_principles.py",
       "source": "code-principles-audit",
       "source_sha256": "9c80362958d93924a150b65478c7140fd7c087c761fd53d96032c82eeb9932ae",
-      "current_sha256": "13400c2089ae3927051a0344887010eea70c0e96ae0687f042270a7decedd733",
+      "current_sha256": "8e18bf6f5c4f60f0b0c7081aa1ae10bce5ae1b635fc0d3cd15ef357ab2690601",
       "modified_from_import": true
     },
     {

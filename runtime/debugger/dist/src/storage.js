@@ -232,13 +232,15 @@ function legacySymptomText(symptom) {
  * A change entry names a file only when it looks like a path and has no spaces: a directory separator, or a known
  * source/config extension. Version numbers ("1.2.3") and product names ("Node.js", "Next.js") stay notes.
  */
-const FILE_EXTENSIONS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'json', 'md', 'mdx', 'py', 'rb', 'go', 'rs', 'swift', 'kt', 'java', 'c', 'h', 'cc', 'cpp', 'hpp', 'cs', 'css', 'scss', 'sass', 'less', 'html', 'vue', 'svelte', 'yml', 'yaml', 'toml', 'ini', 'sql', 'sh', 'zsh', 'txt', 'lock', 'prisma', 'graphql', 'xml', 'plist', 'gradle', 'env']);
+const FILE_EXTENSIONS = new Set(['ts', 'tsx', 'mts', 'cts', 'js', 'jsx', 'mjs', 'cjs', 'json', 'jsonc', 'md', 'mdx', 'py', 'pyi', 'rb', 'go', 'rs', 'swift', 'kt', 'kts', 'java', 'scala', 'c', 'h', 'cc', 'cpp', 'hpp', 'm', 'mm', 'cs', 'fs', 'php', 'lua', 'dart', 'ex', 'exs', 'erl', 'r', 'jl', 'pl', 'pm', 'ps1', 'bat', 'css', 'scss', 'sass', 'less', 'html', 'vue', 'svelte', 'astro', 'yml', 'yaml', 'toml', 'ini', 'cfg', 'conf', 'properties', 'sql', 'sh', 'bash', 'zsh', 'tf', 'tfvars', 'hcl', 'txt', 'lock', 'prisma', 'graphql', 'proto', 'xml', 'plist', 'gradle', 'env', 'dockerfile']);
+/** Framework and product names that look like JavaScript files when written alone. */
+const PRODUCT_NAMES = new Set(['node.js', 'next.js', 'vue.js', 'nuxt.js', 'react.js', 'express.js', 'three.js', 'chart.js', 'd3.js', 'deno.js', 'ember.js', 'backbone.js', 'angular.js', 'svelte.js', 'solid.js', 'alpine.js']);
 function isPathLike(text) {
     if (!/^[\w./@\-]+$/.test(text))
         return false;
     if (text.includes('/'))
         return true;
-    if (/^[A-Z][A-Za-z]*\.js$/.test(text))
+    if (PRODUCT_NAMES.has(text.toLowerCase()))
         return false;
     const ext = /\.([A-Za-z0-9]+)$/.exec(text);
     return ext !== null && FILE_EXTENSIONS.has(ext[1].toLowerCase());

@@ -22,7 +22,7 @@ ENV_HOST = re.compile(
     r"|['\"`]https?://[\w.-]+\.(?:vercel\.app|netlify\.app|railway\.app|up\.railway\.app|herokuapp\.com|onrender\.com|ngrok(?:-free)?\.(?:io|app|dev)|fly\.dev|pages\.dev|workers\.dev|supabase\.co)\b")
 ACCOUNT_ID = re.compile(r"arn:aws:[\w-]*:[\w-]*:\d{12}:")
 YEAR_LOGIC = re.compile(r"\byear\b\s*(?:===?|[<>]=?)\s*20\d\d\b|\b20\d\d\s*(?:===?|[<>]=?)\s*\w*[yY]ear\b")
-TOGGLE = re.compile(r"^(?:export\s+)?(?:const\s+|let\s+|var\s+)?_?[A-Z][A-Z0-9_]*(?:ENABLED|ENABLE|DISABLED|DISABLE|FEATURE|FLAG|USE_[A-Z][A-Z0-9_]*)\w*\s*(?::\s*\w+\s*)?=\s*(?:true|false|True|False)\s*;?\s*$")
+TOGGLE = re.compile(r"^(?:export\s+)?(?:const\s+|let\s+|var\s+)?_?(?:[A-Z][A-Z0-9]*_)*(?:ENABLED|ENABLE|DISABLED|DISABLE|FEATURE|FLAG|USE_[A-Z][A-Z0-9_]*)\w*\s*(?::\s*\w+\s*)?=\s*(?:true|false|True|False)\s*;?\s*$")
 
 # Lines that describe, detect or exemplify a value rather than use it: patterns, examples, assertions, deny lists.
 NOT_A_USE = re.compile(r"/Users/\[|/home/\[|\bTextField\(|\bassert|\bexample\b|e\.g\.|\bplaceholder\s*[:=]|\bfictional\b|\bforbidden\b|\bdeny\b|re\.(?:compile|match|search|fullmatch|sub|findall)\(|RegExp|\bregex\b|_p\(r?['\"]|description\s*[:=]")
@@ -43,9 +43,10 @@ LINE_RULES = [
 ]
 
 # Shared identifiers that must match exactly wherever they appear: file names, paths, keys, URLs, env-var names.
+# Protocol constants such as MIME types are the same everywhere by definition; they are not shared project identifiers.
+PROTOCOL_VALUE = re.compile(r"^['\"](?:application|text|image|audio|video|multipart|font|message|model)/[\w.+-]+['\"]$")
 IDENTIFIER_VALUE = re.compile(r"^['\"](?:[\w.-]+\.[A-Za-z]{2,5}|[\w.-]*/[\w./-]+|https?://\S+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)['\"]$")
-CONST_DEF = re.compile(r"^\s*(?:export\s+)?(?:(?:const|let|var|final|static|public|private|readonly)\s+)*([A-Z][A-Z0-9_]{2,})\s*(?::\s*[\w<>\[\]|. ]+)?\s*[:=]\s*(-?\d[\d_.]*\b|'[^'\n]{1,200}'|\"[^\"\n]{1,200}\")\s*[;,]?\s*(?:#.*|//.*)?$")
-TRIVIAL = {"0", "1", "-1", "2", "''", '""', "'utf-8'", '"utf-8"', "'utf8'", '"utf8"', "True", "False"}
+CONST_DEF = re.compile(r"^\s*(?:export\s+)?(?:(?:const|let|var|final|static|public|private|readonly)\s+)*([A-Z][A-Z0-9_]{2,})\s*(?::\s*[\w<>\[\]|. ]+)?\s*[:=]\s*('[^'\n]{1,200}'|\"[^\"\n]{1,200}\")\s*[;,]?\s*(?:#.*|//.*)?$")
 VERSION = re.compile(r"""['"](\d+\.\d+\.\d+(?:-[\w.]+)?)['"]""")
 
 def line_hits(rel, no, line, in_test=False):
@@ -69,54 +70,113 @@ def line_hits(rel, no, line, in_test=False):
     return out
 
 
-def collect(rel, lines, store):
-    """Gather cross-file data: shared-identifier constant definitions and version literals."""
-    for no, line in enumerate(lines, 1):
-        m = CONST_DEF.match(line)
-        if m and m.group(2) not in TRIVIAL and IDENTIFIER_VALUE.match(m.group(2)):
-            store["consts"][m.group(2).strip("'\"")].append((rel, no, m.group(1), line.strip()[:160]))
+class RustTestScope:
+    """Tracks `#[cfg(test)]` scope: the attributed item only, or a whole `mod … { }` block by brace depth."""
+    def __init__(self):
+        self.pending = False; self.depth = 0; self.single = False
+
+    def update(self, stripped):
+        """Feed one stripped line; return True when the line belongs to test-only code."""
+        if self.depth:
+            self.depth += stripped.count("{") - stripped.count("}")
+            return True
+        if stripped.startswith("#[cfg(test)]"):
+            self.pending = True
+            return True
+        if self.pending and stripped and not stripped.startswith("#["):
+            self.pending = False
+            opened = stripped.count("{") - stripped.count("}")
+            if stripped.startswith(("mod ", "pub mod ", "pub(crate) mod ")) and opened > 0:
+                self.depth = opened
+            return True
+        return False
+
+
+def collect_line(rel, no, line, store, in_test=False):
+    """Gather cross-file data from one source line: shared-identifier constants and this package's version claims.
+    Fixture files and inline test code are not sources and not copies."""
+    if in_test or FIXTURE_PATH.search(rel):
+        return
+    m = CONST_DEF.match(line)
+    if m and IDENTIFIER_VALUE.match(m.group(2)) and not PROTOCOL_VALUE.match(m.group(2)):
+        store["consts"][m.group(2).strip("'\"")].append((rel, no, m.group(1), line.strip()[:160]))
+    context = SELF_VERSION.search(line)
+    if context:
+        store["version_context"][rel] = no
+        if SERVER_VERSION.search(line): store["server_context"][rel] = no
+    near = no - store["version_context"].get(rel, -99) <= 4 and VERSION_KEY.search(line)
+    if context or near:
+        server = bool(SERVER_VERSION.search(line)) or (near and store["server_context"].get(rel) == store["version_context"].get(rel))
+        if SERVER_VERSION.search(line):
+            store["server_context"][rel] = no
         for v in VERSION.finditer(line):
-            store["versions"][v.group(1)].append((rel, no, line.strip()[:160]))
+            store["self_versions"].append((rel, no, v.group(1), line.strip()[:160], server))
 
 
 def new_store():
-    return {"consts": defaultdict(list), "versions": defaultdict(list)}
+    return {"consts": defaultdict(list), "self_versions": [], "version_context": {}, "server_context": {}}
 
 
-SELF_VERSION = re.compile(r"__version__|\b(?:APP|SERVER|CLIENT|PACKAGE|PLUGIN|SERVICE|CLI|TOOL)_VERSION\b|\bVERSION\s*=|service\.version|clientInfo|serverInfo|CLIENT_INFO|SERVER_INFO|userAgent|User-Agent", re.I)
+# The version a CLI or server reports about itself. Script-local `__version__` values and the versions that test or
+# helper clients give themselves are often independent, so only these are compared with the manifest for drift.
+SERVER_VERSION = re.compile(r"\.version\(\s*['\"]|serverInfo|SERVER_INFO", re.I)
+VERSION_KEY = re.compile(r"\bversion['\"]?\s*[:=]", re.I)
+SELF_VERSION = re.compile(r"\.version\(\s*['\"]|__version__|\b(?:APP|SERVER|CLIENT|PACKAGE|PLUGIN|SERVICE|CLI|TOOL)_VERSION\b|\bVERSION\s*=|service\.version|clientInfo|serverInfo|CLIENT_INFO|SERVER_INFO|userAgent|User-Agent", re.I)
 
 
-def manifest_versions(roots):
-    """Versions declared by package manifests at the scan roots: the source of truth a code literal may copy."""
+MANIFESTS = ("package.json", "plugin.json", ".claude-plugin/plugin.json", "pyproject.toml", "Cargo.toml")
+
+
+def _manifest_versions_in(base):
     found = {}
-    for root in roots:
-        base = root if os.path.isdir(root) else os.path.dirname(root)
-        for name in ("package.json", "plugin.json", ".claude-plugin/plugin.json", "pyproject.toml", "Cargo.toml"):
-            path = os.path.join(base, name)
+    for name in MANIFESTS:
+        try:
+            text = open(os.path.join(base, name), encoding="utf-8").read()
+        except OSError:
+            continue
+        if name.endswith(".json"):
             try:
-                text = open(path, encoding="utf-8").read()
-            except OSError:
-                continue
-            if name.endswith(".json"):
-                try:
-                    v = json.loads(text).get("version")
-                except ValueError:
-                    v = None
-            else:
-                m = re.search(r'^version\s*=\s*"([^"]+)"', text, re.M)
-                v = m.group(1) if m else None
-            if isinstance(v, str) and re.fullmatch(r"\d+\.\d+\.\d+(?:-[\w.]+)?", v):
-                found[v] = name
+                v = json.loads(text).get("version")
+            except (ValueError, AttributeError):
+                v = None
+        else:
+            m = re.search(r'^version\s*=\s*"([^"]+)"', text, re.M)
+            v = m.group(1) if m else None
+        if isinstance(v, str) and re.fullmatch(r"\d+\.\d+\.\d+(?:-[\w.]+)?", v):
+            found[v] = name
     return found
 
 
+def nearest_manifest_versions(root, rel, cache):
+    """Versions declared by the nearest directory, from the file up to the scan root, that has a package manifest:
+    a nested package (for example a bundled runtime) owns its own version."""
+    base = root if os.path.isdir(root) else os.path.dirname(root)
+    parts = rel.split("/")[:-1]
+    for depth in range(len(parts), -1, -1):
+        d = os.path.join(base, *parts[:depth])
+        if d not in cache:
+            cache[d] = _manifest_versions_in(d)
+        if cache[d]:
+            return cache[d], "/".join(parts[:depth])
+    return {}, ""
+
+
 def cross_file_hits(store, roots):
-    """F3 copied manifest version and F7 shared identifiers defined in several files."""
-    hits = []
-    for version, manifest in manifest_versions(roots).items():
-        for rel, no, text in store["versions"].get(version, []):
-            if not CONSTANTS_PATH.search(rel) and SELF_VERSION.search(text):
-                hits.append(("F3", f"copies {manifest} version {version}", rel, no, text))
+    """F3 version claims that copy or contradict the owning manifest, and F7 shared identifiers defined in several files."""
+    hits = []; cache = {}
+    root = roots[0] if len(roots) == 1 else None
+    for rel, no, version, text, server in store["self_versions"] if root else []:
+        if CONSTANTS_PATH.search(rel):
+            continue
+        manifests, where = nearest_manifest_versions(root, rel, cache)
+        if not manifests:
+            continue
+        name = lambda m: f"{where}/{m}" if where else m
+        if version in manifests:
+            hits.append(("F3", f"copies {name(manifests[version])} version {version}", rel, no, text))
+        elif server:
+            declared = ", ".join(f"{name(m)} {v}" for v, m in sorted(manifests.items(), key=lambda x: x[1]))
+            hits.append(("F3", f"states version {version} but {declared}", rel, no, text))
     for value, defs in store["consts"].items():
         files = {d[0] for d in defs}
         if len(files) < 2:

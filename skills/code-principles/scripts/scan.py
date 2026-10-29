@@ -27,7 +27,8 @@ CODE_EXT = {
 MAX_FILE_BYTES = 2_000_000
 LOOKAHEAD = 10  # lines checked for a timeout/limit set in a multi-line call
 LOOKAHEAD_ITEMS = {"B2", "B5", "B7"}
-TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|fixtures?|spec|e2e)(/|$)|\.(test|spec)\.\w+$|(^|/)test_\w+\.py$|_test\.(py|go)$|(^|/)\w*Tests?/|Tests?\.swift$|(^|/)tests?\.rs$", re.I)
+# Test conventions are case-sensitive: `Tests/` and `FooTests.swift` (Swift), `tests.rs` (Rust); `src/latest/` is source.
+TEST_PATH = re.compile(r"(^|/)(tests?|__tests__|fixtures?|spec|e2e)(/|$)|\.(test|spec)\.\w+$|(^|/)test_\w+\.py$|_test\.(py|go)$|(^|/)([A-Z]\w*)?Tests/|[A-Z]\w*Tests?\.swift$|(^|/)tests?\.rs$")
 
 # Report order by likely harm: untrusted input first; values that break on another machine or deployment; load;
 # speed; then structure signals, which are the weakest evidence.
@@ -103,11 +104,10 @@ def scan_file(path, rel, skipped, store=None):
     hits = []
     parse_lines = []
     loop_stack = []  # (indent, line_no)
-    inline_tests = False  # Rust test modules sit at the end of the file they test
+    test_scope = frozen.RustTestScope()  # `#[cfg(test)]` items, tracked by brace depth
     for no, line in enumerate(lines, 1):
         stripped = line.strip()
-        if stripped.startswith("#[cfg(test)]"):
-            inline_tests = True
+        in_test = test_scope.update(stripped)
         if not stripped or stripped.startswith(("#", "//", "*", "/*")):
             continue
         ind = indent(line)
@@ -121,8 +121,10 @@ def scan_file(path, rel, skipped, store=None):
             if unless and unless.search(window):
                 continue
             hits.append((item, label, rel, no, stripped[:160]))
-        for item, label in frozen.line_hits(rel, no, line, inline_tests):
+        for item, label in frozen.line_hits(rel, no, line, in_test):
             hits.append((item, label, rel, no, stripped[:160]))
+        if store is not None:
+            frozen.collect_line(rel, no, line, store, in_test)
         if PARSE_CALL.search(line):
             parse_lines.append((no, stripped[:160]))
         if in_loop and IO_CALL.search(line):
@@ -136,8 +138,6 @@ def scan_file(path, rel, skipped, store=None):
     if len(parse_lines) >= 2:
         for no, text in parse_lines:
             hits.append(("A1", f"one of {len(parse_lines)} parse calls in this file", rel, no, text))
-    if store is not None:
-        frozen.collect(rel, lines, store)
     same = same_input_fetches(lines)
     if same:
         flagged = {no for no, _ in same}

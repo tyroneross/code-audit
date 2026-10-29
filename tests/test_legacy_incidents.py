@@ -83,12 +83,12 @@ process.stdout.write(JSON.stringify([byId.INC_STRINGS.fix, byId.INC_STRINGS.lega
 
     def test_single_words_are_notes_and_prior_string_notes_survive(self):
         out = self.probe("""
-await write('INC_WORDS.json', {...base('INC_WORDS'), fix:{approach:'a', notes:'kept prior note', changes:['Refactored','tests','README.md','src/a','npm','Node.js','1.2.3','package-lock.json']}});
+await write('INC_WORDS.json', {...base('INC_WORDS'), fix:{approach:'a', notes:'kept prior note', changes:['Refactored','tests','README.md','src/a','npm','Node.js','1.2.3','package-lock.json','App.js','Gruntfile.js','main.tf']}});
 const {byId} = await load();
 process.stdout.write(JSON.stringify([byId.INC_WORDS.fix, byId.INC_WORDS.legacy.fix_notes]));
 """)
         fix, prior = out
-        self.assertEqual(fix['changes'], [{'file': 'README.md'}, {'file': 'src/a'}, {'file': 'package-lock.json'}])
+        self.assertEqual(fix['changes'], [{'file': 'README.md'}, {'file': 'src/a'}, {'file': 'package-lock.json'}, {'file': 'App.js'}, {'file': 'Gruntfile.js'}, {'file': 'main.tf'}])
         self.assertEqual(fix['notes'], ['kept prior note', 'Refactored', 'tests', 'npm', 'Node.js', '1.2.3'])
         self.assertEqual(prior, 'kept prior note')
 
