@@ -16,9 +16,26 @@ class Package(unittest.TestCase):
         self.assertEqual(legacy['code-audit-debugger']['args'], ['${CLAUDE_PLUGIN_ROOT}/scripts/debugger-server.cjs'])
         self.assertEqual(servers['code-audit-debugger']['type'],'stdio')
 
+    def test_skill_and_agent_frontmatter_resolve(self):
+        # Ported from coding-debugger scripts/test_skill_resolution.py and test_plugin_manifest.py.
+        def front(p):
+            text=p.read_text();self.assertTrue(text.startswith('---\n'),p)
+            return dict(re.findall(r'^([a-z-]+):\s*(.*)$',text.split('\n---\n',1)[0],re.M))
+        names=[]
+        for p in sorted((ROOT/'skills').glob('*/SKILL.md')):
+            meta=front(p);self.assertEqual(meta.get('name'),p.parent.name,p);self.assertTrue(meta.get('description'),p);names.append(meta['name'])
+        self.assertEqual(len(names),len(set(names)))
+        self.assertFalse((ROOT/'commands').exists(),'commands/<name>.md would shadow skills/<name> in the Claude resolver')
+        agents=sorted((ROOT/'agents').glob('*.md'))
+        self.assertEqual({p.stem for p in agents},{'api-assessor','assessment-orchestrator','database-assessor','fix-critique','frontend-assessor','performance-assessor','root-cause-investigator'})
+        for p in agents:
+            meta=front(p);self.assertEqual(meta.get('name'),p.stem,p);self.assertTrue(meta.get('description'),p);self.assertIn('tools',meta,p)
+            self.assertNotIn(p.stem,names,'agent and skill names must not collide')
+        self.assertEqual(front(ROOT/'agents/fix-critique.md')['model'],'opus')
+
     def test_packaged_markdown_links_are_local_and_present(self):
         missing=[]
-        for base in ['skills','research','docs','evals']:
+        for base in ['skills','agents','research','docs','evals']:
             for p in (ROOT/base).rglob('*.md'):
                 targets = re.findall(r'\]\(([^\s)]+)\)',p.read_text())
                 targets += re.findall(r'`((?:references/|\.\./)[^`\s<>*]+\.md)`', p.read_text())

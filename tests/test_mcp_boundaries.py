@@ -213,7 +213,7 @@ class Boundaries(unittest.TestCase):
         provenance=json.loads((ROOT/'docs/source-provenance.json').read_text())
         for entry in provenance['imported_files']:
             p=ROOT/entry['path'];self.assertTrue(p.is_file(),entry['path']);self.assertEqual(hashlib.sha256(p.read_bytes()).hexdigest(),entry['current_sha256']);self.assertEqual(entry['modified_from_import'],entry['source_sha256']!=entry['current_sha256'])
-        for p in (ROOT/'skills').rglob('*.md'):
+        for p in [*(ROOT/'skills').rglob('*.md'),*(ROOT/'agents').glob('*.md')]:
             text=p.read_text();self.assertNotIn('npx @tyroneross/claude-code-debugger',text);self.assertNotIn('Apply documented fix directly',text)
 
 if __name__=='__main__':unittest.main()
