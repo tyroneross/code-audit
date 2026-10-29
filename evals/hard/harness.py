@@ -319,7 +319,7 @@ def set_aside_invalid(out):
     """Move host-failed, timed-out or schema-invalid trials aside once so `run` repeats them; a second failure stays.
     Repair trials invalidated by the network audit are not rerun: the audit result is the trial's outcome."""
     out = Path(out); aside = out / 'invalid-attempts'; moved = []
-    for meta_path in sorted(out.glob('[HCX]*/meta.json')):
+    for meta_path in sorted(p for p in out.glob('*/meta.json') if p.parent.name != 'invalid-attempts'):
         meta = json.loads(meta_path.read_text()); name = meta_path.parent.name
         if meta.get('status') == 'completed' or (aside / name).exists(): continue
         aside.mkdir(exist_ok=True); meta_path.parent.rename(aside / name); moved.append(name)
@@ -329,8 +329,10 @@ def set_aside_invalid(out):
 def reverify(out):
     """Re-run verification and the network audit on every saved repair candidate with the current rules."""
     rows = {}
-    for meta_path in sorted(Path(out).glob('X*/meta.json')):
-        meta = json.loads(meta_path.read_text()); case = case_by_id('repair', meta['case_id']); baseline = workspace_files(case, 'parent')
+    for meta_path in sorted(Path(out).glob('*/meta.json')):
+        meta = json.loads(meta_path.read_text())
+        if meta.get('family') != 'repair': continue
+        case = case_by_id('repair', meta['case_id']); baseline = workspace_files(case, 'parent')
         saved = meta_path.parent / 'candidate'
         files = {r: ((saved / r).read_bytes() if r in case['editable'] and (saved / r).is_file() else baseline[r]) for r in baseline}
         audit = network_commands((meta_path.parent / 'host-output.jsonl').read_text(errors='replace'))
