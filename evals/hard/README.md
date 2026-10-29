@@ -94,3 +94,12 @@ An independent review of the pre-registration found three validity gaps. These r
 - **Invalid trials.** A trial that is invalid (host failure, timeout, schema-invalid answer, or flagged by the audit) is excluded from that arm's denominator and counted separately. It is not scored as a miss. Host failures and timeouts are rerun once. A trial still invalid after the rerun stays excluded.
 - **Repair pass** additionally needs the test runner to report more than zero tests and zero failures. Exit code 0 alone no longer passes. Saved candidates are re-verified under this rule.
 - **Judge keys** qualify each finding by its position, because the output schema does not force unique finding IDs.
+
+## Addendum 3: network-audit precision (decided after the audit ran, before any scores were computed)
+
+The Addendum 2 audit matched bare words. It flagged 10 of 48 scored repair trials, and an inspection of every flagged command found all 10 were false positives:
+- a `yarn.lock` exclusion glob in `rg --files`, 8 trials;
+- the word "requests" in a test name the model wrote, 1 trial;
+- a GitHub no-reply e-mail address in a copyright header, 1 trial.
+
+No trial ran curl, wget, a package manager or a git network verb, and none imported a network library. The audit now matches invocations only: a tool used as a command word, an imported network library, or `git clone/fetch/pull/ls-remote/remote add/submodule`. Its tests keep four true-positive fixtures and add the three observed false-positive shapes. Under the refined audit, 0 of 54 repair trials (pilot and scored) are flagged. Because this rule changed after the flags were seen, both counts are reported.
