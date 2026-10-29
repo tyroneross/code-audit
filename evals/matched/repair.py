@@ -159,6 +159,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--host',choices=['claude','codex'],required=True);parser.add_argument('--model',required=True);parser.add_argument('--out',type=Path,required=True);parser.add_argument('--repeats',type=int,default=2);parser.add_argument('--timeout',type=int,default=300);args=parser.parse_args()
     if not 1<=args.repeats<=5 or not 1<=args.timeout<=600:parser.error('repeats 1..5; timeout 1..600')
     if args.host=='claude' and not os.environ.get('ANTHROPIC_API_KEY'):parser.error('claude host refused: without an API key the Claude CLI loads its login from the macOS Keychain, which the owner rule forbids')
+    if args.host=='claude':parser.error('claude host refused: the minimal-environment repair lane denies home-folder reads, where the Claude CLI is installed, and passes no API key; supporting it is open as CODE-EVALS-m62jfjbmbr1w2grehjmqt')
     args.out=args.out.resolve();args.out.mkdir(parents=True,exist_ok=True);frozen=snapshot()
     (args.out/(args.host+'-baseline-hashes.json')).write_text(json.dumps({'baseline':{name:hashlib.sha256(data).hexdigest() for name,data in frozen[0].items()},'verifier':hashlib.sha256(frozen[1]).hexdigest()},indent=2))
     for repeat in range(1,args.repeats+1):
