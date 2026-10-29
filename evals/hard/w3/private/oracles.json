@@ -1,0 +1,150 @@
+{
+ "ibr-version-literals": {
+  "fix": "9d5cb19a88af4c32b35278592742e079ea113ffc",
+  "file": "src/bin/ibr.ts",
+  "lines": [
+   [
+    235,
+    238
+   ]
+  ],
+  "also": [
+   {
+    "file": "src/mcp/server.ts",
+    "lines": [
+     [
+      42,
+      46
+     ]
+    ]
+   }
+  ],
+  "cls": "copied manifest version drifted",
+  "mechanism": "The CLI hard-codes .version(\"0.8.0\") and the MCP server hard-codes SERVER_INFO.version \"0.4.9\" while package.json says 1.0.0, so `ibr --version` and MCP clients report wrong, mutually inconsistent versions instead of reading the manifest."
+ },
+ "bl-maintainer-path-default": {
+  "fix": "1d476a120991f9562ec71ca90c08ecde68dbdf13",
+  "file": "scripts/assumption_register.py",
+  "lines": [
+   [
+    69,
+    74
+   ]
+  ],
+  "cls": "machine-specific absolute path default",
+  "mechanism": "DEFAULT_DASHBOARD_BUILD falls back to the maintainer's /Users/... checkout path when IBR_DASHBOARD_BUILD is unset, so on any other machine the build step cannot find the script and fails."
+ },
+ "nav-receiver-regex": {
+  "fix": "c76b9d88c7a488d89ed7b614474b0b209934686a",
+  "file": "src/scanners/connections/llm-call-tracer.ts",
+  "lines": [
+   [
+    431,
+    442
+   ]
+  ],
+  "cls": "hand-written regex duplicates the call-pattern table",
+  "mechanism": "The receiver regex is maintained separately from SDK_DEFINITIONS call patterns; its optional dotted group captures \"openai.chat\" for openai.chat.completions.create, so the client-variable lookup misses and the most common OpenAI call shape emits no LLM-call anchor."
+ },
+ "arp-factkind-spelling": {
+  "fix": "9c4bfe20324324c59819f29af65a6a41efc1e6f7",
+  "file": "crates/rally-cli/src/store.rs",
+  "lines": [
+   [
+    300,
+    309
+   ]
+  ],
+  "cls": "hand-written spelling table drifted from serde wire names",
+  "mechanism": "serde rename_all=snake_case writes BacklogItem as \"backlog_item\" but FactKind::parse accepts only \"backlog-item\", so passing a kind read from the ledger to `rally say` fails as an unsupported fact kind."
+ },
+ "bl-codex-manifest-version": {
+  "fix": "90b80b9857c97801057af5603670125816b56ca7",
+  "file": ".codex-plugin/plugin.json",
+  "lines": [
+   [
+    1,
+    6
+   ]
+  ],
+  "cls": "duplicated version left behind on release",
+  "mechanism": "The release bump moved .claude-plugin/plugin.json and package.json to 0.42.1 but .codex-plugin/plugin.json stayed at 0.42.0 although bump_version.py lists it as an owned surface, so Codex installs advertise a stale version."
+ },
+ "bl-rally-kind-allowlist": {
+  "fix": "d5b192b3eff79010406e1af95f50be97974e0e92",
+  "file": "scripts/rally_point/post.py",
+  "lines": [
+   [
+    587,
+    598
+   ]
+  ],
+  "also": [
+   {
+    "file": "scripts/rally_point/discovery_bridge.py",
+    "lines": [
+     [
+      434,
+      455
+     ]
+    ]
+   }
+  ],
+  "cls": "other component's vocabulary copied as a literal",
+  "mechanism": "_native_kind trusts a hard-coded set of kinds the rally binary supposedly accepts, and the capability probe only checks that `say` exists, so a binary build lacking a kind rejects it after the local ledger append succeeded and the Rally projection is silently lost."
+ },
+ "bl-learn-wrong-duplicate-row": {
+  "fix": "dbb9d9ec44d02043bda8c98f959690a0cfe66dcb",
+  "file": "scripts/learn/runner.py",
+  "lines": [
+   [
+    466,
+    475
+   ],
+   [
+    545,
+    548
+   ]
+  ],
+  "also": [
+   {
+    "file": "scripts/run_close_lint.py",
+    "lines": [
+     [
+      285,
+      293
+     ]
+    ]
+   }
+  ],
+  "cls": "two readers resolve duplicate rows differently",
+  "mechanism": "When a run_id owns two runs[] rows, Learn stamps the FIRST matching row while run_close_lint grades the LAST, so --require-learn reports learn_missing for a run that finished Learn."
+ },
+ "arp-daemon-hop-drops-fields": {
+  "fix": "2a90ca8e0f2c1049fd3610cec73bc645af68e0a7",
+  "file": "crates/rally-cli/src/rallyd_core.rs",
+  "lines": [
+   [
+    675,
+    689
+   ]
+  ],
+  "also": [
+   {
+    "file": "crates/rally-cli/src/store.rs",
+    "lines": [
+     [
+      443,
+      456
+     ],
+     [
+      531,
+      531
+     ]
+    ]
+   }
+  ],
+  "cls": "extra hop drops internal state",
+  "mechanism": "When rallyd is running, the snapshot crosses the daemon wire via the public serializer, so its #[serde(skip)] internal fields arrive defaulted; checkpoints get seq 0, repeated `next` appends duplicate wake intents and stale-author demotion stops, unlike the direct path."
+ }
+}
