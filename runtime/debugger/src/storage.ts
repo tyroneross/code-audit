@@ -167,9 +167,9 @@ const SYMPTOM_TEXT_KEYS = ['user_description', 'observed_behavior', 'user_report
 export function legacySymptomText(symptom: Record<string, unknown>): string | null {
   const description = textValue(symptom.description);
   if (description) return description;
-  const preferred = SYMPTOM_TEXT_KEYS.filter(key => key in symptom);
-  const keys = preferred.length ? preferred : Object.keys(symptom).sort();
-  const text = keys.flatMap(key => textParts(symptom[key])).join('. ');
+  const preferred = SYMPTOM_TEXT_KEYS.filter(key => key in symptom).flatMap(key => textParts(symptom[key]));
+  // Preferred keys present but empty fall back to every other text field, alphabetically.
+  const text = (preferred.length ? preferred : Object.keys(symptom).sort().flatMap(key => textParts(symptom[key]))).join('. ');
   return text || null;
 }
 
@@ -729,6 +729,11 @@ export async function searchIncidentLog(
     let entry: IncidentLogEntry;
     try { entry = JSON.parse(line); }
     catch { recordCorpusSkip(coverage, `incidents.jsonl:${n+1}`, 'invalid_json'); continue; }
+    const raw = entry as any;
+    if (raw && raw.symptom !== null && typeof raw.symptom === 'object' && !Array.isArray(raw.symptom)) {
+      const text = legacySymptomText(raw.symptom);
+      if (text) raw.symptom = text;
+    }
     if (!entry || !isValidIncidentId(entry.incident_id) || typeof entry.symptom !== 'string' || typeof entry.category !== 'string' || !Array.isArray(entry.tags) || !entry.tags.every(t => typeof t === 'string')) {
       recordCorpusSkip(coverage, `incidents.jsonl:${n+1}`, 'invalid_record'); continue;
     }

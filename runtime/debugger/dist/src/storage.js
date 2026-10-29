@@ -223,9 +223,9 @@ function legacySymptomText(symptom) {
     const description = textValue(symptom.description);
     if (description)
         return description;
-    const preferred = SYMPTOM_TEXT_KEYS.filter(key => key in symptom);
-    const keys = preferred.length ? preferred : Object.keys(symptom).sort();
-    const text = keys.flatMap(key => textParts(symptom[key])).join('. ');
+    const preferred = SYMPTOM_TEXT_KEYS.filter(key => key in symptom).flatMap(key => textParts(symptom[key]));
+    // Preferred keys present but empty fall back to every other text field, alphabetically.
+    const text = (preferred.length ? preferred : Object.keys(symptom).sort().flatMap(key => textParts(symptom[key]))).join('. ');
     return text || null;
 }
 /** A change entry names a file only when it looks like a path: a directory separator or a file extension, no spaces. */
@@ -756,6 +756,12 @@ async function searchIncidentLog(query, config, coverage = emptyCorpusCoverage()
         catch {
             recordCorpusSkip(coverage, `incidents.jsonl:${n + 1}`, 'invalid_json');
             continue;
+        }
+        const raw = entry;
+        if (raw && raw.symptom !== null && typeof raw.symptom === 'object' && !Array.isArray(raw.symptom)) {
+            const text = legacySymptomText(raw.symptom);
+            if (text)
+                raw.symptom = text;
         }
         if (!entry || !isValidIncidentId(entry.incident_id) || typeof entry.symptom !== 'string' || typeof entry.category !== 'string' || !Array.isArray(entry.tags) || !entry.tags.every(t => typeof t === 'string')) {
             recordCorpusSkip(coverage, `incidents.jsonl:${n + 1}`, 'invalid_record');

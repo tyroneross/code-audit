@@ -92,6 +92,36 @@ process.stdout.write(JSON.stringify([byId.INC_WORDS.fix, byId.INC_WORDS.legacy.f
         self.assertEqual(fix['notes'], ['kept prior note', 'Refactored', 'tests', 'npm'])
         self.assertEqual(prior, 'kept prior note')
 
+    def test_empty_preferred_symptom_fields_fall_back_to_other_text(self):
+        out = self.probe("""
+await write('INC_EMPTY.json', {...base('INC_EMPTY'), symptom:{user_description:'', context:'Widget fails to render', severity:'low'}});
+const {byId} = await load();
+process.stdout.write(JSON.stringify(byId.INC_EMPTY && byId.INC_EMPTY.symptom));
+""")
+        self.assertEqual(out, 'Widget fails to render. low')
+
+    def test_incident_log_search_reads_structured_symptoms(self):
+        out = self.probe("""
+await fs.mkdir(memoryPath,{recursive:true});
+await fs.writeFile(memoryPath+'/incidents.jsonl', JSON.stringify({incident_id:'INC_LOG',symptom:{description:'Cart total drifts'},category:'logic',tags:[]})+'\\n');
+const coverage=st.emptyCorpusCoverage();
+const rows=await st.searchIncidentLog('cart total', memoryConfig, coverage);
+process.stdout.write(JSON.stringify([rows.map(r=>[r.incident_id,r.symptom]), coverage.skipped]));
+""")
+        self.assertEqual(out, [[['INC_LOG', 'Cart total drifts']], 0])
+
+    def test_mcp_detail_shows_notes_and_plain_file_changes(self):
+        out = self.probe("""
+const {handleToolCall} = require(""" + json.dumps(str(DIST / 'mcp/tools.js')) + """);
+const root = memoryPath + '/project'; await fs.mkdir(root+'/.claude/memory/incidents',{recursive:true});
+await fs.writeFile(root+'/.claude/memory/incidents/INC_CMD.json', JSON.stringify({...base('INC_CMD'), fix:{approach:'a', changes:['src/app.ts',{command:'npm run build',summary:'Rebuilt'}]}}));
+const r = await handleToolCall('detail', {id:'INC_CMD', project_root: root});
+process.stdout.write(JSON.stringify(r.content[0].text));
+""")
+        self.assertIn('- src/app.ts\n', out)
+        self.assertNotIn('undefined', out)
+        self.assertIn('Notes:\n- Rebuilt — command: npm run build', out)
+
     def test_millisecond_epoch_ids_supply_a_timestamp(self):
         out = self.probe("""
 const {timestamp, ...rest} = base('INCIDENT_1792059300000_ms');
