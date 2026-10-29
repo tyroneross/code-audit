@@ -173,8 +173,18 @@ export function legacySymptomText(symptom: Record<string, unknown>): string | nu
   return text || null;
 }
 
-/** A change entry names a file only when it looks like a path: a directory separator or a file extension, no spaces. */
-const PATH_LIKE = /^(?=[\w./@\-]+$)(?:.*\/.*|.*\.[A-Za-z0-9]{1,10})$/;
+/**
+ * A change entry names a file only when it looks like a path and has no spaces: a directory separator, or a known
+ * source/config extension. Version numbers ("1.2.3") and product names ("Node.js", "Next.js") stay notes.
+ */
+const FILE_EXTENSIONS = new Set(['ts','tsx','js','jsx','mjs','cjs','json','md','mdx','py','rb','go','rs','swift','kt','java','c','h','cc','cpp','hpp','cs','css','scss','sass','less','html','vue','svelte','yml','yaml','toml','ini','sql','sh','zsh','txt','lock','prisma','graphql','xml','plist','gradle','env']);
+function isPathLike(text: string): boolean {
+  if (!/^[\w./@\-]+$/.test(text)) return false;
+  if (text.includes('/')) return true;
+  if (/^[A-Z][A-Za-z]*\.js$/.test(text)) return false;
+  const ext = /\.([A-Za-z0-9]+)$/.exec(text);
+  return ext !== null && FILE_EXTENSIONS.has(ext[1].toLowerCase());
+}
 
 /** Epoch milliseconds embedded in an ID the runtime generated: INC_[CAT_]YYYYMMDD_HHMMSS_* (UTC) or INCIDENT_<epoch seconds|ms>_*. */
 export function incidentIdTimestamp(incident_id: string): number | null {
@@ -231,7 +241,7 @@ export function normalizeLegacyIncident<T>(value: T, sourceFile?: string): T {
     for (const entry of fix.changes as any[]) {
       const text = textValue(entry);
       if (entry && typeof entry === 'object' && typeof entry.file === 'string') changes.push(entry);
-      else if (text && PATH_LIKE.test(text)) changes.push({ file: text });
+      else if (text && isPathLike(text)) changes.push({ file: text });
       else if (text) notes.push(text);
       else if (entry && typeof entry === 'object' && (textValue(entry.summary) || textValue(entry.command))) {
         notes.push([textValue(entry.summary), textValue(entry.command) && `command: ${textValue(entry.command)}`].filter(Boolean).join(' — '));
