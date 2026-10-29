@@ -81,6 +81,26 @@ process.stdout.write(JSON.stringify([byId.INC_STRINGS.fix, byId.INC_STRINGS.lega
         self.assertEqual(commands_fix['notes'], ['Rebuilt the bundle — command: npm run build', 'Shipped — command: git push'])
         self.assertEqual((ids, skipped), (['INC_COMMANDS', 'INC_STRINGS'], 1))
 
+    def test_single_words_are_notes_and_prior_string_notes_survive(self):
+        out = self.probe("""
+await write('INC_WORDS.json', {...base('INC_WORDS'), fix:{approach:'a', notes:'kept prior note', changes:['Refactored','tests','README.md','src/a','npm']}});
+const {byId} = await load();
+process.stdout.write(JSON.stringify([byId.INC_WORDS.fix, byId.INC_WORDS.legacy.fix_notes]));
+""")
+        fix, prior = out
+        self.assertEqual(fix['changes'], [{'file': 'README.md'}, {'file': 'src/a'}])
+        self.assertEqual(fix['notes'], ['kept prior note', 'Refactored', 'tests', 'npm'])
+        self.assertEqual(prior, 'kept prior note')
+
+    def test_millisecond_epoch_ids_supply_a_timestamp(self):
+        out = self.probe("""
+const {timestamp, ...rest} = base('INCIDENT_1792059300000_ms');
+await write('INCIDENT_1792059300000_ms.json', rest);
+const {byId} = await load();
+process.stdout.write(JSON.stringify(byId['INCIDENT_1792059300000_ms'].timestamp));
+""")
+        self.assertEqual(out, 1792059300000)
+
     def test_missing_id_and_timestamp_come_from_a_matching_filename_and_disk_is_untouched(self):
         out = self.probe("""
 const {incident_id, timestamp, ...rest} = base('x');

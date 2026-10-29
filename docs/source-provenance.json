@@ -780,28 +780,28 @@
       "path": "runtime/debugger/dist/src/storage.d.ts",
       "source": "coding-debugger",
       "source_sha256": "a3abcb137bc90719cb0366dc41237b888f5907964052d810269f68073cb4d024",
-      "current_sha256": "55627cdd69a0a1b081e368e4f1f5643033997d64ec8be57682042cda1b021f04",
+      "current_sha256": "f51fead3248ff6f287fdfd815eef3f0e9d6ce22b7468d807d0cb17667acaee7a",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "ee54c36bd7d6e6a7cb57254c6bb3602b66d48a7ba9297d0ec750abb195f28e0c",
-      "current_sha256": "f576c42edae39bd6741c4fb6dedeefde2bd03e1adf64d8dc3ecfa59e6fb283c5",
+      "current_sha256": "56939c0c6e736cb0541ebfa7b09e14d2c1c23417f51d6d10414fa79a1addf191",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js",
       "source": "coding-debugger",
       "source_sha256": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361",
-      "current_sha256": "7ea493a200d0956faa8889ba57c9f40f5b2a4b82bd1c327bf567af12824aecce",
+      "current_sha256": "3b17e6f49db31639b588bb926908e19250176ba2fbbab5995f6c6b802198309e",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js.map",
       "source": "coding-debugger",
       "source_sha256": "81f7bba12869371e93f1d59a4e7851ce9e6cb2a169e0170e52487ece2a0448ca",
-      "current_sha256": "f647d7adae7672e5f3cad987b4b1eba2fae0da4ea35673e25a18d20e1f8c8067",
+      "current_sha256": "22139662896f56613b9e38d934bdff45b4d64436860165b4d268142f6fee9620",
       "modified_from_import": true
     },
     {
@@ -1088,14 +1088,14 @@
       "path": "runtime/debugger/dist/src/types.d.ts",
       "source": "coding-debugger",
       "source_sha256": "6be8081caa993bef29b35a09bc82f9b56fcfd3dbd58ffef5a780ad8e9ad88963",
-      "current_sha256": "73b8b0c2ecd8717e98c9b3dc21e23f4fde0b3c49d49178219903534603a893a1",
+      "current_sha256": "b874061cf08f9dccad68b5455796586d7a1a796ba11c2ba518d291ec3952c457",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/types.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "7f2a4ca73ced915f60e60df23bdb40fb910cb30e98e3845fb13bbf80112181b3",
-      "current_sha256": "f2cf97fb970f8f84c99cc4e5994368f04be3606246027154f5a8c829728641b5",
+      "current_sha256": "81dfc3f0cbb6c7d6d2fc870df5ae85217a6733aa10cccaa8f78b69917799a6f3",
       "modified_from_import": true
     },
     {
@@ -1109,7 +1109,7 @@
       "path": "runtime/debugger/dist/src/types.js.map",
       "source": "coding-debugger",
       "source_sha256": "5c6469250c78a757d5ffb8d3fad22e98733ee5b9d3740e07f7153ff2d73983d3",
-      "current_sha256": "6fefc91254df882fcd4f69a8cafc6f614bc5defd32ac5fbd7443ee4d79fe0cc9",
+      "current_sha256": "3c710fab63152cbe7b833f2d6e57b412d625f24e8c3370683ea759816717b8cc",
       "modified_from_import": true
     },
     {
@@ -1291,7 +1291,7 @@
       "path": "runtime/debugger/src/storage.ts",
       "source": "coding-debugger",
       "source_sha256": "a384fde223a93df9ae02596cd74f50e7e041f191b6c201c089194224ea59d3dc",
-      "current_sha256": "ff5f867d74585cba1e09eb5c6e0850db8475cad263827edcdadff0d9c5c49999",
+      "current_sha256": "fa28efd36f56171cd739d9dbf7cfba23d194e5a645361b7d401246a2d19ef981",
       "modified_from_import": true
     },
     {
@@ -1368,7 +1368,7 @@
       "path": "runtime/debugger/src/types.ts",
       "source": "coding-debugger",
       "source_sha256": "5da9b8bdd87fec032b4b4030106c386596bb14d9d0ff6566101fdd2a28b547a5",
-      "current_sha256": "1219e1164b6c8d4aa0fb88d8fdb3971cb0878e608fb9b044d9df7d73268e77ba",
+      "current_sha256": "ca0b9a59dc03eda3fac52a8b791f8c0f4ca901b92528b1ad8ecf03d8aec03247",
       "modified_from_import": true
     },
     {
@@ -1953,7 +1953,8 @@
     "2026-10-28: Imported the seven debugger agents into agents/ for Claude Code: replaced the npx memory search with caller-supplied incident candidates, added a code-audit adaptation note (evidence-ranked hypotheses, read-only unless authorized), pinned fix-critique to model opus as a judge, and qualified its symptom-fix table with contract context. Skills now reference the agents; Codex and other hosts follow the same procedures directly. Commands, the mining hook and debugger packaging scripts are recorded in removed_imports with reasons.",
     "2026-10-28: storage reads legacy ISO-8601 string incident timestamps as epoch milliseconds (normalizeLegacyIncident) instead of rejecting them. Correction: on the real comparison corpus this alone loaded no additional records; the measured skips were legacy INCIDENT_ IDs and schema variants.",
     "2026-10-28: incident IDs accept the legacy INCIDENT_ prefix through one exported isValidIncidentId (storage, MCP list and detail routing), still restricted to word characters and hyphens. On the 100-file comparison corpus code-audit loads 87 records; 13 remain visibly skipped for non-string symptoms (10), non-enum verification status (4), fix shape (2) and filename/ID mismatch (1); coding-debugger loads all 100 without validation.",
-    "2026-10-28: read-time normalization maps the remaining legacy incident shapes without rewriting files: a structured symptom becomes its description (else a fixed-order join of its text fields) with the object kept in legacy.symptom; a verification status outside the enum reads as unverified with the raw value kept; path-like string changes become {file} and command/summary or prose entries become fix.notes; a missing incident_id comes from a filename that matches the ID pattern, and a missing timestamp from the ID's embedded creation time (never file mtime). SESSION_ files (the debugger's temporary session namespace) and filename/ID mismatches stay skipped with named reasons. On the 100-file comparison corpus code-audit now loads 98; the two skips are one SESSION_ record and one filename/ID mismatch."
+    "2026-10-28: read-time normalization maps the remaining legacy incident shapes without rewriting files: a structured symptom becomes its description (else a fixed-order join of its text fields) with the object kept in legacy.symptom; a verification status outside the enum reads as unverified with the raw value kept; path-like string changes become {file} and command/summary or prose entries become fix.notes; a missing incident_id comes from a filename that matches the ID pattern, and a missing timestamp from the ID's embedded creation time (never file mtime). SESSION_ files (the debugger's temporary session namespace) and filename/ID mismatches stay skipped with named reasons. On the 100-file comparison corpus code-audit now loads 98; the two skips are one SESSION_ record and one filename/ID mismatch.",
+    "2026-10-28 (review fixes): a string change maps to {file} only when it has a directory separator or a file extension, so single words such as 'Refactored' become notes; a prior non-array fix.notes is kept (as the first note and in legacy.fix_notes); INCIDENT_ IDs with a 13-digit millisecond epoch also supply a timestamp. Normalization never rewrites files on read; an explicit user-initiated store of a normalized record (for example batch review) saves the normalized shape with its legacy block."
   ],
   "removed_imports": [
     {

@@ -58,6 +58,7 @@ export interface LegacyIncidentFields {
   symptom?: Record<string, unknown>;          // Structured symptom object; `symptom` holds its text form
   verification_status?: unknown;              // Status outside verified|partial|unverified; read as unverified
   fix_changes?: unknown[];                     // Original change entries that were not {file} objects
+  fix_notes?: unknown;                         // Original non-array fix.notes, kept when change notes were appended
   incident_id_source?: 'filename';             // ID was absent and taken from a matching filename
   timestamp_source?: 'incident_id';            // Timestamp was absent and taken from the ID's embedded time
 }
