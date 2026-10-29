@@ -182,6 +182,28 @@ class S {
         self.assertEqual(sorted((h["file"], h["line"]) for h in out["items"]["F7"]), [("app.py", 4), ("app.py", 9), ("web/lock.ts", 1)])
         self.assertEqual(set(out["items"]) & {"F4", "F5", "G1", "G2"}, set())
 
+    def test_frozen_value_review_fixes(self):
+        files = {
+            "package.json": '{"name": "demo", "version": "1.2.3"}',
+            "src/cli.ts": "program\n  .name('demo')\n  .version('0.8.0');\nconst SERVER_INFO = {\n  name: 'demo',\n  version: '1.2.3',\n};\n",
+            "src/latest/api.ts": "const BASE = 'http://localhost:3000';\n",            # source, not tests
+            "lib/cache.py": "USE_CACHE = True\nCONTENT_TYPE = 'application/json'\n",
+            "lib/other.py": "CONTENT_TYPE = 'application/json'\nLOCK = 'state.lock'\n",
+            "samples/demo.py": "LOCK = 'state.lock'\n",                               # fixture, not a copy
+            "src/lib.rs": '#[cfg(test)]\nuse helper::x;\nconst ROOT: &str = "/Users/realuser/data";\n#[cfg(test)]\nmod tests {\n    const P: &str = "/Users/other/x";\n}\nconst AFTER: &str = "/Users/realuser/after";\n',
+        }
+        with tempfile.TemporaryDirectory() as d:
+            for rel, text in files.items():
+                path = Path(d, rel); path.parent.mkdir(parents=True, exist_ok=True); path.write_text(text)
+            _, out = run_scan([d])
+        f3 = {(h["file"], h["line"]): h["label"] for h in out["items"]["F3"]}
+        self.assertIn("states version 0.8.0", f3[("src/cli.ts", 3)])      # a drifted copy is the consequential case
+        self.assertIn("copies package.json version 1.2.3", f3[("src/cli.ts", 6)])
+        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F2"]], [("src/latest/api.ts", 1)])
+        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F6"]], [("lib/cache.py", 1)])
+        self.assertNotIn("F7", out["items"])                               # MIME type and fixture copy are not shared identifiers
+        self.assertEqual(sorted(h["line"] for h in out["items"]["F1"]), [3, 8])   # only the test module and the attributed item are skipped
+
     def test_unreadable_input_is_reported_not_counted(self):
         (self.root / "src" / "bad.ts").write_bytes(b"\xff\xfe fetch(u)")
         locked = self.root / "locked"

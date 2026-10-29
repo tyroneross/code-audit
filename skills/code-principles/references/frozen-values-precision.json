@@ -1,0 +1,453 @@
+{
+ "date": "2026-10-29",
+ "method": "git-tracked non-test source files; scanner as committed with this record; one rater (the author) labelled each sampled hit tp/fp: tp means the value has a source of truth or varies by context and is frozen in code. Informal: single rater, no second label, samples of at most 15.",
+ "files_scanned": 2099,
+ "repos": {
+  "build-loop": "271c93887599f6dd8f0784fcd01f62405ffd327f",
+  "NavGator": "d61eddf8314d85eba2373185cb11d2655249a875",
+  "interface-built-right": "4e9e029edd553dc0b087800d0783a4698e24e9c9",
+  "agent-rally-point": "cb0713f51d75720e51dd6d05da950aa7a4125118",
+  "spectra": "2801f01a93902ff74690eb8cbc3d3a3ea3552f7c",
+  "local-smartz": "26f148bf7f8173518f812fc7e7b43bd417eec71c",
+  "decision-doctor-cc": "aa78428e786a934af00f2cee4f0880f607c86037",
+  "code-audit": "a8a67ead309010596444f41925a4e03877fc7d43"
+ },
+ "seed": 20261029,
+ "rules": {
+  "F1": {
+   "hits": 11,
+   "sampled": 11,
+   "true_positive": 10,
+   "precision": 0.91,
+   "sample": [
+    {
+     "repo": "code-audit",
+     "file": "evals/comparison/memory_arms.py",
+     "line": 14,
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "scripts/seed-plugins.ts",
+     "line": 117,
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "scripts/seed-plugins.ts",
+     "line": 80,
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "scripts/seed-plugins.ts",
+     "line": 99,
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "repo": "code-audit",
+     "file": "evals/comparison/run_repair.py",
+     "line": 17,
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "scripts/seed-plugins.ts",
+     "line": 69,
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "scripts/seed-plugins.ts",
+     "line": 58,
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "scripts/seed-plugins.ts",
+     "line": 108,
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "repo": "code-audit",
+     "file": "evals/comparison/run_repair.py",
+     "line": 15,
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "scripts/seed-plugins.ts",
+     "line": 90,
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "repo": "spectra",
+     "file": "src/cli/index.ts",
+     "line": 162,
+     "signal": "home or machine-specific absolute path",
+     "label": "fp",
+     "reason": "CLI help text showing an example pattern"
+    }
+   ]
+  },
+  "F2": {
+   "hits": 25,
+   "sampled": 15,
+   "true_positive": 10,
+   "precision": 0.67,
+   "sample": [
+    {
+     "repo": "spectra",
+     "file": "macos/Spectra/DaemonCore/verify-g2-suite.ts",
+     "line": 387,
+     "signal": "environment-specific host in code",
+     "label": "fp",
+     "reason": "verification-suite fixture target"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "lib/auth.ts",
+     "line": 30,
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "lib/auth.ts",
+     "line": 32,
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    },
+    {
+     "repo": "NavGator",
+     "file": "scripts/ibr-ui-test.mjs",
+     "line": 18,
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    },
+    {
+     "repo": "local-smartz",
+     "file": "src/localsmartz/doctor.py",
+     "line": 43,
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    },
+    {
+     "repo": "spectra",
+     "file": "macos/Spectra/DaemonCore/SessionStore.swift",
+     "line": 423,
+     "signal": "environment-specific host in code",
+     "label": "fp",
+     "reason": "conformance fixture URL"
+    },
+    {
+     "repo": "local-smartz",
+     "file": "src/localsmartz/observability.py",
+     "line": 34,
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "lib/auth.ts",
+     "line": 29,
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    },
+    {
+     "repo": "decision-doctor-cc",
+     "file": "lib/auth.ts",
+     "line": 31,
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    },
+    {
+     "repo": "local-smartz",
+     "file": "app/LocalSmartz/Views/SettingsTabs.swift",
+     "line": 177,
+     "signal": "environment-specific host in code",
+     "label": "fp",
+     "reason": "UI text that displays the host"
+    },
+    {
+     "repo": "local-smartz",
+     "file": "src/localsmartz/doctor.py",
+     "line": 45,
+     "signal": "environment-specific host in code",
+     "label": "fp",
+     "reason": "status message string"
+    },
+    {
+     "repo": "spectra",
+     "file": "src/cli/index.ts",
+     "line": 158,
+     "signal": "environment-specific host in code",
+     "label": "fp",
+     "reason": "CLI help example"
+    },
+    {
+     "repo": "build-loop",
+     "file": "scripts/scan_transcript_for_decisions.py",
+     "line": 537,
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    },
+    {
+     "repo": "build-loop",
+     "file": "scripts/transcript_capture.py",
+     "line": 155,
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    },
+    {
+     "repo": "local-smartz",
+     "file": "app/LocalSmartz/Views/SetupView.swift",
+     "line": 417,
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    }
+   ]
+  },
+  "F3": {
+   "hits": 6,
+   "sampled": 6,
+   "true_positive": 6,
+   "precision": 1.0,
+   "sample": [
+    {
+     "repo": "local-smartz",
+     "file": "src/localsmartz/__init__.py",
+     "line": 3,
+     "signal": "copies pyproject.toml version 0.1.0",
+     "label": "tp",
+     "reason": "version literal copies or contradicts the owning manifest"
+    },
+    {
+     "repo": "code-audit",
+     "file": "runtime/debugger/src/mcp/server.ts",
+     "line": 54,
+     "signal": "copies runtime/debugger/package.json version 1.9.1",
+     "label": "tp",
+     "reason": "version literal copies or contradicts the owning manifest"
+    },
+    {
+     "repo": "agent-rally-point",
+     "file": "tools/agent-rally-watcher/src/agent_rally_watcher/__init__.py",
+     "line": 13,
+     "signal": "copies tools/agent-rally-watcher/pyproject.toml version 0.1.1",
+     "label": "tp",
+     "reason": "version literal copies or contradicts the owning manifest"
+    },
+    {
+     "repo": "local-smartz",
+     "file": "src/localsmartz/observability.py",
+     "line": 297,
+     "signal": "copies pyproject.toml version 0.1.0",
+     "label": "tp",
+     "reason": "version literal copies or contradicts the owning manifest"
+    },
+    {
+     "repo": "local-smartz",
+     "file": "src/localsmartz/plugins/mcp_client.py",
+     "line": 41,
+     "signal": "copies pyproject.toml version 0.1.0",
+     "label": "tp",
+     "reason": "version literal copies or contradicts the owning manifest"
+    },
+    {
+     "repo": "interface-built-right",
+     "file": "src/mcp/server.ts",
+     "line": 142,
+     "signal": "states version 1.0.0 but package.json 1.6.0",
+     "label": "tp",
+     "reason": "version literal copies or contradicts the owning manifest"
+    }
+   ]
+  },
+  "F6": {
+   "hits": 1,
+   "sampled": 1,
+   "true_positive": 1,
+   "precision": 1.0,
+   "sample": [
+    {
+     "repo": "build-loop",
+     "file": "scripts/rally_point/discovery_bridge.py",
+     "line": 869,
+     "signal": "feature toggle fixed in code",
+     "label": "tp",
+     "reason": "module-level toggle fixed in code"
+    }
+   ]
+  },
+  "F7": {
+   "hits": 32,
+   "sampled": 15,
+   "true_positive": 14,
+   "precision": 0.93,
+   "sample": [
+    {
+     "repo": "build-loop",
+     "file": "scripts/migrate_project_memory.py",
+     "line": 91,
+     "signal": "`.build-loop/memory` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "NavGator",
+     "file": "web/hooks/use-toast.ts",
+     "line": 20,
+     "signal": "`UPDATE_TOAST` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "build-loop",
+     "file": "scripts/install_memory.py",
+     "line": 62,
+     "signal": "`manifest.json` is defined as a constant in 2 files; a change must reach all",
+     "label": "fp",
+     "reason": "same file name, different manifest (a seed manifest, not the architecture manifest)"
+    },
+    {
+     "repo": "build-loop",
+     "file": "scripts/model_resolver.py",
+     "line": 91,
+     "signal": "`model-tier-cache.json` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "build-loop",
+     "file": "scripts/migrate_project_memory.py",
+     "line": 92,
+     "signal": "`.MOVED.md` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "NavGator",
+     "file": "web/hooks/use-toast.ts",
+     "line": 21,
+     "signal": "`DISMISS_TOAST` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "build-loop",
+     "file": "scripts/cleanup_legacy_memory_stubs.py",
+     "line": 46,
+     "signal": "`.build-loop/memory` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "NavGator",
+     "file": "src/registry-journal.ts",
+     "line": 123,
+     "signal": "`registry-conflicts.1.jsonl` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "NavGator",
+     "file": "web/lib/server/registry-journal.ts",
+     "line": 109,
+     "signal": "`registry-journal.jsonl` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "NavGator",
+     "file": "web/components/ui/use-toast.ts",
+     "line": 22,
+     "signal": "`REMOVE_TOAST` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "build-loop",
+     "file": "scripts/sync_navgator_lessons.py",
+     "line": 114,
+     "signal": "`.build-loop/sync_errors.log` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "build-loop",
+     "file": "scripts/classify_model_tier.py",
+     "line": 63,
+     "signal": "`model-tier-cache.json` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "NavGator",
+     "file": "web/components/ui/use-toast.ts",
+     "line": 19,
+     "signal": "`ADD_TOAST` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "NavGator",
+     "file": "web/lib/server/registry-journal.ts",
+     "line": 110,
+     "signal": "`registry-journal.1.jsonl` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "repo": "NavGator",
+     "file": "web/lib/server/registry-journal.ts",
+     "line": 129,
+     "signal": "`registry-conflicts.1.jsonl` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    }
+   ]
+  }
+ },
+ "held_out_informal": {
+  "repos": 6,
+  "note": "private local repositories; labels kept outside this repository. Measured on 2026-10-28 with an earlier version of the rules: F1 9/11, F2 9/15, F7 15/15."
+ },
+ "cut_rules_informal": {
+  "model ids": "~25% (3 of 12 sampled)",
+  "pass-through functions": "~20% (2-3 of 12)",
+  "generic account/tenant ids": "mostly test data and wire-name mappings",
+  "unrestricted boolean toggles": "mostly UI properties and state assignments",
+  "single-implementation interfaces": "second implementation is usually a test fake the scanner skips"
+ }
+}
