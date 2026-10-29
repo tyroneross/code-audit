@@ -1739,7 +1739,7 @@
       "path": "skills/code-principles/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "0f6fd51d6d96f7e9f756bed68275fd3230d633385a8eb039322735c649aa9f00",
+      "current_sha256": "f2ee9ee90f9e2a01cb0f2e799246dd37330819cac0673c461fba514de7731244",
       "modified_from_import": true
     },
     {
@@ -1887,7 +1887,7 @@
       "source": "code-principles-audit",
       "source_path": "skills/code-principles/SKILL.md",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "62aa541c002ff32d08581e2ff89ce4af9c5f2833d45ff7250e78e9434943a457",
+      "current_sha256": "41a15748a5c6a91bb3eed46651e1c68b371b4fd2fae04a26cd50d63fdc4dc1ef",
       "modified_from_import": true,
       "adaptation": "Checklist extracted from the imported focused skill; contextual failure-handler wording and relative links updated."
     },
