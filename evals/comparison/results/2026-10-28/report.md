@@ -6,6 +6,8 @@ Method, arms and verdict rule: [README](../../README.md), committed in 38f7709 b
 
 ## Scores
 
+> **Erratum (2026-10-28, after publication).** Two numbers were corrected in place after the owner's review. The keyword control's F3 recall@5 was printed as 0.650. scores.json, the run-3 file and this report's own component row (1.0 / 1.0 / 1.0) all give 1.000. The cost note said 16 trials per arm; the count is 8 per arm (4 review, 4 repair), 32 overall. Neither correction changes a verdict. A later rerun after legacy-shape loading is in [run 4](memory-run4-after-legacy-shapes.json).
+
 | Family | Metric | code-audit | coding-debugger | code-principles-audit | none | n per arm |
 |---|---|---|---|---|---|---|
 | F1 review | recall of D1–D4 on P01 | 1.00, 1.00 | 1.00, 1.00 | 1.00, 1.00 | 1.00, 1.00 | 2 trials |
@@ -14,7 +16,7 @@ Method, arms and verdict rule: [README](../../README.md), committed in 38f7709 b
 | F1 review | valid JSON before recovery | 3/4 | 0/4 | 1/4 | 2/4 | 4 |
 | F2 repair | R1 timeout-retry, 18 withheld checks | 2/2 | 2/2 | 2/2 | 2/2 | 2 |
 | F2 repair | R2 scan-skipped, withheld historical test | 2/2 | 2/2 | 2/2 | 2/2 | 2 |
-| F3 memory | recall@5, standard path | 0.350 | 0.383 | capability absent | 0.650 | 60 queries |
+| F3 memory | recall@5, standard path | 0.350 | 0.383 | capability absent | 1.000 [erratum] | 60 queries |
 | F3 memory | recall@5 exact / partial / cause | 0.80 / 0.25 / 0.00 | 0.85 / 0.30 / 0.00 | — | 1.0 / 1.0 / 1.0 | 20 each |
 | F3 memory | recall@5, indexed path | 0.183 | 0.183 | — | — | 60 |
 | F3 memory | false returns on 10 negatives | 0.0 | 0.0 | — | 0.1 | 10 |
@@ -22,7 +24,7 @@ Method, arms and verdict rule: [README](../../README.md), committed in 38f7709 b
 
 The F3 control is a keyword search over the same symptom and root-cause fields that the queries were derived from. It is an upper bound for this query design, not evidence that keyword search beats the runtime.
 
-Cost covers the 16 review and repair trials per arm, using Codex input plus output tokens. Dollar cost is unavailable.
+Cost covers the 8 review and repair trials per arm (4 review, 4 repair; 32 overall) [erratum], using Codex input plus output tokens. Dollar cost is unavailable.
 
 | Arm | Time | Tokens |
 |---|---|---|
