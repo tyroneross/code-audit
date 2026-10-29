@@ -126,9 +126,9 @@ class Rerun(unittest.TestCase):
     def test_invalid_trials_are_set_aside_once(self):
         with tempfile.TemporaryDirectory() as folder:
             out = Path(folder)
-            for name, status in [('H01-none-1', 'completed'), ('H01-none-2', 'host_timeout'), ('X01-none-1', 'host_failed')]:
+            for name, status in [('H01-none-1', 'completed'), ('H01-none-2', 'host_timeout'), ('WX1-none-1', 'host_failed')]:
                 (out / name).mkdir(); (out / name / 'meta.json').write_text(json.dumps({'status': status}))
-            self.assertEqual(harness.set_aside_invalid(out), ['H01-none-2', 'X01-none-1'])
+            self.assertEqual(harness.set_aside_invalid(out), ['H01-none-2', 'WX1-none-1'])
             (out / 'H01-none-2').mkdir(); (out / 'H01-none-2' / 'meta.json').write_text(json.dumps({'status': 'host_timeout'}))
             self.assertEqual(harness.set_aside_invalid(out), [])  # the rerun failed too: it stays, counted invalid
 
