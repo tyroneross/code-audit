@@ -122,6 +122,16 @@ process.stdout.write(JSON.stringify(r.content[0].text));
         self.assertNotIn('undefined', out)
         self.assertIn('Notes:\n- Rebuilt — command: npm run build', out)
 
+    def test_string_notes_without_legacy_changes_show_in_detail(self):
+        out = self.probe("""
+const {handleToolCall} = require(""" + json.dumps(str(DIST / 'mcp/tools.js')) + """);
+const root = memoryPath + '/project'; await fs.mkdir(root+'/.claude/memory/incidents',{recursive:true});
+await fs.writeFile(root+'/.claude/memory/incidents/INC_NOTE.json', JSON.stringify({...base('INC_NOTE'), fix:{approach:'a', changes:[], notes:'Run npm test after restart'}}));
+const r = await handleToolCall('detail', {id:'INC_NOTE', project_root: root});
+process.stdout.write(JSON.stringify(r.content[0].text));
+""")
+        self.assertIn('Notes:\n- Run npm test after restart', out)
+
     def test_millisecond_epoch_ids_supply_a_timestamp(self):
         out = self.probe("""
 const {timestamp, ...rest} = base('INCIDENT_1792059300000_ms');
