@@ -10,11 +10,34 @@ experiment=load('score_experiment',EVALS/'repository/experiment.py')
 SEED=20261028
 
 
+def recover(review_dir):
+    """Deviation recorded in results: Sol often dropped the final `]}` of otherwise complete JSON.
+    Re-parse invalid_response trials by appending only closing brackets, for every arm alike;
+    accept only output that then passes the harness's own review validator."""
+    report=[]
+    for meta_path in sorted(review_dir.glob('*/meta.json')):
+        m=json.loads(meta_path.read_text())
+        if m.get('status')!='invalid_response':continue
+        text=None
+        for line in (meta_path.parent/'host-output.jsonl').read_text().splitlines():
+            row=json.loads(line)
+            if row.get('type')=='item.completed' and row.get('item',{}).get('type')=='agent_message':text=row['item']['text']
+        value=None;suffix=None
+        for suffix in [']}','}',']}}','}]}']:
+            try:value=experiment.validate_review(json.loads(text.strip()+suffix),m['case_id']);break
+            except (ValueError,TypeError,KeyError,AttributeError):value=None
+        if value is None:report.append({'trial':meta_path.parent.name,'recovered':False});continue
+        (meta_path.parent/'answer.json').write_text(json.dumps(value,indent=2)+'\n')
+        m.update({'status':'completed_recovered','recovered_suffix':suffix});meta_path.write_text(json.dumps(m,indent=2)+'\n')
+        report.append({'trial':meta_path.parent.name,'recovered':True,'suffix':suffix})
+    return report
+
+
 def blind(review_dir,judge_dir,repo):
     manifest=json.loads((EVALS/'repository/cases.json').read_text());oracles=json.loads((EVALS/'repository/private/oracles.json').read_text())['oracles']
     judge_dir.mkdir(parents=True,exist_ok=False);rng=random.Random(SEED)
     for case in manifest['cases']:
-        folders=sorted(p for p in review_dir.glob(case['id']+'-*') if json.loads((p/'meta.json').read_text()).get('status')=='completed')
+        folders=sorted(p for p in review_dir.glob(case['id']+'-*') if json.loads((p/'meta.json').read_text()).get('status') in ('completed','completed_recovered'))
         labels=[f'L{n:02d}' for n in range(1,len(folders)+1)];rng.shuffle(labels)
         mapping=dict(zip(labels,[p.name for p in folders]))
         reviews={label:json.loads((review_dir/name/'answer.json').read_text()) for label,name in sorted(mapping.items())}
@@ -40,13 +63,13 @@ def f1(review_dir,judge_dir):
     for arm in ARMS:
         rows=[t for t in trials.values() if t['arm']==arm]
         p01=[t for t in rows if t['case']=='P01']
-        recalls=[len(t.get('covered',[]))/4 if t['status']=='completed' else 0.0 for t in p01]
+        recalls=[len(t.get('covered',[]))/4 if t['status'] in ('completed','completed_recovered') else 0.0 for t in p01]
         precisions=[]
         for rep in sorted({t['repeat'] for t in rows}):
-            rr=[t for t in rows if t['repeat']==rep and t['status']=='completed'];f=sum(t['findings'] for t in rr);v=sum(t['valid'] for t in rr)
+            rr=[t for t in rows if t['repeat']==rep and t['status'] in ('completed','completed_recovered')];f=sum(t['findings'] for t in rr);v=sum(t['valid'] for t in rr)
             precisions.append(v/f if f else 1.0)
         arms[arm]={'recall_per_trial':recalls,'mean_recall':round(sum(recalls)/len(recalls),3) if recalls else None,'precision_per_repeat':[round(x,3) for x in precisions],'mean_precision':round(sum(precisions)/len(precisions),3) if precisions else None,
-                   'harmful':sum(t.get('harmful',0) for t in rows),'failed_trials':sum(t['status']!='completed' for t in rows),'seconds':[t['seconds'] for t in rows],'tokens':[(t['usage'] or {}).get('input_tokens',0)+(t['usage'] or {}).get('output_tokens',0) for t in rows]}
+                   'harmful':sum(t.get('harmful',0) for t in rows),'failed_trials':sum(t['status'] not in ('completed','completed_recovered') for t in rows),'recovered_trials':sum(t['status']=='completed_recovered' for t in rows),'seconds':[t['seconds'] for t in rows],'tokens':[(t['usage'] or {}).get('input_tokens',0)+(t['usage'] or {}).get('output_tokens',0) for t in rows]}
     return {'trials':trials,'arms':arms}
 
 
@@ -82,8 +105,9 @@ def verdicts(f1v,f2v,f3v):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('phase',choices=['blind','score']);p.add_argument('--private',type=Path,required=True);p.add_argument('--repo',type=Path,default=EVALS.parent);p.add_argument('--out',type=Path)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('phase',choices=['recover','blind','score']);p.add_argument('--private',type=Path,required=True);p.add_argument('--repo',type=Path,default=EVALS.parent);p.add_argument('--out',type=Path)
     a=p.parse_args()
+    if a.phase=='recover':print(json.dumps(recover(a.private/'review'),indent=1));return
     if a.phase=='blind':blind(a.private/'review',a.private/'judge',a.repo);return
     f1v=f1(a.private/'review',a.private/'judge');f2v=f2(a.private/'repair')
     f3v=json.loads((EVALS/'comparison/results/2026-10-28/memory-run3-after-legacy-id-fix.json').read_text())['results']
