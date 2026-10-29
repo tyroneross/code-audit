@@ -33,6 +33,15 @@ export interface Incident {
     embedding?: number[];
     patternized?: boolean;
     durability?: DurabilityTracking;
+    legacy?: LegacyIncidentFields;
+}
+/** Original values that read-time normalization replaced, kept so no information is lost. */
+export interface LegacyIncidentFields {
+    symptom?: Record<string, unknown>;
+    verification_status?: unknown;
+    fix_changes?: unknown[];
+    incident_id_source?: 'filename';
+    timestamp_source?: 'incident_id';
 }
 export interface RootCause {
     description: string;
@@ -47,6 +56,7 @@ export interface Fix {
     changes: FileChange[];
     pattern_used?: string;
     time_to_fix?: number;
+    notes?: string[];
 }
 export interface FileChange {
     file: string;
@@ -134,7 +144,7 @@ export interface CorpusCoverage {
     skipped: number;
     examples: Array<{
         file: string;
-        reason: 'read_failed' | 'invalid_json' | 'invalid_record';
+        reason: 'read_failed' | 'invalid_json' | 'invalid_record' | 'missing_timestamp' | 'id_filename_mismatch' | 'session_record';
     }>;
 }
 export interface RetrievalCoverage {

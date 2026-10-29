@@ -48,6 +48,18 @@ export interface Incident {
 
   // Durability Tracking
   durability?: DurabilityTracking;  // 30-day stability
+
+  // Read-time normalization of older Coding Debugger shapes; the file on disk is never rewritten.
+  legacy?: LegacyIncidentFields;
+}
+
+/** Original values that read-time normalization replaced, kept so no information is lost. */
+export interface LegacyIncidentFields {
+  symptom?: Record<string, unknown>;          // Structured symptom object; `symptom` holds its text form
+  verification_status?: unknown;              // Status outside verified|partial|unverified; read as unverified
+  fix_changes?: unknown[];                     // Original change entries that were not {file} objects
+  incident_id_source?: 'filename';             // ID was absent and taken from a matching filename
+  timestamp_source?: 'incident_id';            // Timestamp was absent and taken from the ID's embedded time
 }
 
 export interface RootCause {
@@ -64,6 +76,7 @@ export interface Fix {
   changes: FileChange[];            // Specific changes made
   pattern_used?: string;            // Pattern ID if applicable
   time_to_fix?: number;             // Minutes
+  notes?: string[];                 // Non-file change entries, e.g. commands run
 }
 
 export interface FileChange {
@@ -170,7 +183,7 @@ export interface CorpusCoverage {
   checked: number;
   loaded: number;
   skipped: number;
-  examples: Array<{ file: string; reason: 'read_failed' | 'invalid_json' | 'invalid_record' }>;
+  examples: Array<{ file: string; reason: 'read_failed' | 'invalid_json' | 'invalid_record' | 'missing_timestamp' | 'id_filename_mismatch' | 'session_record' }>;
 }
 
 export interface RetrievalCoverage {
