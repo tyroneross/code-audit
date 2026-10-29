@@ -458,14 +458,14 @@
       "path": "runtime/debugger/dist/src/mcp/tools.js",
       "source": "coding-debugger",
       "source_sha256": "73411cbde215cec2dad12d6fc5aec8f2ad159e7efdab48ed25d014c798dc0c6a",
-      "current_sha256": "b57e6d8306f88e97d7b3f5e72a2f7e1201b6442ba72783bb4877cfa5dac5a5c5",
+      "current_sha256": "a50306468797f01d56e23ac4ad6ec53cdb33c34e73cd048a6dc5c100ba7503f7",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/mcp/tools.js.map",
       "source": "coding-debugger",
       "source_sha256": "fb37bf662e7a4f27fd1ca105a7397a7e5677eb88307a76f4e8c50c50354a47be",
-      "current_sha256": "948a388d20487052a7d7e97a85e697709ea4ebafd6a04e784c5fbff7dce54084",
+      "current_sha256": "4c2c528116f90eff4bcbc16f62a969e0cdfc9e5d5ce59919cea3b7ff30fa07f4",
       "modified_from_import": true
     },
     {
@@ -787,21 +787,21 @@
       "path": "runtime/debugger/dist/src/storage.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "ee54c36bd7d6e6a7cb57254c6bb3602b66d48a7ba9297d0ec750abb195f28e0c",
-      "current_sha256": "56939c0c6e736cb0541ebfa7b09e14d2c1c23417f51d6d10414fa79a1addf191",
+      "current_sha256": "a62047d7cb0e082b6b234aaf26004f1382f3e7572ba212a4590aa4af59ee2869",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js",
       "source": "coding-debugger",
       "source_sha256": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361",
-      "current_sha256": "3b17e6f49db31639b588bb926908e19250176ba2fbbab5995f6c6b802198309e",
+      "current_sha256": "e4e4392d2e53b1fde65eeffcbbf6161d8277eb48735b3721bf3d74b7dd7578d0",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js.map",
       "source": "coding-debugger",
       "source_sha256": "81f7bba12869371e93f1d59a4e7851ce9e6cb2a169e0170e52487ece2a0448ca",
-      "current_sha256": "22139662896f56613b9e38d934bdff45b4d64436860165b4d268142f6fee9620",
+      "current_sha256": "9cc498ebc9a992894594218f2571d813530d68233d00df80697908627cd5e9c7",
       "modified_from_import": true
     },
     {
@@ -1207,7 +1207,7 @@
       "path": "runtime/debugger/src/mcp/tools.ts",
       "source": "coding-debugger",
       "source_sha256": "cc37487da687dda595da713239d18c6580e95e112fe035b79014603d3429e4f3",
-      "current_sha256": "e212b134343611591d2ca6be375b88add8d04076271ebbab0c3ca76359b5e5bc",
+      "current_sha256": "b7e57f0860c44f1a080e626e3207517597bb722e24acfbf2321301dfc3897f9a",
       "modified_from_import": true
     },
     {
@@ -1291,7 +1291,7 @@
       "path": "runtime/debugger/src/storage.ts",
       "source": "coding-debugger",
       "source_sha256": "a384fde223a93df9ae02596cd74f50e7e041f191b6c201c089194224ea59d3dc",
-      "current_sha256": "fa28efd36f56171cd739d9dbf7cfba23d194e5a645361b7d401246a2d19ef981",
+      "current_sha256": "ce15d6e3c4b2f74bf6fd9aee3d603830603167fdff80c3d8b862113835bba604",
       "modified_from_import": true
     },
     {

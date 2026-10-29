@@ -540,8 +540,14 @@ async function handleDetail(
     if (incident.fix?.changes?.length) {
       lines.push('Changes:');
       for (const c of incident.fix.changes) {
-        lines.push(`- ${c.file}: ${c.summary || c.change_type} (${c.lines_changed} lines)`);
+        const detail = c.summary || c.change_type;
+        lines.push(`- ${c.file}${detail ? `: ${detail}` : ''}${Number.isFinite(c.lines_changed) ? ` (${c.lines_changed} lines)` : ''}`);
       }
+    }
+
+    if (Array.isArray(incident.fix?.notes) && incident.fix.notes.length) {
+      lines.push('Notes:');
+      for (const note of incident.fix.notes) lines.push(`- ${note}`);
     }
 
     lines.push(`Tags: ${(incident.tags || []).join(', ')}`);
