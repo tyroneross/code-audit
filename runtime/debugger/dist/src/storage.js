@@ -49,7 +49,10 @@ exports.isValidIncidentId = isValidIncidentId;
 exports.loadIncident = loadIncident;
 exports.emptyCorpusCoverage = emptyCorpusCoverage;
 exports.recordCorpusSkip = recordCorpusSkip;
+exports.legacySymptomText = legacySymptomText;
+exports.incidentIdTimestamp = incidentIdTimestamp;
 exports.normalizeLegacyIncident = normalizeLegacyIncident;
+exports.incidentSkipReason = incidentSkipReason;
 exports.validIncidentRecord = validIncidentRecord;
 exports.loadAllIncidents = loadAllIncidents;
 exports.storePattern = storePattern;
@@ -184,7 +187,7 @@ async function loadIncident(incident_id, config) {
         const filepath = path_1.default.join(paths.incidents, filename);
         try {
             const content = await promises_1.default.readFile(filepath, 'utf-8');
-            return normalizeLegacyIncident(JSON.parse(content));
+            return normalizeLegacyIncident(JSON.parse(content), filename);
         }
         catch (error) {
             if (error.code === 'ENOENT') {
@@ -211,19 +214,120 @@ const optionalRate = (value) => value == null || (typeof value === 'number' && N
 function optionalFields(value, fields) {
     return value == null || (typeof value === 'object' && !Array.isArray(value) && Object.entries(fields).every(([key, valid]) => valid(value[key])));
 }
+const textValue = (value) => typeof value === 'string' && value.trim() ? value.trim() : null;
+const textParts = (value) => Array.isArray(value) ? value.map(textValue).filter((x) => x !== null) : [textValue(value)].filter((x) => x !== null);
+/** Symptom fields that describe what went wrong, in the order a reader would want them; other keys follow alphabetically. */
+const SYMPTOM_TEXT_KEYS = ['user_description', 'observed_behavior', 'user_report', 'user_visible', 'user_impact', 'error_message', 'error_messages'];
+/** Text form of a structured legacy symptom: its description, else a deterministic join of its text fields. */
+function legacySymptomText(symptom) {
+    const description = textValue(symptom.description);
+    if (description)
+        return description;
+    const preferred = SYMPTOM_TEXT_KEYS.filter(key => key in symptom);
+    const keys = preferred.length ? preferred : Object.keys(symptom).sort();
+    const text = keys.flatMap(key => textParts(symptom[key])).join('. ');
+    return text || null;
+}
+/** Epoch milliseconds embedded in an ID the runtime generated: INC_[CAT_]YYYYMMDD_HHMMSS_* (UTC) or INCIDENT_<epoch seconds>_*. */
+function incidentIdTimestamp(incident_id) {
+    const stamp = /^INC_(?:[A-Z0-9]{1,12}_)?(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})_/.exec(incident_id);
+    if (stamp) {
+        const [y, mo, d, h, mi, se] = stamp.slice(1).map(Number);
+        const ms = Date.UTC(y, mo - 1, d, h, mi, se);
+        const check = new Date(ms);
+        return check.getUTCMonth() === mo - 1 && check.getUTCDate() === d && h < 24 && mi < 60 && se < 60 ? ms : null;
+    }
+    const epoch = /^INCIDENT_(\d{10})_/.exec(incident_id);
+    return epoch ? Number(epoch[1]) * 1000 : null;
+}
 /**
- * Coding Debugger records written before numeric timestamps store ISO-8601 strings.
- * Read a parseable string as epoch milliseconds so those incidents stay retrievable;
- * an unparseable value is left unchanged and still fails validation visibly.
+ * Read older Coding Debugger record shapes into the current schema, in memory only; files are never rewritten.
+ * - ISO-8601 string timestamps become epoch milliseconds.
+ * - A structured symptom becomes its text form; the object is kept in `legacy.symptom`.
+ * - A verification status outside verified|partial|unverified reads as unverified; the raw value is kept.
+ * - Path-like string changes become {file}; other entries (commands, prose) become `fix.notes`, never fake files.
+ * - A missing incident_id is taken from `sourceFile` only when that filename already matches the ID pattern.
+ * - A missing timestamp is taken from the ID's embedded creation time; file mtime is not used.
+ * Anything that cannot be mapped is left as-is and fails validation visibly.
  */
-function normalizeLegacyIncident(value) {
+function normalizeLegacyIncident(value, sourceFile) {
     const record = value;
-    if (record !== null && typeof record === 'object' && typeof record.timestamp === 'string') {
+    if (record === null || typeof record !== 'object' || Array.isArray(record))
+        return value;
+    const legacy = {};
+    if (record.incident_id === undefined && sourceFile) {
+        const stem = path_1.default.basename(sourceFile).replace(/\.json$/, '');
+        if (isValidIncidentId(stem)) {
+            record.incident_id = stem;
+            legacy.incident_id_source = 'filename';
+        }
+    }
+    if (typeof record.timestamp === 'string') {
         const ms = Date.parse(record.timestamp);
         if (Number.isFinite(ms))
             record.timestamp = ms;
     }
+    else if (record.timestamp === undefined && isValidIncidentId(record.incident_id)) {
+        const ms = incidentIdTimestamp(record.incident_id);
+        if (ms !== null) {
+            record.timestamp = ms;
+            legacy.timestamp_source = 'incident_id';
+        }
+    }
+    if (record.symptom !== null && typeof record.symptom === 'object' && !Array.isArray(record.symptom)) {
+        const text = legacySymptomText(record.symptom);
+        if (text) {
+            legacy.symptom = record.symptom;
+            record.symptom = text;
+        }
+    }
+    const verification = record.verification;
+    if (verification !== null && typeof verification === 'object' && !Array.isArray(verification) &&
+        typeof verification.status === 'string' && !['verified', 'partial', 'unverified'].includes(verification.status)) {
+        legacy.verification_status = verification.status;
+        verification.status = 'unverified';
+    }
+    const fix = record.fix;
+    if (fix !== null && typeof fix === 'object' && Array.isArray(fix.changes) && !fix.changes.every((c) => c && typeof c === 'object' && typeof c.file === 'string')) {
+        const changes = [], notes = [];
+        let mapped = true;
+        for (const entry of fix.changes) {
+            const text = textValue(entry);
+            if (entry && typeof entry === 'object' && typeof entry.file === 'string')
+                changes.push(entry);
+            else if (text && /^[\w./@\-]+$/.test(text))
+                changes.push({ file: text });
+            else if (text)
+                notes.push(text);
+            else if (entry && typeof entry === 'object' && (textValue(entry.summary) || textValue(entry.command))) {
+                notes.push([textValue(entry.summary), textValue(entry.command) && `command: ${textValue(entry.command)}`].filter(Boolean).join(' — '));
+            }
+            else {
+                mapped = false;
+                break;
+            } // unrecognized entry: leave changes as-is so validation reports it
+        }
+        if (mapped) {
+            legacy.fix_changes = fix.changes;
+            fix.changes = changes;
+            if (notes.length)
+                fix.notes = [...(Array.isArray(fix.notes) ? fix.notes : []), ...notes];
+        }
+    }
+    if (Object.keys(legacy).length)
+        record.legacy = { ...(record.legacy && typeof record.legacy === 'object' ? record.legacy : {}), ...legacy };
     return value;
+}
+/** Why a record from `file` is not loaded as an incident, or null when it loads. */
+function incidentSkipReason(value, file) {
+    if (/^SESSION_/.test(file))
+        return 'session_record';
+    const record = normalizeLegacyIncident(value, file);
+    if (record !== null && typeof record === 'object' && isValidIncidentId(record.incident_id) && record.timestamp === undefined)
+        return 'missing_timestamp';
+    if (!validIncidentRecord(record))
+        return 'invalid_record';
+    return `${record.incident_id}.json` === file ? null : 'id_filename_mismatch';
 }
 function validIncidentRecord(value) {
     return value !== null && typeof value === 'object' &&
@@ -244,7 +348,7 @@ function validPatternRecord(value) {
         stringArray(value.applicable_to) && Array.isArray(value.detection_signature) && value.detection_signature.every((sig) => typeof sig === 'string') && stringArray(value.tags);
 }
 /** Preserve useful records while making partial reads visible to callers that request coverage. */
-async function loadCorpus(directory, valid, coverage, identifier) {
+async function loadCorpus(directory, skipReason, coverage) {
     let files;
     try {
         files = (await promises_1.default.readdir(directory)).filter(file => file.endsWith('.json')).sort();
@@ -272,7 +376,8 @@ async function loadCorpus(directory, valid, coverage, identifier) {
             catch {
                 return { file, reason: 'invalid_json' };
             }
-            return valid(value) && `${identifier(value)}.json` === file ? { value } : { file, reason: 'invalid_record' };
+            const reason = skipReason(value, file);
+            return reason ? { file, reason } : { value };
         }));
         for (const result of results) {
             if ('reason' in result && result.reason)
@@ -286,7 +391,7 @@ async function loadCorpus(directory, valid, coverage, identifier) {
     return records;
 }
 async function loadAllIncidents(config, coverage = emptyCorpusCoverage()) {
-    return loadCorpus((0, config_1.getMemoryPaths)(config).incidents, (value) => validIncidentRecord(normalizeLegacyIncident(value)), coverage, incident => incident.incident_id);
+    return loadCorpus((0, config_1.getMemoryPaths)(config).incidents, incidentSkipReason, coverage);
 }
 /**
  * Store a pattern
@@ -337,7 +442,7 @@ async function loadPattern(pattern_id, config) {
  * Load all patterns with batched I/O (max 50 concurrent reads)
  */
 async function loadAllPatterns(config, coverage = emptyCorpusCoverage()) {
-    return loadCorpus((0, config_1.getMemoryPaths)(config).patterns, validPatternRecord, coverage, pattern => pattern.pattern_id);
+    return loadCorpus((0, config_1.getMemoryPaths)(config).patterns, (value, file) => validPatternRecord(value) && `${value.pattern_id}.json` === file ? null : 'invalid_record', coverage);
 }
 /**
  * Validate incident structure

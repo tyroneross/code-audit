@@ -31,12 +31,23 @@ export declare function loadIncident(incident_id: string, config?: MemoryConfig)
  */
 export declare function emptyCorpusCoverage(): CorpusCoverage;
 export declare function recordCorpusSkip(coverage: CorpusCoverage, file: string, reason: CorpusCoverage['examples'][number]['reason']): void;
+/** Text form of a structured legacy symptom: its description, else a deterministic join of its text fields. */
+export declare function legacySymptomText(symptom: Record<string, unknown>): string | null;
+/** Epoch milliseconds embedded in an ID the runtime generated: INC_[CAT_]YYYYMMDD_HHMMSS_* (UTC) or INCIDENT_<epoch seconds>_*. */
+export declare function incidentIdTimestamp(incident_id: string): number | null;
 /**
- * Coding Debugger records written before numeric timestamps store ISO-8601 strings.
- * Read a parseable string as epoch milliseconds so those incidents stay retrievable;
- * an unparseable value is left unchanged and still fails validation visibly.
+ * Read older Coding Debugger record shapes into the current schema, in memory only; files are never rewritten.
+ * - ISO-8601 string timestamps become epoch milliseconds.
+ * - A structured symptom becomes its text form; the object is kept in `legacy.symptom`.
+ * - A verification status outside verified|partial|unverified reads as unverified; the raw value is kept.
+ * - Path-like string changes become {file}; other entries (commands, prose) become `fix.notes`, never fake files.
+ * - A missing incident_id is taken from `sourceFile` only when that filename already matches the ID pattern.
+ * - A missing timestamp is taken from the ID's embedded creation time; file mtime is not used.
+ * Anything that cannot be mapped is left as-is and fails validation visibly.
  */
-export declare function normalizeLegacyIncident<T>(value: T): T;
+export declare function normalizeLegacyIncident<T>(value: T, sourceFile?: string): T;
+/** Why a record from `file` is not loaded as an incident, or null when it loads. */
+export declare function incidentSkipReason(value: unknown, file: string): CorpusCoverage['examples'][number]['reason'] | null;
 export declare function validIncidentRecord(value: any): value is Incident;
 export declare function loadAllIncidents(config?: MemoryConfig, coverage?: CorpusCoverage): Promise<Incident[]>;
 /**
