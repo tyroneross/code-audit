@@ -40,7 +40,7 @@ def verify(scan_bytes,outcome_bytes,withheld,protected,timeout=60):
     with tempfile.TemporaryDirectory(prefix='code-audit-r2-verify-') as folder:
         work=Path(folder).resolve();case=work/'case';case.mkdir()
         (case/'scan.py').write_bytes(scan_bytes);(case/'outcome.py').write_bytes(outcome_bytes);(case/'test_code_principles.py').write_bytes(withheld)
-        env={'PATH':os.environ['PATH'],'HOME':str(work),'TMPDIR':str(work),'PYTHONDONTWRITEBYTECODE':'1'}
+        env=isolation.lane_env(work)
         command=isolation.sandbox_command(['python3','-m','unittest','test_code_principles'],work,protected)
         try:result=isolation.run_bounded(command,text=False,env=env,cwd=case,timeout=timeout)
         except subprocess.TimeoutExpired:return {'status':'timeout','exit_code':None,'output':''}
@@ -69,12 +69,12 @@ def run_r2(arm,repeat,out,timeout,ledger):
             auth=Path(os.environ.get('CODEX_HOME',Path.home()/'.codex'))/'auth.json'
             if not auth.is_file():raise RuntimeError('existing Codex file session unavailable')
             (home/'auth.json').symlink_to(auth.resolve())
-            env={**os.environ,'CODEX_HOME':str(home),'TMPDIR':str(work/'tmp'),'RALLY_HOOKS':'off','PYTHONDONTWRITEBYTECODE':'1'}
-            meta['kernel_canary']=isolation.check_boundary(work,EVALS/'comparison/README.md',protected)
+            env=isolation.lane_env(work,CODEX_HOME=home,TMPDIR=work/'tmp');readable=[auth.resolve()]
+            meta['kernel_canary']=isolation.check_boundary(work,EVALS/'comparison/README.md',protected,readable)
             cmd=['codex','exec','--ephemeral','--ignore-user-config','--skip-git-repo-check','--json','-s','danger-full-access','-m',MODEL,'-c','approval_policy="never"','-c','cli_auth_credentials_store="file"','-c',EFFORT,'-']
             meta['command']=cmd;before=len(ledger)
             try:
-                result=guarded(isolation.run_bounded,ledger)(isolation.sandbox_command(cmd,work,protected),input=prompt.encode(),text=False,env=env,cwd=candidate,timeout=timeout)
+                result=guarded(isolation.run_bounded,ledger)(isolation.sandbox_command(cmd,work,protected,readable),input=prompt.encode(),text=False,env=env,cwd=candidate,timeout=timeout)
                 (dest/'host-output.jsonl').write_bytes(result.stdout);(dest/'stderr.txt').write_bytes(result.stderr);meta['exit_code']=result.returncode
                 rows=[json.loads(line) for line in result.stdout.decode(errors='replace').splitlines() if line.strip().startswith('{')]
                 ends=[row for row in rows if row.get('type')=='turn.completed']
