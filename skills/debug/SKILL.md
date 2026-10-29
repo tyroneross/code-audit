@@ -26,7 +26,7 @@ Load [shared principles](../code-principles/SKILL.md) and relevant challenge ref
 
 The bundled MCP server `code-audit-debugger` supplies search, detail, store, outcome, status, list, patterns and read_logs. Use actual host-exposed names. If unavailable, report that memory was not checked and continue with source/log/test evidence. Never invent matches or successful storage. Do not write another host's personal assistant memory.
 
-The procedure is host-neutral. Investigate directly when a host lacks agent registration. Independent critique requires an actual independent execution; self-review cannot substitute for it. If unavailable, mark critique UNAVAILABLE and deliver bounded results with that gap disclosed.
+The procedure is host-neutral. On Claude Code the bundled agents (`assessment-orchestrator` and four domain assessors, `root-cause-investigator`, `fix-critique`) provide parallel domain assessment, causal-tree investigation and critique; see [debugging memory](../debugging-memory/SKILL.md#independent-work). Investigate directly when a host lacks agent registration. Independent critique requires an actual independent execution; self-review cannot substitute for it. If unavailable, mark critique UNAVAILABLE and deliver bounded results with that gap disclosed.
 
 Before any incident or outcome write, follow [debugging memory](../debugging-memory/SKILL.md): check `status` and require its actual working directory and configured memory path to match the authorized project or explicitly selected shared corpus. If the destination cannot be established, keep a task report and disclose the storage gap.
 

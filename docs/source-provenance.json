@@ -1816,7 +1816,7 @@
       "path": "skills/debug-loop/SKILL.md",
       "source": "coding-debugger",
       "source_sha256": "4f9b91866eab93783578746025a56c1416d4d2c10cc68113761c41f5f9328dcf",
-      "current_sha256": "8d66551446af316346d265d087d73070af4d6ea512b071e6cc78fdf9c35db95a",
+      "current_sha256": "38b0cefd347510b6a4311b93f6f66f7163c25d788aea08a01e6091356a4c8a36",
       "modified_from_import": true
     },
     {
@@ -1837,7 +1837,7 @@
       "path": "skills/debugging-memory/SKILL.md",
       "source": "coding-debugger",
       "source_sha256": "2139ecd13e7e159b0db29df6afe82b852ae74ce312e05c0bd922f8cfefa26205",
-      "current_sha256": "3d30c475ba834ec50bb6a088961ab6095f5195c658c60743df646b5af09a98bf",
+      "current_sha256": "87a773b006cd53780eafc97c36885167109b039fb34d205ccb2fb8287d1ee877",
       "modified_from_import": true
     },
     {
@@ -1890,6 +1890,55 @@
       "current_sha256": "199c25cbe67d952f04cee0a9a28e2b86c6c84916bfce31c3f411624c802246c0",
       "modified_from_import": true,
       "adaptation": "Checklist extracted from the imported focused skill; contextual failure-handler wording and relative links updated."
+    },
+    {
+      "path": "agents/api-assessor.md",
+      "source": "coding-debugger",
+      "source_sha256": "a2f95d87eb00b4ffe6597cb13c702e2a3e45512195b0086344fb2a42cb4e51c3",
+      "current_sha256": "57c8dbe8cb2a202b3d9334335a2903be3bc9c086e743b8f8a2ea23dbcc13b603",
+      "modified_from_import": true
+    },
+    {
+      "path": "agents/assessment-orchestrator.md",
+      "source": "coding-debugger",
+      "source_sha256": "e69361b56afe610de0368e5ee3995c6d45f20d0981b11f01120eeaca498d7040",
+      "current_sha256": "23304e690527e555e9c0cb910246831e9889847970d783b3514ac60047be316f",
+      "modified_from_import": true
+    },
+    {
+      "path": "agents/database-assessor.md",
+      "source": "coding-debugger",
+      "source_sha256": "5f1a1090e8f9ac581b6525942e529e5c6c4bc9f9696ff99a9fa74f94710f2b07",
+      "current_sha256": "c9583926cbf67744961d6af2775f6fb0330661961243b25418fe9530edd168c7",
+      "modified_from_import": true
+    },
+    {
+      "path": "agents/fix-critique.md",
+      "source": "coding-debugger",
+      "source_sha256": "b3dfda836f02c3043d288dfddd09eb696305717239cc45ffb4c4a5820f9f3a35",
+      "current_sha256": "f450f22033d8c237dd2e198ad4617a6613d5bc861bd07d25e1413950fff50c25",
+      "modified_from_import": true
+    },
+    {
+      "path": "agents/frontend-assessor.md",
+      "source": "coding-debugger",
+      "source_sha256": "1745db28d3fd3730818e9517180a862e5e1e7748a6c07ee44eedbd467473edd5",
+      "current_sha256": "72f66f293afe1ecbc3ae409d72e24355c680c93a33bfd7ea8735b26551315f45",
+      "modified_from_import": true
+    },
+    {
+      "path": "agents/performance-assessor.md",
+      "source": "coding-debugger",
+      "source_sha256": "f079b5532b06a97467f884169deb7138867880bf3a7b036f5bbeb3cb394e2add",
+      "current_sha256": "7fe6651f3d3ea4b17afa4c4fe4e22d64deaf3260883c97f8f81dc7c49024abfa",
+      "modified_from_import": true
+    },
+    {
+      "path": "agents/root-cause-investigator.md",
+      "source": "coding-debugger",
+      "source_sha256": "625294a7810ea4c655cf008b6d1a22678263493e1ea0ed9584027f0b31292ba1",
+      "current_sha256": "65a900586745f41bf2064602141df808ddddd734493c72e7552f38716bc08b56",
+      "modified_from_import": true
     }
   ],
   "hash_semantics": "source_sha256 records imported bytes; current_sha256 records current retained bytes. Removed imports are historical provenance, not packaged resources. Incidental session state is excluded.",
@@ -1900,7 +1949,8 @@
     "Memory workflow matches actual tool schemas and optional host capabilities.",
     "Debugger package and lockfile remove automatic install setup; compiled runtime rebuilt from copied source.",
     "2026-10-17: Add review convergence, evidence-sensitive finding reopening, incident applicability and negative-outcome guidance, research limits and a held-out synthetic review evaluation; MCP schemas and runtime unchanged.",
-    "2026-10-28: Re-recorded current hashes after adding the 2026-10-25 agent communication and dependency handoff checks to code-principles SKILL.md and challenge-guidance.md; source bytes unchanged."
+    "2026-10-28: Re-recorded current hashes after adding the 2026-10-25 agent communication and dependency handoff checks to code-principles SKILL.md and challenge-guidance.md; source bytes unchanged.",
+    "2026-10-28: Imported the seven debugger agents into agents/ for Claude Code: replaced the npx memory search with caller-supplied incident candidates, added a code-audit adaptation note (evidence-ranked hypotheses, read-only unless authorized), pinned fix-critique to model opus as a judge, and qualified its symptom-fix table with contract context. Skills now reference the agents; Codex and other hosts follow the same procedures directly. Commands, the mining hook and debugger packaging scripts are recorded in removed_imports with reasons."
   ],
   "removed_imports": [
     {
@@ -2087,25 +2137,127 @@
       "path": "skills/debugging-memory/references/incident-documentation.md",
       "source": "coding-debugger",
       "source_sha256": "e9c0c1f5445e350e54f4f45d7a337f30a80a019c5896a7df284b0a589767751e",
-      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+      "reason": "Superseded: describes the npx CLI and legacy incident fields; code-audit debugging-memory/SKILL.md, examples/incident-example.json and the MCP store schema are the canonical incident format."
     },
     {
       "path": "skills/debugging-memory/references/ios-notification-alarm-playbook.md",
       "source": "coding-debugger",
       "source_sha256": "0ccd6b366a059e3160baa7f4afe72f6dab82f9fb4f092c00b3e0bda81e93d243",
-      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+      "reason": "Unlinked in the source skill; a single-app (FlowDoro) incident playbook, which belongs in a project incident corpus rather than packaged guidance."
     },
     {
       "path": "skills/debugging-memory/references/pattern-extraction.md",
       "source": "coding-debugger",
       "source_sha256": "9010a9b24e967f73e35f7508cc60947f0920f4ca8755b90917ea9f7738c485dc",
-      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+      "reason": "Unlinked in the source skill; describes automatic pattern extraction through the npx CLI. The bundled MCP `patterns` tool and incident-learning.md cover pattern use."
     },
     {
       "path": "skills/debugging-memory/references/subagent-integration.md",
       "source": "coding-debugger",
       "source_sha256": "7ff7494b12757667701dd9224553a7e9947a03c9b4870222ba4bda40bf318a92",
-      "reason": "Duplicate canonical card or unused legacy reference removed during integration."
+      "reason": "Unlinked in the source skill; npx/MCP proxy patterns for subagents. Replaced by debugging-memory/SKILL.md 'Independent work' and the bundled agents/, which receive caller-supplied candidates."
+    },
+    {
+      "path": "commands/coding-debugger.md",
+      "source": "coding-debugger",
+      "source_sha256": "d9d43044f45badc38f226ad15bc84c7e3577c9422433b6172da3c4eaf2a3e003",
+      "reason": "Router replaced by the code-audit entry skill (/code-audit:code-audit)."
+    },
+    {
+      "path": "commands/debugger.md",
+      "source": "coding-debugger",
+      "source_sha256": "9bec25527eeb98ccd61967c827776e555b30cc165a3711e2771798b92f80a1d6",
+      "reason": "Memory search is the bundled MCP `search` tool, invoked through debugging-memory/SKILL.md; the command shelled to the npx CLI."
+    },
+    {
+      "path": "commands/debugger-detail.md",
+      "source": "coding-debugger",
+      "source_sha256": "9d12966a3c6d676ad0522336cde5fc977f1ca3bfd0e080253bdac0b20fabb8a4",
+      "reason": "Covered by the bundled MCP `detail` tool."
+    },
+    {
+      "path": "commands/debugger-status.md",
+      "source": "coding-debugger",
+      "source_sha256": "dae295ab5d8d2e2a44841edd3a606dd0c5349875caf91d8ab75edcab21b7cd46",
+      "reason": "Covered by the bundled MCP `status` tool; the command shelled to the npx CLI."
+    },
+    {
+      "path": "commands/debugger-agent.md",
+      "source": "coding-debugger",
+      "source_sha256": "643a44202d393934ef952add21eb596cb082510c30b3181bf16660c96609c20b",
+      "reason": "Covered by the debug-loop skill, reached through the code-audit entry skill."
+    },
+    {
+      "path": "commands/assess.md",
+      "source": "coding-debugger",
+      "source_sha256": "f97d4966e110928acea7678124aad0c421e6fc64ddf0a6f53a7e14580650307a",
+      "reason": "Covered by the imported agents/assessment-orchestrator.md and domain assessors, referenced from the debug and debugging-memory skills."
+    },
+    {
+      "path": "commands/debugger-scan.md",
+      "source": "coding-debugger",
+      "source_sha256": "d4face4a3f3ace002a6d3d3b2e99ea46a51220a0fcc907dd181987b43d3fa818",
+      "reason": "Deliberately excluded: runs automatic session mining via npx; code-audit enables no mining (README design)."
+    },
+    {
+      "path": "commands/feedback.md",
+      "source": "coding-debugger",
+      "source_sha256": "56bdbb6f927f0da90447f284671efe1c57597838ff10bfeb8c5077d7d5367639",
+      "reason": "Excluded: opens the coding-debugger issue tracker; not applicable to code-audit."
+    },
+    {
+      "path": "commands/update.md",
+      "source": "coding-debugger",
+      "source_sha256": "edd5ff1fa8a28c5fda6cbb20ff7b773d97aefa18531beda66bfcb6038de0f916",
+      "reason": "Excluded: updates the npm package; code-audit ships compiled runtime and updates through git/marketplace."
+    },
+    {
+      "path": "hooks/hooks.json",
+      "source": "coding-debugger",
+      "source_sha256": "73bc0928b5b7ca267fa62941df58fa24877abed7ab5f419ac62be5f91ce9bd77",
+      "reason": "Deliberately excluded: Stop hook runs `npx ... mine --store` after every session (automatic mining and network package fetch); code-audit enables no automatic hook. tests/test_plugin.py asserts no hooks/ directory."
+    },
+    {
+      "path": "scripts/test_plugin_manifest.py",
+      "source": "coding-debugger",
+      "source_sha256": "6bf6b0706372b9c64504f089ff1c6688bf367d360d5a42f1b2dcb62e143c3b0c",
+      "reason": "Not imported: checks the debugger's own manifest/marketplace; tests/test_plugin.py covers code-audit manifests, and the skill/agent frontmatter checks were ported there."
+    },
+    {
+      "path": "scripts/test_mcp_registration.py",
+      "source": "coding-debugger",
+      "source_sha256": "02d8a321f98208afa70e799c1b7efac84a7cf13ef531e924e3ef0fe855466250",
+      "reason": "Not imported: tests/test_plugin.py asserts the code-audit-debugger server name and args."
+    },
+    {
+      "path": "scripts/test_skill_resolution.py",
+      "source": "coding-debugger",
+      "source_sha256": "744f1abce733a8284ad719e8ba83622ec00adedf899856534bccb6ebdc7cca81",
+      "reason": "Not imported: depends on collision_scan.py and build-loop accepted siblings; the frontmatter-name-equals-directory and no command/skill namesake checks were ported to tests/test_plugin.py."
+    },
+    {
+      "path": "scripts/collision_scan.py",
+      "source": "coding-debugger",
+      "source_sha256": "88ce9ecfc2b623e6ea53663f6f241b1affff721a44f3d857f8b2a62272eb0b11",
+      "reason": "Not imported: code-audit ships no commands/, so no command/skill namesake can collide; the ported test asserts that."
+    },
+    {
+      "path": "scripts/test_trigger_phrases.py",
+      "source": "coding-debugger",
+      "source_sha256": "3533c686aa68d39f08aad4cae6ab69df1340b20fcab53ac3b6c9fa871255b3c9",
+      "reason": "Not imported: its golden phrases target the debugger's skill descriptions, which code-audit rewrote; matched evals measure behavior instead."
+    },
+    {
+      "path": "scripts/test_bridge_preflight.py",
+      "source": "coding-debugger",
+      "source_sha256": "130a68b01de14ea563787e931c758dd96f5bc303dbbabde2e3dc0e6678ae0dd4",
+      "reason": "Not imported: tests build-loop bridge skills; code-audit has no bridge skills."
+    },
+    {
+      "path": "scripts/verify-codex-surface.sh",
+      "source": "coding-debugger",
+      "source_sha256": "db49ff92f71b2f1e9f6706d0b6760292dc1ddf07a15ea54bfcf1d5e3979600f0",
+      "reason": "Not imported: verifies the debugger's Codex surface; docs/verification.md records code-audit host checks."
     }
   ]
 }

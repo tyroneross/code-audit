@@ -44,7 +44,7 @@ Do not manually write an isolated incident JSON file: storage also maintains ret
 
 ## Independent work
 
-The plugin provides procedures, not pre-registered domain assessors on every host. If authorized agents are available, pass the relevant current evidence and candidate incidents, clearly labeling historical hypotheses. Never invent dispatch, access or independent approval. Continue directly when independent execution is unavailable, and disclose the review gap. See [the debug workflow](../debug/SKILL.md) and [deep loop](../debug-loop/SKILL.md).
+The plugin provides procedures on every host. Claude Code also loads the bundled [agents](../../agents): `assessment-orchestrator` with `database-assessor`, `frontend-assessor`, `api-assessor` and `performance-assessor` for parallel domain assessment of an unclear multi-layer symptom, `root-cause-investigator` for a causal tree and `fix-critique` for independent critique. They receive no memory tool; pass them the incident candidates you retrieved. Other hosts follow the same procedures directly. If authorized agents are available, pass the relevant current evidence and candidate incidents, clearly labeling historical hypotheses. Never invent dispatch, access or independent approval. Continue directly when independent execution is unavailable, and disclose the review gap. See [the debug workflow](../debug/SKILL.md) and [deep loop](../debug-loop/SKILL.md).
 
 
 ## Programmatic retrieval

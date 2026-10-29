@@ -32,7 +32,7 @@ For a repair or restart crossing component boundaries, read [change and failure 
 
 1. **Search memory when available** — use the bundled debugger search tool; inspect candidate context. If unavailable, disclose the gap and continue source investigation.
 2. **Reproduce the issue when feasible** — identify exact steps, commands, or conditions that trigger the bug. If the original environment is unavailable, record the causal evidence and limits; distinguish a controlled regression case from reproduction of the original incident.
-3. **Trace plausible causes** — inspect callers, state and failure boundaries, rank by evidence and prune with counterevidence. Use an independent investigator only when authorized and available; agent registration is not required for investigation.
+3. **Trace plausible causes** — inspect callers, state and failure boundaries, rank by evidence and prune with counterevidence. Use an independent investigator only when authorized and available (on Claude Code, the bundled `root-cause-investigator` agent; for an unclear multi-domain symptom, `assessment-orchestrator` and its domain assessors); agent registration is not required for investigation.
 4. **Research gate** — if the investigator flags unfamiliar error codes, library behavior, or version-specific issues:
    - Search official sources using a minimal non-sensitive query; never send private code, credentials or logs without authorization
    - Document what was searched and what was found
@@ -107,7 +107,7 @@ Score against these criteria:
 
 **Goal**: Challenge the fix before the user relies on it.
 
-1. **Seek independent critique when available** with:
+1. **Seek independent critique when available** (on Claude Code, the bundled `fix-critique` agent) with:
    - The symptom
    - The causal tree from investigation (confirmed branch path + pruned branches)
    - The fix (what was changed)

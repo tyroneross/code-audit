@@ -21,6 +21,7 @@ The [entry skill](skills/code-audit/SKILL.md) starts with pseudocode, selects th
 | `skills/code-principles` | Focused checklist, source scanner and contextual engineering definitions. |
 | `skills/audit`, `plan`, `improve` | Thirty-rule evidence reports, pre-build checks and improvement campaigns. |
 | `skills/debug`, `debug-loop`, `debugging-memory`, `logging-tracer` | Causal investigation, verification and incident retrieval. |
+| `agents/` | Claude Code subagents: parallel domain assessment, root-cause investigation and fix critique. |
 | `runtime/debugger` | Bundled local incident-memory MCP implementation. |
 | [Research](research/README.md) | Source links, applicability and limitations. |
 
