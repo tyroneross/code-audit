@@ -20,7 +20,9 @@ def blind(review_dir,judge_dir,repo):
         reviews={label:json.loads((review_dir/name/'answer.json').read_text()) for label,name in sorted(mapping.items())}
         source=experiment.packet(case,manifest,repo)
         (judge_dir/f'{case["id"]}-prompt.txt').write_text(experiment.judge_prompt(source,{case['id']:oracles[case['id']]},reviews))
-        (judge_dir/f'{case["id"]}-mapping.json').write_text(json.dumps(mapping,indent=2))
+        mapping_dir=judge_dir.parent/'judge-mapping';mapping_dir.mkdir(exist_ok=True)
+        # Kept apart so a judge with file tools cannot un-blind itself.
+        (mapping_dir/f'{case["id"]}-mapping.json').write_text(json.dumps(mapping,indent=2))
 
 
 def f1(review_dir,judge_dir):
@@ -29,7 +31,7 @@ def f1(review_dir,judge_dir):
         if p.is_dir():
             m=json.loads((p/'meta.json').read_text());trials[p.name]={'arm':m['arm'],'case':m['case_id'],'repeat':m['repeat'],'status':m['status'],'seconds':m.get('elapsed_seconds'),'usage':m.get('usage')}
     for case in ['P01','P02']:
-        mapping=json.loads((judge_dir/f'{case}-mapping.json').read_text());answer=json.loads((judge_dir/f'{case}-answer.json').read_text())
+        mapping=json.loads((judge_dir.parent/'judge-mapping'/f'{case}-mapping.json').read_text());answer=json.loads((judge_dir/f'{case}-answer.json').read_text())
         for label,name in mapping.items():
             j=answer['reviews'][label]['judgments'];t=trials[name]
             covered={x['oracle_id'] for x in j if x['valid'] and x.get('oracle_id')}|{c['oracle_id'] for x in j if x['valid'] for c in x.get('also_covers',[])}
@@ -84,7 +86,7 @@ def main():
     a=p.parse_args()
     if a.phase=='blind':blind(a.private/'review',a.private/'judge',a.repo);return
     f1v=f1(a.private/'review',a.private/'judge');f2v=f2(a.private/'repair')
-    f3v=json.loads((EVALS/'comparison/results/2026-10-28/memory-run2-after-timestamp-fix.json').read_text())['results']
+    f3v=json.loads((EVALS/'comparison/results/2026-10-28/memory-run3-after-legacy-id-fix.json').read_text())['results']
     value={'f1':f1v,'f2':f2v,'f3':f3v,'verdicts':verdicts(f1v,f2v,f3v)}
     a.out.write_text(json.dumps(value,indent=2)+'\n');print(json.dumps(value['verdicts'],indent=1))
 

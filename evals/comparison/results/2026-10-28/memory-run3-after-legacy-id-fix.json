@@ -1,0 +1,201 @@
+{
+  "version": 1,
+  "corpus": {
+    "project": "atomize-ai (private; text withheld)",
+    "incidents_loaded": 89,
+    "incident_files": 100,
+    "sha256_of_sorted_ids": "4be783eac7206fd9474d170eef81cd5e3703b366c793c63b21038e7a91709436"
+  },
+  "queries": {
+    "seed": 20261028,
+    "count": 70,
+    "positive": 60,
+    "negative": 10,
+    "sha256": "1164cc0d116d755858b54f2a994cf6362bb1567afd891980a21b0efdb727f72a",
+    "targets": [
+      "T01-exact",
+      "T02-exact",
+      "T03-exact",
+      "T04-exact",
+      "T05-exact",
+      "T06-exact",
+      "T07-exact",
+      "T08-exact",
+      "T09-exact",
+      "T10-exact",
+      "T11-exact",
+      "T12-exact",
+      "T13-exact",
+      "T14-exact",
+      "T15-exact",
+      "T16-exact",
+      "T17-exact",
+      "T18-exact",
+      "T19-exact",
+      "T20-exact"
+    ],
+    "relevant_ids": {
+      "T01-exact": [
+        "sha256:947ca8c4f19d"
+      ],
+      "T02-exact": [
+        "sha256:9b4533ea45cf"
+      ],
+      "T03-exact": [
+        "sha256:d99bbefdbc65"
+      ],
+      "T04-exact": [
+        "sha256:f5342346f6ea"
+      ],
+      "T05-exact": [
+        "sha256:908a797a0bc8"
+      ],
+      "T06-exact": [
+        "sha256:0225bdc57a6e"
+      ],
+      "T07-exact": [
+        "sha256:f6342400445f",
+        "sha256:ed70f7cb10bc"
+      ],
+      "T08-exact": [
+        "sha256:d0cda051fd16"
+      ],
+      "T09-exact": [
+        "sha256:3be0bac878a8"
+      ],
+      "T10-exact": [
+        "sha256:6c65b1b31ae9"
+      ],
+      "T11-exact": [
+        "sha256:d7a6ead329f3"
+      ],
+      "T12-exact": [
+        "sha256:234fd0923892"
+      ],
+      "T13-exact": [
+        "sha256:856e8f5fce93"
+      ],
+      "T14-exact": [
+        "sha256:5363b36a70ec"
+      ],
+      "T15-exact": [
+        "sha256:17bff800e568"
+      ],
+      "T16-exact": [
+        "sha256:e30e232e44b5"
+      ],
+      "T17-exact": [
+        "sha256:a3719a49732d"
+      ],
+      "T18-exact": [
+        "sha256:074aac8ac9e3"
+      ],
+      "T19-exact": [
+        "sha256:311288241d49"
+      ],
+      "T20-exact": [
+        "sha256:7a38f925ff2e"
+      ]
+    },
+    "id_note": "Incident IDs are sha256-prefixed: some private IDs embed descriptive words."
+  },
+  "configuration": {
+    "threshold": 0.5,
+    "max_results": 5,
+    "baseline": "content-token overlap over symptom+root cause, >=2 overlaps, top 5"
+  },
+  "results": {
+    "code-audit": {
+      "standard": {
+        "positive_queries": 60,
+        "negative_queries": 10,
+        "recall_at_5": 0.35,
+        "mrr": 0.35,
+        "negative_false_return_rate": 0.0,
+        "errors": 0,
+        "recall_at_5_exact": 0.8,
+        "recall_at_5_partial": 0.25,
+        "recall_at_5_cause": 0.0
+      },
+      "indexed": {
+        "positive_queries": 60,
+        "negative_queries": 10,
+        "recall_at_5": 0.183,
+        "mrr": 0.183,
+        "negative_false_return_rate": 0.0,
+        "errors": 0,
+        "recall_at_5_exact": 0.5,
+        "recall_at_5_partial": 0.05,
+        "recall_at_5_cause": 0.0
+      },
+      "runtime_sha256": {
+        "retrieval.js": "f9480c07efd00c28d6430675b30c1ad65a0fd929f104691c3207971e39d4c687",
+        "storage.js": "0665b7309c05001441939870a18c18b3d0e31c1cf268e1bdb51ca14f12bb83ec"
+      },
+      "corpus_coverage": {
+        "loaded": 87,
+        "checked": 100,
+        "skipped": 13
+      }
+    },
+    "coding-debugger": {
+      "standard": {
+        "positive_queries": 60,
+        "negative_queries": 10,
+        "recall_at_5": 0.383,
+        "mrr": 0.383,
+        "negative_false_return_rate": 0.0,
+        "errors": 0,
+        "recall_at_5_exact": 0.85,
+        "recall_at_5_partial": 0.3,
+        "recall_at_5_cause": 0.0
+      },
+      "indexed": {
+        "positive_queries": 60,
+        "negative_queries": 10,
+        "recall_at_5": 0.183,
+        "mrr": 0.183,
+        "negative_false_return_rate": 0.0,
+        "errors": 0,
+        "recall_at_5_exact": 0.5,
+        "recall_at_5_partial": 0.05,
+        "recall_at_5_cause": 0.0
+      },
+      "runtime_sha256": {
+        "retrieval.js": "aa585361bcd54c6639a9a4135584724ed64f3d9f6ae5612b4ec86b2a341bab07",
+        "storage.js": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361"
+      },
+      "corpus_coverage": {
+        "loaded": 100,
+        "checked": null,
+        "skipped": null
+      }
+    },
+    "none": {
+      "keyword": {
+        "positive_queries": 60,
+        "negative_queries": 10,
+        "recall_at_5": 1.0,
+        "mrr": 1.0,
+        "negative_false_return_rate": 0.1,
+        "errors": 0,
+        "recall_at_5_exact": 1.0,
+        "recall_at_5_partial": 1.0,
+        "recall_at_5_cause": 1.0
+      }
+    },
+    "code-principles-audit": {
+      "capability": "absent",
+      "recall_at_5": 0.0,
+      "mrr": 0.0,
+      "negative_false_return_rate": 0.0,
+      "note": "no incident memory in this source"
+    }
+  },
+  "limits": [
+    "One project corpus; incident wording was written by agents during real sessions.",
+    "Partial and cause queries are rule-derived, not human paraphrases.",
+    "Relevance is the target plus exact-duplicate symptoms; other genuinely related incidents count as non-relevant.",
+    "Retrieval does not establish that a model applies a correct repair."
+  ]
+}

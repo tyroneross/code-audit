@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""F3: deterministic incident retrieval on a real private corpus. No model calls. Commits IDs, hashes and scores only."""
+"""F3: deterministic incident retrieval on a real private corpus. No model calls. Commits hashed IDs, hashes and scores only."""
 import argparse
 import hashlib
 import json
@@ -77,6 +77,14 @@ process.stdout.write(JSON.stringify(rows))})().catch(e=>{process.stderr.write(St
     return json.loads(result.stdout)
 
 
+def runtime_coverage(dist,memory):
+    """Count how many corpus records this runtime actually loads, with skip-reason counts."""
+    program=f"""const st=require({json.dumps(str(dist/'storage.js'))});console.log=()=>{{}};const c=st.emptyCorpusCoverage?st.emptyCorpusCoverage():null;
+st.loadAllIncidents({{storageMode:'local',memoryPath:{json.dumps(str(memory))},autoMine:false}},c||undefined).then(r=>process.stdout.write(JSON.stringify({{loaded:r.length,checked:c?c.checked:null,skipped:c?c.skipped:null}})))"""
+    result=subprocess.run(['node','-e',program],text=True,capture_output=True,timeout=60)
+    return json.loads(result.stdout) if result.returncode==0 else {'error':result.stderr[-300:]}
+
+
 def metrics(rows,queries):
     rel={q['id']:set(q['relevant']) for q in queries};pos=[q['id'] for q in queries if q['relevant']];neg=[q['id'] for q in queries if not q['relevant']]
     by={r['query_id']:r for r in rows}
@@ -105,13 +113,14 @@ def main():
         for arm,dist in RUNTIMES.items():
             rows=runtime_results(dist,memory,queries);raw[arm]=rows
             results[arm]={path:metrics([r for r in rows if r['path']==path],queries) for path in ['standard','indexed']}
-            results[arm]['runtime_sha256']=hashlib.sha256((dist/'retrieval.js').read_bytes()).hexdigest()
+            results[arm]['runtime_sha256']={name:hashlib.sha256((dist/name).read_bytes()).hexdigest() for name in ['retrieval.js','storage.js']}
+            coverage=runtime_coverage(dist,memory);results[arm]['corpus_coverage']=coverage
         rows=[{'query_id':q['id'],'path':'keyword','ids':keyword_baseline(corpus,q['text']),'error':None} for q in queries];raw['none']=rows
         results['none']={'keyword':metrics(rows,queries)}
         results['code-principles-audit']={'capability':'absent','recall_at_5':0.0,'mrr':0.0,'negative_false_return_rate':0.0,'note':'no incident memory in this source'}
         (a.private/'raw-rows.json').write_text(json.dumps(raw,indent=1))
         value={'version':1,'corpus':{'project':'atomize-ai (private; text withheld)','incidents_loaded':len(corpus),'incident_files':len(list((memory/'incidents').glob('*.json'))),'sha256_of_sorted_ids':hashlib.sha256('\n'.join(sorted(corpus)).encode()).hexdigest()},
-               'queries':{'seed':SEED,'count':len(queries),'positive':sum(1 for q in queries if q['relevant']),'negative':sum(1 for q in queries if not q['relevant']),'sha256':hashlib.sha256(json.dumps(queries,sort_keys=True).encode()).hexdigest(),'targets':[q['id'] for q in queries if q['id'].endswith('exact')],'relevant_ids':{q['id']:q['relevant'] for q in queries if q['id'].endswith('exact')}},
+               'queries':{'seed':SEED,'count':len(queries),'positive':sum(1 for q in queries if q['relevant']),'negative':sum(1 for q in queries if not q['relevant']),'sha256':hashlib.sha256(json.dumps(queries,sort_keys=True).encode()).hexdigest(),'targets':[q['id'] for q in queries if q['id'].endswith('exact')],'relevant_ids':{q['id']:['sha256:'+hashlib.sha256(i.encode()).hexdigest()[:12] for i in q['relevant']] for q in queries if q['id'].endswith('exact')},'id_note':'Incident IDs are sha256-prefixed: some private IDs embed descriptive words.'},
                'configuration':{'threshold':0.5,'max_results':5,'baseline':'content-token overlap over symptom+root cause, >=2 overlaps, top 5'},'results':results,
                'limits':['One project corpus; incident wording was written by agents during real sessions.','Partial and cause queries are rule-derived, not human paraphrases.','Relevance is the target plus exact-duplicate symptoms; other genuinely related incidents count as non-relevant.','Retrieval does not establish that a model applies a correct repair.']}
     a.out.parent.mkdir(parents=True,exist_ok=True);a.out.write_text(json.dumps(value,indent=2)+'\n');print(json.dumps(results,indent=1))

@@ -35,7 +35,7 @@ Grading uses the existing `repository/experiment.py judge_prompt`, run by a blin
 
 Known confound: the code-principles bundle (and code-audit's) contains rule C6, "report what was skipped", which was written from this same fix. A guidance advantage on R2 is partly learned from R2 itself, so R2 is reported separately as well as pooled.
 
-**F3 — incident-memory retrieval, deterministic.** The corpus is a read-only temporary copy of the 102 real incidents in one project's `.claude/memory/incidents` (`atomize-ai`). The queries are frozen by `memory_arms.py` from a fixed seed (20261028), before any arm runs:
+**F3 — incident-memory retrieval, deterministic.** The corpus is a read-only temporary copy of the 100 real incident files in one project's `.claude/memory/incidents` (`atomize-ai`). The queries are frozen by `memory_arms.py` from a fixed seed (20261028), before any arm runs:
 - 20 target incidents, each with three queries: exact symptom, first six content words of the symptom, and the first sentence of the recorded root cause.
 - 10 off-corpus negative queries.
 
