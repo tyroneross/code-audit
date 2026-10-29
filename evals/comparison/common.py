@@ -7,6 +7,8 @@ import sys
 ROOT=Path(__file__).resolve().parent
 EVALS=ROOT.parent
 ARMS=['code-audit','coding-debugger','code-principles-audit','none']
+# Later bundles measured in evals/hard/w3; the comparison's own arm list above stays fixed.
+EXTRA_ARMS=['code-audit-w3']
 MODEL='gpt-6.1-sol'
 EFFORT='model_reasoning_effort="medium"'
 sys.path.insert(0,str(EVALS/'matched'));sys.path.insert(0,str(EVALS/'repository'))
@@ -17,7 +19,7 @@ def load(name,path):
 
 
 def guidance(arm):
-    if arm not in ARMS:raise ValueError('unknown arm '+arm)
+    if arm not in ARMS+EXTRA_ARMS:raise ValueError('unknown arm '+arm)
     return (EVALS/'matched/guidance'/f'{arm}.txt').read_text()
 
 

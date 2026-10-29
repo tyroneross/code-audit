@@ -19,11 +19,14 @@ import sys
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-CASES = json.loads((HERE / 'cases.json').read_text())
-ORACLES = json.loads((HERE / 'private/oracles.json').read_text())
+import os
+CASES_FILE = Path(os.environ.get('HARD_CASES', HERE / 'cases.json')).resolve()
+CASES = json.loads(CASES_FILE.read_text())
+ORACLES = json.loads((HERE / CASES.get('oracles', 'private/oracles.json')).read_text())
 TOLERANCE = 10
-ARMS = ['code-audit', 'coding-debugger', 'code-principles-audit', 'none']
-SOURCES = ['coding-debugger', 'code-principles-audit']
+ARMS = CASES.get('arms', ['code-audit', 'coding-debugger', 'code-principles-audit', 'none'])
+SUBJECT = CASES.get('subject', 'code-audit')
+SOURCES = CASES.get('comparators', ['coding-debugger', 'code-principles-audit'])
 
 JUDGE_PROMPT = '''You are grading code-review findings against one known historical defect. Decide for each finding whether it identifies THIS defect: the same trigger and mechanism, at or calling into the defective code. A finding about a different problem, or one that names the location but a different mechanism, does not match. Severity, wording and fix quality do not matter. For a CONTROL packet the defect was already fixed in the reviewed code: mark a finding as matching only if it claims this same defect is still present.
 Return only JSON {"judgments":[{"label":"...","finding_id":"...","matches":true|false,"reason":"one sentence"}]} with one row per finding supplied.
@@ -42,17 +45,24 @@ def same_file(cited, oracle_file):
     return cited == oracle_file or oracle_file.endswith('/' + cited) or cited.endswith('/' + oracle_file)
 
 
+def windows(oracle):
+    """(file, lines) pairs: the primary defect file plus any other file whose copy is part of the defect."""
+    return [(oracle['file'], oracle['lines'])] + [(w['file'], w['lines']) for w in oracle.get('also', [])]
+
+
 def location_hit(finding, oracle, tolerance=TOLERANCE):
     for text in finding.get('locations') or []:
         loc = parse_location(text)
-        if not loc or not same_file(loc[0], oracle['file']): continue
-        for a, b in oracle['lines']:
-            if loc[1] <= b + tolerance and loc[2] >= a - tolerance: return True
+        if not loc: continue
+        for path, lines in windows(oracle):
+            if not same_file(loc[0], path): continue
+            for a, b in lines:
+                if loc[1] <= b + tolerance and loc[2] >= a - tolerance: return True
     return False
 
 
 def cites_file(finding, oracle):
-    return any((loc := parse_location(t)) and same_file(loc[0], oracle['file']) for t in finding.get('locations') or [])
+    return any((loc := parse_location(t)) and any(same_file(loc[0], path) for path, _ in windows(oracle)) for t in finding.get('locations') or [])
 
 
 def trials(out, family=None):
@@ -153,7 +163,7 @@ def aggregate(out, matches, case_ids=None):
 
 def verdicts(arms):
     """Pre-registered rule (README): Delta = code-audit - source."""
-    ca = arms['code-audit']; out = {}
+    ca = arms[SUBJECT]; out = {'subject': SUBJECT}
     for source in SOURCES:
         s = arms[source]; row = {}
         if ca['detection_rate'] is not None and s['detection_rate'] is not None:

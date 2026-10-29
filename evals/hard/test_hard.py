@@ -143,6 +143,28 @@ class Audit(unittest.TestCase):
             arms = score.aggregate(out, {}); self.assertEqual((arms['none']['repair_trials'], arms['none']['repair_invalid']), (0, 1))
 
 
+class W3Manifest(unittest.TestCase):
+    @unittest.skipUnless(REPOS, 'source repositories unavailable')
+    def test_w3_oracles_sit_inside_their_packets_and_bundle_is_reproducible(self):
+        import os, subprocess
+        check = '''
+import harness, grade
+for c in harness.CASES['review']:
+    o = grade.ORACLES[c['key']]; src = harness.review_sources(c)
+    for path, lines in grade.windows(o):
+        nums = {int(l.split(':', 1)[0]) for l in src[path].splitlines() if l.split(':', 1)[0].isdigit()}
+        assert all(n in nums for a, b in lines for n in range(a, b + 1)), (c['id'], path)
+        assert o['mechanism'][:60] not in harness.review_prompt(c, 'none')
+assert grade.SUBJECT == 'code-audit-w3' and 'none' in grade.SOURCES
+print('ok')
+'''
+        env = {**os.environ, 'HARD_CASES': str(HERE / 'w3/cases.json')}
+        out = subprocess.run([sys.executable, '-c', check], cwd=HERE, env=env, capture_output=True, text=True, timeout=120)
+        self.assertEqual(out.stdout.strip(), 'ok', out.stderr[-800:])
+        rebuilt = subprocess.run([sys.executable, str(HERE / 'w3/build_bundle.py'), 'code-audit', 'fabd2d9', '--check', str(HERE.parent / 'matched/guidance/code-audit.txt')], capture_output=True, text=True, timeout=60)
+        self.assertEqual(rebuilt.stdout.strip(), 'match')
+
+
 class Verdicts(unittest.TestCase):
     def test_rule_thresholds(self):
         base = lambda rate, fp=0, passed=0: {'detection_rate': rate, 'control_false_positives': fp, 'repair_trials': 12, 'repair_passed': passed, 'per_case': {}}

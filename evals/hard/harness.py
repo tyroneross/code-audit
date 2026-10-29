@@ -26,7 +26,9 @@ sys.path.insert(0, str(EVALS / 'matched'))
 import isolation  # noqa: E402
 from run import extract  # noqa: E402
 
-CASES = json.loads((HERE / 'cases.json').read_text())
+# HARD_CASES selects another pre-registered case set (evals/hard/w3); paths in it resolve relative to evals/hard.
+CASES_FILE = Path(os.environ.get('HARD_CASES', HERE / 'cases.json')).resolve()
+CASES = json.loads(CASES_FILE.read_text())
 ROOT = Path(CASES['repos_root'])
 REVIEW_TIMEOUT, REPAIR_TIMEOUT, VERIFY_TIMEOUT = 300, 480, 180
 
@@ -170,6 +172,8 @@ def workspace_files(case, side='parent'):
             if old.encode() not in data: raise ValueError(f'transform target missing in {path}')
             data = data.replace(old.encode(), new.encode())
         files[case.get('place', {}).get(path, path)] = data
+    if side == 'fix':  # modules the historical fix added; the candidate may add its own
+        for path in case.get('fix_files', []): files[path] = git_show(case['repo'], rev, path)
     for dest, source in case.get('fixtures', {}).items():
         files[dest] = (HERE / source).read_bytes()
     return files
@@ -178,7 +182,7 @@ def workspace_files(case, side='parent'):
 def withheld_test(case):
     w = case['withheld']
     if 'git' in w: return Path(w['git']).name, git_show(case['repo'], case['fix'], w['git'])
-    return 'withheld.test.mjs', (HERE / w['private']).read_bytes()
+    return w.get('name', 'withheld.test.mjs'), (HERE / w['private']).read_bytes()
 
 
 def verify(case, files, protected, timeout=VERIFY_TIMEOUT):
@@ -208,6 +212,9 @@ def test_counts(text):
     if (m := re.findall(r'^Ran (\d+) tests?', text, re.M)): ran = int(m[-1])
     if (m := re.findall(r'^FAILED \((.*)\)', text, re.M)): failed = sum(int(x) for x in re.findall(r'(?:failures|errors)=(\d+)', m[-1]))
     elif ran and not re.search(r'^OK\b', text, re.M): failed = 1
+    if (m := re.findall(r'^=*\s*(?:(\d+) failed, )?(\d+) passed', text, re.M)):  # pytest summary
+        failed_py, passed_py = m[-1]; ran = int(passed_py) + int(failed_py or 0); failed = int(failed_py or 0)
+    elif (m := re.findall(r'^=*\s*(\d+) failed', text, re.M)): ran = failed = int(m[-1])
     if (m := re.findall(r'^# tests (\d+)', text, re.M)): ran = int(m[-1])
     if (m := re.findall(r'^# fail (\d+)', text, re.M)): failed = int(m[-1])
     return {'ran': ran, 'failed': failed}
