@@ -17,7 +17,7 @@ python3 evals/matched/repair.py --host claude --model claude-opus-5-5 --out /tmp
 python3 evals/matched/repair.py --host codex --model gpt-6.1-sol --out /tmp/new-codex-repair-trials
 ```
 
-Each command defaults to two repetitions of three arms in fresh temporary contexts, with order reversed for repetition two and a conservative 300-second per-call cap. These are cloud model calls and can incur usage charges. Existing result directories are never overwritten. No plugin, dependencies or credentials are installed globally; temporary Codex homes reference existing local authentication without copying its contents.
+The Claude lane refuses to start without `ANTHROPIC_API_KEY`, because the CLI's default login is read from the macOS Keychain; Codex lanes pin the file credential store. Each command defaults to two repetitions of three arms in fresh temporary contexts, with order reversed for repetition two and a conservative 300-second per-call cap. These are cloud model calls and can incur usage charges. Existing result directories are never overwritten. No plugin, dependencies or credentials are installed globally; temporary Codex homes reference existing local authentication without copying its contents.
 
 Review cases and guidance are supplied directly; reviewers receive neither `private/oracles.json` nor prior outputs. Review trials prohibit tools and reject recorded tool use, host errors or missing case coverage. Claude tools are disabled; Codex receives a no-tools instruction and its event receipt is inspected. This enforcement differs by host and limits cross-host comparisons. Codex receipts retain requested identity and usage; unavailable served identity and dollar cost stay null.
 

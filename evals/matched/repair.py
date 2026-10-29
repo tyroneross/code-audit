@@ -91,7 +91,7 @@ def run(host,arm,repeat,out,model,timeout,frozen=None):
                 home=work/'codex-home';home.mkdir();auth=Path(os.environ.get('CODEX_HOME',Path.home()/'.codex'))/'auth.json'
                 if auth.exists():(home/'auth.json').symlink_to(auth)
                 env['CODEX_HOME']=str(home)
-                cmd=['codex','exec','--ephemeral','--ignore-user-config','--skip-git-repo-check','--json','-s','danger-full-access','-m',model,'-c','approval_policy="never"','-c','model_reasoning_effort="medium"','-']
+                cmd=['codex','exec','--ephemeral','--ignore-user-config','--skip-git-repo-check','--json','-s','danger-full-access','-m',model,'-c','approval_policy="never"','-c','cli_auth_credentials_store="file"','-c','model_reasoning_effort="medium"','-']
             meta['command']=cmd
             try:
                 result=run_bounded(sandbox_command(cmd,work,protected),input=prompt.encode(),text=False,env=env,cwd=candidate,timeout=timeout)
@@ -157,6 +157,7 @@ def run(host,arm,repeat,out,model,timeout,frozen=None):
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--host',choices=['claude','codex'],required=True);parser.add_argument('--model',required=True);parser.add_argument('--out',type=Path,required=True);parser.add_argument('--repeats',type=int,default=2);parser.add_argument('--timeout',type=int,default=300);args=parser.parse_args()
     if not 1<=args.repeats<=5 or not 1<=args.timeout<=600:parser.error('repeats 1..5; timeout 1..600')
+    if args.host=='claude' and not os.environ.get('ANTHROPIC_API_KEY'):parser.error('claude host refused: without an API key the Claude CLI loads its login from the macOS Keychain, which the owner rule forbids')
     args.out=args.out.resolve();args.out.mkdir(parents=True,exist_ok=True);frozen=snapshot()
     (args.out/(args.host+'-baseline-hashes.json')).write_text(json.dumps({'baseline':{name:hashlib.sha256(data).hexdigest() for name,data in frozen[0].items()},'verifier':hashlib.sha256(frozen[1]).hexdigest()},indent=2))
     for repeat in range(1,args.repeats+1):

@@ -65,7 +65,7 @@ def run_trial(host, arm, repeat, out, model=None, cases_path=ROOT/'cases.json', 
             auth=Path(os.environ.get('CODEX_HOME',Path.home()/'.codex'))/'auth.json'
             if auth.exists():(home/'auth.json').symlink_to(auth)
             env['CODEX_HOME']=str(home)
-            cmd=['codex','exec','--ephemeral','--ignore-user-config','--skip-git-repo-check','--json','-s','read-only','-c','model_reasoning_effort="medium"','-']
+            cmd=['codex','exec','--ephemeral','--ignore-user-config','--skip-git-repo-check','--json','-s','read-only','-c','cli_auth_credentials_store="file"','-c','model_reasoning_effort="medium"','-']
             if model:cmd[2:2]=['-m',model]
         start=time.monotonic()
         meta={'host':host,'arm':arm,'repeat':repeat,'requested_model':model,'effort':'medium','timeout_seconds':timeout,'prompt_sha256':digest(prompt),'cases_sha256':digest(cases_text),'guidance_sha256':digest(guidance),'guidance_words':len(guidance.split()),'command':cmd,'status':'unavailable','isolation':'fresh temp cwd; no supplied oracles or other outputs; no tools permitted; CLI harness differs by host'}
@@ -94,6 +94,7 @@ def main():
     parser.add_argument('--model');parser.add_argument('--repeats',type=int,default=2);parser.add_argument('--timeout',type=int,default=300)
     args=parser.parse_args()
     if not 1<=args.repeats<=5 or not 1<=args.timeout<=600:parser.error('repeats 1..5, timeout 1..600 required')
+    if args.host=='claude' and not os.environ.get('ANTHROPIC_API_KEY'):parser.error('claude host refused: without an API key the Claude CLI loads its login from the macOS Keychain, which the owner rule forbids')
     args.out.mkdir(parents=True,exist_ok=True)
     # Alternate order to reduce simple order/warm-cache confounding. Every call is a fresh context.
     for repeat in range(1,args.repeats+1):
