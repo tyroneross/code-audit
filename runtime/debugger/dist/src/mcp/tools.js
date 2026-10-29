@@ -464,7 +464,7 @@ async function handleDetail(args, config) {
         }
         return textResponse(lines.join('\n'));
     }
-    if (id.startsWith('INC_')) {
+    if ((0, storage_1.isValidIncidentId)(id)) {
         const incident = await (0, storage_1.loadIncident)(id, config);
         if (!incident)
             return errorResponse(`Incident not found: ${id}`);
@@ -582,7 +582,7 @@ async function handleList(args, config) {
     const coverage = (0, storage_1.emptyCorpusCoverage)();
     for (const id of incidentIds) {
         coverage.checked++;
-        if (typeof id !== 'string' || !/^INC_[\w\-]+$/.test(id)) {
+        if (!(0, storage_1.isValidIncidentId)(id)) {
             (0, storage_1.recordCorpusSkip)(coverage, String(id), 'invalid_record');
             continue;
         }

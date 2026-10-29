@@ -43,7 +43,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.INCIDENT_ID_PATTERN = void 0;
 exports.storeIncident = storeIncident;
+exports.isValidIncidentId = isValidIncidentId;
 exports.loadIncident = loadIncident;
 exports.emptyCorpusCoverage = emptyCorpusCoverage;
 exports.recordCorpusSkip = recordCorpusSkip;
@@ -161,11 +163,12 @@ async function storeIncident(incident, options = {}) {
     });
 }
 /**
- * Validate incident ID format to prevent path traversal attacks
- * Supports both formats: INC_YYYYMMDD_HHMMSS_xxxx and INC_CATEGORY_YYYYMMDD_HHMMSS_xxxx
+ * Validate incident ID format to prevent path traversal attacks.
+ * New IDs use INC_; older Coding Debugger records use INCIDENT_. Both admit only word characters and hyphens.
  */
+exports.INCIDENT_ID_PATTERN = /^(?:INC|INCIDENT)_[\w\-]+$/;
 function isValidIncidentId(incident_id) {
-    return typeof incident_id === 'string' && /^INC_[\w\-]+$/.test(incident_id);
+    return typeof incident_id === 'string' && exports.INCIDENT_ID_PATTERN.test(incident_id);
 }
 /**
  * Load an incident by ID
@@ -377,7 +380,7 @@ function validateIncident(incident) {
  *
  * The trailing suffix is 6 hex characters of crypto entropy plus a 3-character
  * base36 process sequence. Existing shorter IDs still load: isValidIncidentId
- * accepts any /^INC_[\w\-]+$/ and nothing parses the suffix by length.
+ * accepts any INC_ or legacy INCIDENT_ word/hyphen ID and nothing parses the suffix by length.
  */
 // Monotonic within this process. An incident ID is a FILENAME, so two incidents
 // that collide do not merely share a label -- the second overwrites the first and

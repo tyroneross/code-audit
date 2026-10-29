@@ -74,7 +74,7 @@ Return a structured JSON assessment:
 
 ## Confidence Scoring Guidelines
 
-- **0.9-1.0**: Exact match found in memory with verified fix
+- **0.9-1.0**: Current source evidence confirms the cause; a matching verified incident supports it but is never sufficient alone
 - **0.7-0.8**: Similar pattern found, high tag match
 - **0.5-0.6**: Category match, some keyword overlap
 - **0.3-0.4**: Weak match, inferred from symptoms
