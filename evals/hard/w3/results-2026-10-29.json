@@ -1,0 +1,1445 @@
+{
+ "version": 1,
+ "date": "2026-10-29",
+ "model": "gpt-6.1-sol",
+ "effort": "medium",
+ "repetitions": 2,
+ "primary_set": {
+  "review": [
+   "W01",
+   "W02",
+   "W03",
+   "W04",
+   "W05",
+   "W06"
+  ],
+  "repair": [
+   "WX2",
+   "WX3"
+  ]
+ },
+ "pre_registered_oracle": {
+  "primary": {
+   "arms": {
+    "code-audit-w3": {
+     "review_trials": 12,
+     "detected": 2,
+     "located": 2,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 27,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1166.8,
+     "tokens": 1466155,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       0,
+       0
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.167
+    },
+    "code-audit": {
+     "review_trials": 12,
+     "detected": 4,
+     "located": 5,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 30,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1038.8,
+     "tokens": 1404105,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.333
+    },
+    "coding-debugger": {
+     "review_trials": 12,
+     "detected": 4,
+     "located": 4,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 32,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1024.3,
+     "tokens": 1535271,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.333
+    },
+    "code-principles-audit": {
+     "review_trials": 12,
+     "detected": 4,
+     "located": 4,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 30,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1102.6,
+     "tokens": 1328813,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.333
+    },
+    "none": {
+     "review_trials": 12,
+     "detected": 5,
+     "located": 5,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 32,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 952.8,
+     "tokens": 1104731,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       1,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.417
+    }
+   },
+   "verdicts": {
+    "subject": "code-audit-w3",
+    "none": {
+     "review": {
+      "delta_detection": -0.25,
+      "delta_control_fp": 0,
+      "verdict": "worse"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "coding-debugger": {
+     "review": {
+      "delta_detection": -0.166,
+      "delta_control_fp": 0,
+      "verdict": "worse"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "code-principles-audit": {
+     "review": {
+      "delta_detection": -0.166,
+      "delta_control_fp": 0,
+      "verdict": "worse"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "code-audit": {
+     "review": {
+      "delta_detection": -0.166,
+      "delta_control_fp": 0,
+      "verdict": "worse"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "discrimination": {
+     "review_control_below_ceiling": true,
+     "repair_control_below_ceiling": false
+    }
+   }
+  },
+  "all": {
+   "arms": {
+    "code-audit-w3": {
+     "review_trials": 16,
+     "detected": 6,
+     "located": 6,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 35,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1325.1,
+     "tokens": 1575737,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       0,
+       0
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "W07": [
+       1,
+       1
+      ],
+      "W08": [
+       1,
+       1
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.375
+    },
+    "code-audit": {
+     "review_trials": 16,
+     "detected": 8,
+     "located": 9,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 37,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1205.0,
+     "tokens": 1513133,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "W07": [
+       1,
+       1
+      ],
+      "W08": [
+       1,
+       1
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.5
+    },
+    "coding-debugger": {
+     "review_trials": 16,
+     "detected": 8,
+     "located": 8,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 40,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1181.9,
+     "tokens": 1645641,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "W07": [
+       1,
+       1
+      ],
+      "W08": [
+       1,
+       1
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.5
+    },
+    "code-principles-audit": {
+     "review_trials": 16,
+     "detected": 8,
+     "located": 8,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 37,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1229.0,
+     "tokens": 1425509,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "W07": [
+       1,
+       1
+      ],
+      "W08": [
+       1,
+       1
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.5
+    },
+    "none": {
+     "review_trials": 16,
+     "detected": 9,
+     "located": 9,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 39,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1090.0,
+     "tokens": 1191853,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       1,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "W07": [
+       1,
+       1
+      ],
+      "W08": [
+       1,
+       1
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.562
+    }
+   },
+   "verdicts": {
+    "subject": "code-audit-w3",
+    "none": {
+     "review": {
+      "delta_detection": -0.187,
+      "delta_control_fp": 0,
+      "verdict": "worse"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "coding-debugger": {
+     "review": {
+      "delta_detection": -0.125,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "code-principles-audit": {
+     "review": {
+      "delta_detection": -0.125,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "code-audit": {
+     "review": {
+      "delta_detection": -0.125,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "discrimination": {
+     "review_control_below_ceiling": true,
+     "repair_control_below_ceiling": false
+    }
+   }
+  }
+ },
+ "corrected_oracle": {
+  "primary": {
+   "arms": {
+    "code-audit-w3": {
+     "review_trials": 12,
+     "detected": 4,
+     "located": 4,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 27,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1166.8,
+     "tokens": 1466155,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.333
+    },
+    "code-audit": {
+     "review_trials": 12,
+     "detected": 4,
+     "located": 5,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 30,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1038.8,
+     "tokens": 1404105,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.333
+    },
+    "coding-debugger": {
+     "review_trials": 12,
+     "detected": 4,
+     "located": 4,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 32,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1024.3,
+     "tokens": 1535271,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.333
+    },
+    "code-principles-audit": {
+     "review_trials": 12,
+     "detected": 4,
+     "located": 4,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 30,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1102.6,
+     "tokens": 1328813,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.333
+    },
+    "none": {
+     "review_trials": 12,
+     "detected": 5,
+     "located": 5,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 32,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 952.8,
+     "tokens": 1104731,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       1,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.417
+    }
+   },
+   "verdicts": {
+    "subject": "code-audit-w3",
+    "none": {
+     "review": {
+      "delta_detection": -0.084,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "coding-debugger": {
+     "review": {
+      "delta_detection": 0.0,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "code-principles-audit": {
+     "review": {
+      "delta_detection": 0.0,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "code-audit": {
+     "review": {
+      "delta_detection": 0.0,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "discrimination": {
+     "review_control_below_ceiling": true,
+     "repair_control_below_ceiling": false
+    }
+   }
+  },
+  "all": {
+   "arms": {
+    "code-audit-w3": {
+     "review_trials": 16,
+     "detected": 8,
+     "located": 8,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 35,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1325.1,
+     "tokens": 1575737,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "W07": [
+       1,
+       1
+      ],
+      "W08": [
+       1,
+       1
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.5
+    },
+    "code-audit": {
+     "review_trials": 16,
+     "detected": 8,
+     "located": 9,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 37,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1205.0,
+     "tokens": 1513133,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "W07": [
+       1,
+       1
+      ],
+      "W08": [
+       1,
+       1
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.5
+    },
+    "coding-debugger": {
+     "review_trials": 16,
+     "detected": 8,
+     "located": 8,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 40,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1181.9,
+     "tokens": 1645641,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "W07": [
+       1,
+       1
+      ],
+      "W08": [
+       1,
+       1
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.5
+    },
+    "code-principles-audit": {
+     "review_trials": 16,
+     "detected": 8,
+     "located": 8,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 37,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1229.0,
+     "tokens": 1425509,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       0,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "W07": [
+       1,
+       1
+      ],
+      "W08": [
+       1,
+       1
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.5
+    },
+    "none": {
+     "review_trials": 16,
+     "detected": 9,
+     "located": 9,
+     "control_trials": 4,
+     "control_false_positives": 0,
+     "review_invalid": 0,
+     "findings": 39,
+     "repair_trials": 4,
+     "repair_passed": 4,
+     "repair_invalid": 0,
+     "seconds": 1090.0,
+     "tokens": 1191853,
+     "per_case": {
+      "W01": [
+       0,
+       0
+      ],
+      "W02": [
+       1,
+       1
+      ],
+      "W03": [
+       1,
+       1
+      ],
+      "W04": [
+       1,
+       0
+      ],
+      "W05": [
+       0,
+       0
+      ],
+      "W06": [
+       0,
+       0
+      ],
+      "W07": [
+       1,
+       1
+      ],
+      "W08": [
+       1,
+       1
+      ],
+      "WX2": [
+       1,
+       1
+      ],
+      "WX3": [
+       1,
+       1
+      ]
+     },
+     "detection_rate": 0.562
+    }
+   },
+   "verdicts": {
+    "subject": "code-audit-w3",
+    "none": {
+     "review": {
+      "delta_detection": -0.062,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "coding-debugger": {
+     "review": {
+      "delta_detection": 0.0,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "code-principles-audit": {
+     "review": {
+      "delta_detection": 0.0,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "code-audit": {
+     "review": {
+      "delta_detection": 0.0,
+      "delta_control_fp": 0,
+      "verdict": "parity"
+     },
+     "repair": {
+      "delta_passes": 0,
+      "worst_case_delta": 0,
+      "verdict": "parity"
+     }
+    },
+    "discrimination": {
+     "review_control_below_ceiling": true,
+     "repair_control_below_ceiling": false
+    }
+   }
+  }
+ },
+ "iteration_post_hoc": {
+  "arm": "code-audit-w3b",
+  "bundle_commit": "2389d96",
+  "oracle": "corrected",
+  "all_cases": {
+   "review_trials": 16,
+   "detected": 12,
+   "located": 12,
+   "control_trials": 4,
+   "control_false_positives": 0,
+   "review_invalid": 0,
+   "findings": 39,
+   "repair_trials": 4,
+   "repair_passed": 4,
+   "repair_invalid": 0,
+   "seconds": 1016.3,
+   "tokens": 1562369,
+   "per_case": {
+    "W01": [
+     1,
+     1
+    ],
+    "W02": [
+     1,
+     1
+    ],
+    "W03": [
+     1,
+     1
+    ],
+    "W04": [
+     1,
+     1
+    ],
+    "W05": [
+     0,
+     0
+    ],
+    "W06": [
+     0,
+     0
+    ],
+    "W07": [
+     1,
+     1
+    ],
+    "W08": [
+     1,
+     1
+    ],
+    "WX2": [
+     1,
+     1
+    ],
+    "WX3": [
+     1,
+     1
+    ]
+   },
+   "detection_rate": 0.75
+  },
+  "primary": {
+   "review_trials": 12,
+   "detected": 8,
+   "located": 8,
+   "control_trials": 4,
+   "control_false_positives": 0,
+   "review_invalid": 0,
+   "findings": 33,
+   "repair_trials": 4,
+   "repair_passed": 4,
+   "repair_invalid": 0,
+   "seconds": 901.2,
+   "tokens": 1453106,
+   "per_case": {
+    "W01": [
+     1,
+     1
+    ],
+    "W02": [
+     1,
+     1
+    ],
+    "W03": [
+     1,
+     1
+    ],
+    "W04": [
+     1,
+     1
+    ],
+    "W05": [
+     0,
+     0
+    ],
+    "W06": [
+     0,
+     0
+    ],
+    "WX2": [
+     1,
+     1
+    ],
+    "WX3": [
+     1,
+     1
+    ]
+   },
+   "detection_rate": 0.667
+  }
+ },
+ "pilot": {
+  "arm": "none",
+  "review_detected": "3/8",
+  "control_false_positives": "0/2",
+  "repair_passed": "2/2",
+  "host_failures_rerun": 1
+ },
+ "validity": {
+  "invalid_trials": 0,
+  "network_audit_flags": "0/20 scored, 0/4 iteration, 0/2 pilot repair trials",
+  "schema_parse_failures": 0
+ },
+ "raw_outputs": "outside the repository (.build-loop/evals/hard-w3)"
+}

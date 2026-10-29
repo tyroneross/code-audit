@@ -136,8 +136,10 @@ def usage_tokens(meta):
 
 
 def aggregate(out, matches, case_ids=None):
-    arms = {arm: {'review_trials': 0, 'detected': 0, 'located': 0, 'control_trials': 0, 'control_false_positives': 0, 'review_invalid': 0,
-                  'findings': 0, 'repair_trials': 0, 'repair_passed': 0, 'repair_invalid': 0, 'seconds': 0.0, 'tokens': 0, 'per_case': {}} for arm in ARMS}
+    blank = lambda: {'review_trials': 0, 'detected': 0, 'located': 0, 'control_trials': 0, 'control_false_positives': 0, 'review_invalid': 0,
+                     'findings': 0, 'repair_trials': 0, 'repair_passed': 0, 'repair_invalid': 0, 'seconds': 0.0, 'tokens': 0, 'per_case': {}}
+    rows = trials(out)
+    arms = {arm: blank() for arm in ARMS + sorted({t['arm'] for t in rows} - set(ARMS))}
     for t in trials(out):
         # Selecting a primary set never drops the controls: their false positives are part of every review verdict.
         if case_ids and t['case_id'] not in case_ids and not is_control(t): continue
