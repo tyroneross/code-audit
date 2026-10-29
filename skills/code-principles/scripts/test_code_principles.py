@@ -204,6 +204,20 @@ class S {
         self.assertNotIn("F7", out["items"])                               # MIME type and fixture copy are not shared identifiers
         self.assertEqual(sorted(h["line"] for h in out["items"]["F1"]), [3, 8])   # only the test module and the attributed item are skipped
 
+    def test_rust_test_scope_and_multiple_roots(self):
+        rust = "\n".join([
+            '#[cfg(test)]', 'fn helper() {', '    let p = "/Users/one/x";', '}',             # body of an attributed fn: test-only
+            '#[cfg(test)] mod inline {', '    const P: &str = "/Users/two/x";', '}',      # attribute on the item's own line
+            '#[cfg(test)]', '// comment', 'mod commented {', '    const S: &str = "{";', '    const P: &str = "/Users/three/x";', '}',
+            'const REAL: &str = "/Users/realuser/data";',                                  # production code after the tests
+        ]) + "\n"
+        with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
+            Path(a, "lib.rs").write_text(rust)
+            Path(b, "package.json").write_text('{"version": "2.0.0"}'); Path(b, "cli.ts").write_text("program.version('1.0.0');\n")
+            _, out = run_scan([a, b])
+        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F1"]], [("lib.rs", 14)])
+        self.assertEqual([h["label"] for h in out["items"]["F3"]], ["states version 1.0.0 but package.json 2.0.0"])
+
     def test_unreadable_input_is_reported_not_counted(self):
         (self.root / "src" / "bad.ts").write_bytes(b"\xff\xfe fetch(u)")
         locked = self.root / "locked"

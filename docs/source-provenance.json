@@ -1802,14 +1802,14 @@
       "path": "skills/code-principles/scripts/scan.py",
       "source": "code-principles-audit",
       "source_sha256": "97cf11fcb5f0da3f47d9423f32ccc5b6d3ccbefbfdac3565333dc88d3a763cd0",
-      "current_sha256": "129e85a8b21e2c5083aae5bdee6e609d2e4dbd6f879966f358da4309fb4073d4",
+      "current_sha256": "71716d33e50446f5cb59aabf644f0a875b8b3f80eda303329633121a562fc8f6",
       "modified_from_import": true
     },
     {
       "path": "skills/code-principles/scripts/test_code_principles.py",
       "source": "code-principles-audit",
       "source_sha256": "9c80362958d93924a150b65478c7140fd7c087c761fd53d96032c82eeb9932ae",
-      "current_sha256": "8e18bf6f5c4f60f0b0c7081aa1ae10bce5ae1b635fc0d3cd15ef357ab2690601",
+      "current_sha256": "ee5083e4037dfb4cdc957b37d50858e661114822dd20f9e7fe777b8565bc8d4c",
       "modified_from_import": true
     },
     {
