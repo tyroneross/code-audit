@@ -123,7 +123,8 @@ def aggregate(out, matches, case_ids=None):
     arms = {arm: {'review_trials': 0, 'detected': 0, 'located': 0, 'control_trials': 0, 'control_false_positives': 0, 'review_invalid': 0,
                   'findings': 0, 'repair_trials': 0, 'repair_passed': 0, 'repair_invalid': 0, 'seconds': 0.0, 'tokens': 0, 'per_case': {}} for arm in ARMS}
     for t in trials(out):
-        if case_ids and t['case_id'] not in case_ids: continue
+        # Selecting a primary set never drops the controls: their false positives are part of every review verdict.
+        if case_ids and t['case_id'] not in case_ids and not t['case_id'].startswith('C'): continue
         a = arms[t['arm']]; a['seconds'] += t.get('elapsed_seconds') or 0; a['tokens'] += usage_tokens(t)
         if t['family'] == 'repair':
             # Invalid trials (host failure, timeout, network or other tool use) are excluded from the denominator and counted.

@@ -91,6 +91,10 @@ class Blinding(unittest.TestCase):
             # Both judged as matching, but only the finding inside the oracle window counts as detected.
             self.assertEqual((arms['code-audit']['detected'], arms['none']['detected']), (1, 0))
             self.assertEqual(arms['code-audit']['tokens'], 6)
+            c = out / 'C01-none-1'; c.mkdir()
+            (c / 'meta.json').write_text(json.dumps({'family': 'review', 'case_id': 'C01', 'arm': 'none', 'repeat': 1, 'status': 'completed'}))
+            (c / 'answer.json').write_text(json.dumps({'coverage': 'complete', 'findings': []}))
+            self.assertEqual(score.aggregate(out, {}, ['H01'])['none']['control_trials'], 1)  # controls kept under a case filter
 
 
 class Repair(unittest.TestCase):
