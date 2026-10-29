@@ -47,6 +47,7 @@ exports.storeIncident = storeIncident;
 exports.loadIncident = loadIncident;
 exports.emptyCorpusCoverage = emptyCorpusCoverage;
 exports.recordCorpusSkip = recordCorpusSkip;
+exports.normalizeLegacyIncident = normalizeLegacyIncident;
 exports.validIncidentRecord = validIncidentRecord;
 exports.loadAllIncidents = loadAllIncidents;
 exports.storePattern = storePattern;
@@ -180,7 +181,7 @@ async function loadIncident(incident_id, config) {
         const filepath = path_1.default.join(paths.incidents, filename);
         try {
             const content = await promises_1.default.readFile(filepath, 'utf-8');
-            return JSON.parse(content);
+            return normalizeLegacyIncident(JSON.parse(content));
         }
         catch (error) {
             if (error.code === 'ENOENT') {
@@ -206,6 +207,20 @@ const stringArray = (value) => value === undefined || (Array.isArray(value) && v
 const optionalRate = (value) => value == null || (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1);
 function optionalFields(value, fields) {
     return value == null || (typeof value === 'object' && !Array.isArray(value) && Object.entries(fields).every(([key, valid]) => valid(value[key])));
+}
+/**
+ * Coding Debugger records written before numeric timestamps store ISO-8601 strings.
+ * Read a parseable string as epoch milliseconds so those incidents stay retrievable;
+ * an unparseable value is left unchanged and still fails validation visibly.
+ */
+function normalizeLegacyIncident(value) {
+    const record = value;
+    if (record !== null && typeof record === 'object' && typeof record.timestamp === 'string') {
+        const ms = Date.parse(record.timestamp);
+        if (Number.isFinite(ms))
+            record.timestamp = ms;
+    }
+    return value;
 }
 function validIncidentRecord(value) {
     return value !== null && typeof value === 'object' &&
@@ -268,7 +283,7 @@ async function loadCorpus(directory, valid, coverage, identifier) {
     return records;
 }
 async function loadAllIncidents(config, coverage = emptyCorpusCoverage()) {
-    return loadCorpus((0, config_1.getMemoryPaths)(config).incidents, validIncidentRecord, coverage, incident => incident.incident_id);
+    return loadCorpus((0, config_1.getMemoryPaths)(config).incidents, (value) => validIncidentRecord(normalizeLegacyIncident(value)), coverage, incident => incident.incident_id);
 }
 /**
  * Store a pattern

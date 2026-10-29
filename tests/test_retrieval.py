@@ -89,4 +89,21 @@ process.stdout.write(JSON.stringify(await checkMemoryScaled('alpha beta gamma de
         self.assertEqual(result['coverage']['incidents']['skipped'],1)
         self.assertEqual(result['coverage']['scope'],'keyword candidates')
 
+    def test_legacy_iso_string_timestamp_is_read_not_skipped(self):
+        # Coding Debugger wrote ISO-8601 timestamps; 12 of 100 records in one real corpus use them.
+        rows = self.probe("""
+const legacy = {...incident('INC_LEGACY',0), timestamp:new Date(now-5*day).toISOString()};
+await write('INC_LEGACY.json', legacy);
+await write('INC_BADTIME.json', {...incident('INC_BADTIME',0), timestamp:'not a date'});
+const {loadIncident} = require(""" + json.dumps(str(ROOT / 'runtime/debugger/dist/src/storage.js')) + """);
+const options={memoryConfig,max_results:20};
+const standard=await checkMemory('alpha beta gamma delta',options);
+const detail=await loadIncident('INC_LEGACY',memoryConfig);
+process.stdout.write(JSON.stringify([standard,detail.timestamp]));
+""")
+        standard, stamp = rows
+        self.assertEqual([r['incident_id'] for r in standard['incidents']], ['INC_LEGACY'])
+        self.assertEqual(stamp, 1792454400000 - 5*86400000)
+        self.assertEqual(standard['coverage']['incidents']['skipped'], 1)
+
 if __name__ == '__main__': unittest.main()
