@@ -14,6 +14,29 @@ class Launch(unittest.TestCase):
         self.assertEqual(ARMS[-1],'none');self.assertEqual(guidance('none'),'')
         for arm in ARMS[:-1]:self.assertIn('Frozen '+arm+' guidance bundle',guidance(arm))
 
+class Recover(unittest.TestCase):
+    def trial(self,root,name,events,exit_code=0):
+        d=root/name;d.mkdir()
+        (d/'meta.json').write_text(json.dumps({'status':'invalid_response','case_id':'P01','exit_code':exit_code}))
+        (d/'host-output.jsonl').write_text('\n'.join(json.dumps(e) for e in events)+'\n')
+        return d
+
+    def test_only_pure_truncation_is_recovered(self):
+        import tempfile,score
+        from pathlib import Path
+        body=json.dumps({'cases':[{'case_id':'P01','coverage':'complete','findings':[{'id':'F1','cause':'c','locations':['a.py:1'],'severity':'low','origin':'unknown','disposition':'open','suggested_change':'s','verification':'v'}]}]})[:-2]
+        msg=lambda: {'type':'item.completed','item':{'type':'agent_message','text':body}}
+        done={'type':'turn.completed','usage':{}}
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            self.trial(root,'clean',[msg(),done])
+            self.trial(root,'tool',[{'type':'item.completed','item':{'type':'command_execution','command':'cat x'}},msg(),done])
+            self.trial(root,'failed',[msg(),{'type':'turn.failed'}])
+            self.trial(root,'nonzero',[msg(),done],exit_code=1)
+            result={r['trial']:r['recovered'] for r in score.recover(root)}
+            self.assertEqual(result,{'clean':True,'tool':False,'failed':False,'nonzero':False})
+            self.assertEqual(json.loads((root/'tool'/'meta.json').read_text())['status'],'invalid_response')
+
 class Memory(unittest.TestCase):
     def test_metrics_and_baseline(self):
         corpus={'INC_A':{'incident_id':'INC_A','symptom':'checkout receipt duplicated after timeout','root_cause':{'description':'retry without idempotency key'}},

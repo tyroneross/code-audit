@@ -5,6 +5,7 @@ import json
 import random
 from pathlib import Path
 from common import ARMS,EVALS,load
+from run import extract
 
 experiment=load('score_experiment',EVALS/'repository/experiment.py')
 SEED=20261028
@@ -12,21 +13,26 @@ SEED=20261028
 
 def recover(review_dir):
     """Deviation recorded in results: Sol often dropped the final `]}` of otherwise complete JSON.
-    Re-parse invalid_response trials by appending only closing brackets, for every arm alike;
-    accept only output that then passes the harness's own review validator."""
+    Re-parse invalid_response trials by appending only closing brackets, for every arm alike, and only when
+    truncation is the sole defect: the host exited 0 and the raw events pass the harness's own validity
+    checks (no tool use, no error or failed turn, exactly one completed turn). Accept only output that then
+    passes the review validator. New benchmarks avoid this path with schema-constrained output (evals/hard)."""
     report=[]
     for meta_path in sorted(review_dir.glob('*/meta.json')):
         m=json.loads(meta_path.read_text())
         if m.get('status')!='invalid_response':continue
-        text=None
-        for line in (meta_path.parent/'host-output.jsonl').read_text().splitlines():
-            row=json.loads(line)
-            if row.get('type')=='item.completed' and row.get('item',{}).get('type')=='agent_message':text=row['item']['text']
+        if m.get('exit_code')!=0:report.append({'trial':meta_path.parent.name,'recovered':False,'reason':'host exit not 0'});continue
+        try:text,_=extract('codex',(meta_path.parent/'host-output.jsonl').read_text())
+        except (ValueError,KeyError,TypeError) as error:
+            report.append({'trial':meta_path.parent.name,'recovered':False,'reason':str(error)});continue
+        try:
+            json.loads(text);report.append({'trial':meta_path.parent.name,'recovered':False,'reason':'parses without repair; invalid for another reason'});continue
+        except ValueError:pass
         value=None;suffix=None
         for suffix in [']}','}',']}}','}]}']:
             try:value=experiment.validate_review(json.loads(text.strip()+suffix),m['case_id']);break
             except (ValueError,TypeError,KeyError,AttributeError):value=None
-        if value is None:report.append({'trial':meta_path.parent.name,'recovered':False});continue
+        if value is None:report.append({'trial':meta_path.parent.name,'recovered':False,'reason':'not a closing-bracket truncation'});continue
         (meta_path.parent/'answer.json').write_text(json.dumps(value,indent=2)+'\n')
         m.update({'status':'completed_recovered','recovered_suffix':suffix});meta_path.write_text(json.dumps(m,indent=2)+'\n')
         report.append({'trial':meta_path.parent.name,'recovered':True,'suffix':suffix})
