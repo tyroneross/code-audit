@@ -173,7 +173,10 @@ export function legacySymptomText(symptom: Record<string, unknown>): string | nu
   return text || null;
 }
 
-/** Epoch milliseconds embedded in an ID the runtime generated: INC_[CAT_]YYYYMMDD_HHMMSS_* (UTC) or INCIDENT_<epoch seconds>_*. */
+/** A change entry names a file only when it looks like a path: a directory separator or a file extension, no spaces. */
+const PATH_LIKE = /^(?=[\w./@\-]+$)(?:.*\/.*|.*\.[A-Za-z0-9]{1,10})$/;
+
+/** Epoch milliseconds embedded in an ID the runtime generated: INC_[CAT_]YYYYMMDD_HHMMSS_* (UTC) or INCIDENT_<epoch seconds|ms>_*. */
 export function incidentIdTimestamp(incident_id: string): number | null {
   const stamp = /^INC_(?:[A-Z0-9]{1,12}_)?(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})_/.exec(incident_id);
   if (stamp) {
@@ -182,8 +185,8 @@ export function incidentIdTimestamp(incident_id: string): number | null {
     const check = new Date(ms);
     return check.getUTCMonth() === mo - 1 && check.getUTCDate() === d && h < 24 && mi < 60 && se < 60 ? ms : null;
   }
-  const epoch = /^INCIDENT_(\d{10})_/.exec(incident_id);
-  return epoch ? Number(epoch[1]) * 1000 : null;
+  const epoch = /^INCIDENT_(\d{10}|\d{13})_/.exec(incident_id);
+  return epoch ? Number(epoch[1]) * (epoch[1].length === 10 ? 1000 : 1) : null;
 }
 
 /**
@@ -228,7 +231,7 @@ export function normalizeLegacyIncident<T>(value: T, sourceFile?: string): T {
     for (const entry of fix.changes as any[]) {
       const text = textValue(entry);
       if (entry && typeof entry === 'object' && typeof entry.file === 'string') changes.push(entry);
-      else if (text && /^[\w./@\-]+$/.test(text)) changes.push({ file: text });
+      else if (text && PATH_LIKE.test(text)) changes.push({ file: text });
       else if (text) notes.push(text);
       else if (entry && typeof entry === 'object' && (textValue(entry.summary) || textValue(entry.command))) {
         notes.push([textValue(entry.summary), textValue(entry.command) && `command: ${textValue(entry.command)}`].filter(Boolean).join(' — '));
@@ -237,7 +240,11 @@ export function normalizeLegacyIncident<T>(value: T, sourceFile?: string): T {
     if (mapped) {
       legacy.fix_changes = fix.changes;
       fix.changes = changes;
-      if (notes.length) fix.notes = [...(Array.isArray(fix.notes) ? fix.notes : []), ...notes];
+      if (notes.length) {
+        if (fix.notes !== undefined && !Array.isArray(fix.notes)) legacy.fix_notes = fix.notes;
+        const prior = Array.isArray(fix.notes) ? fix.notes : textParts(fix.notes);
+        fix.notes = [...prior, ...notes];
+      }
     }
   }
   if (Object.keys(legacy).length) record.legacy = { ...(record.legacy && typeof record.legacy === 'object' ? record.legacy : {}), ...legacy };

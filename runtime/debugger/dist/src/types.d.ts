@@ -40,6 +40,7 @@ export interface LegacyIncidentFields {
     symptom?: Record<string, unknown>;
     verification_status?: unknown;
     fix_changes?: unknown[];
+    fix_notes?: unknown;
     incident_id_source?: 'filename';
     timestamp_source?: 'incident_id';
 }

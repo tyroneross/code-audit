@@ -33,7 +33,7 @@ export declare function emptyCorpusCoverage(): CorpusCoverage;
 export declare function recordCorpusSkip(coverage: CorpusCoverage, file: string, reason: CorpusCoverage['examples'][number]['reason']): void;
 /** Text form of a structured legacy symptom: its description, else a deterministic join of its text fields. */
 export declare function legacySymptomText(symptom: Record<string, unknown>): string | null;
-/** Epoch milliseconds embedded in an ID the runtime generated: INC_[CAT_]YYYYMMDD_HHMMSS_* (UTC) or INCIDENT_<epoch seconds>_*. */
+/** Epoch milliseconds embedded in an ID the runtime generated: INC_[CAT_]YYYYMMDD_HHMMSS_* (UTC) or INCIDENT_<epoch seconds|ms>_*. */
 export declare function incidentIdTimestamp(incident_id: string): number | null;
 /**
  * Read older Coding Debugger record shapes into the current schema, in memory only; files are never rewritten.
