@@ -152,7 +152,7 @@ class S {
 
     def test_frozen_values_are_found_and_sources_examples_and_tests_are_not(self):
         files = {
-            "pyproject.toml": 'name = "demo"\nversion = "1.2.3"\n',
+            "pyproject.toml": '[project]\nname = "demo"\nversion = "1.2.3"\n',
             "app.py": "\n".join([
                 'CORPUS = "/Users/alice2/dev/corpus"',            # F1: machine-specific path
                 'EXAMPLE = "/Users/example/dev/x"',                # placeholder user
@@ -216,9 +216,15 @@ class S {
         with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
             Path(a, "lib.rs").write_text(rust)
             Path(b, "package.json").write_text('{"version": "2.0.0"}'); Path(b, "cli.ts").write_text("program.version('1.0.0');\n")
-            _, out = run_scan([a, b])
+            with tempfile.TemporaryDirectory() as c:  # same relative path, correct version: must not borrow b's manifest
+                Path(c, "package.json").write_text('{"version": "1.0.0"}'); Path(c, "cli.ts").write_text("program.version('1.0.0');\n")
+                Path(c, "pyproject.toml").write_text('[tool.other]\nversion = "9.9.9"\n[project]\nname = "x"\n')
+                Path(c, "consts.py").write_text("LOGO = 'image/logo.svg'\n"); Path(a, "img.py").write_text("LOGO = 'image/logo.svg'\n")
+                _, out = run_scan([a, b, c])
         self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F1"]], [("lib.rs", 25)])
-        self.assertEqual([h["label"] for h in out["items"]["F3"]], ["states version 1.0.0 but package.json 2.0.0"])
+        self.assertEqual(sorted(h["label"] for h in out["items"]["F3"]), ["copies package.json version 1.0.0", "states version 1.0.0 but package.json 2.0.0"])
+        # a shared file path that merely starts like a MIME type; consts.py owns it, so only the copy is flagged
+        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F7"]], [("img.py", 1)])
 
     def test_unreadable_input_is_reported_not_counted(self):
         (self.root / "src" / "bad.ts").write_bytes(b"\xff\xfe fetch(u)")
