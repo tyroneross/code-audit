@@ -31,7 +31,8 @@ def outcomes(arm, key='per_case'):
 
 
 def per_trial(arm, field):
-    n = arm['review_trials'] + arm['control_trials']
+    """Mean cost per attempt: the totals include invalid attempts, so the denominator does too."""
+    n = arm.get('attempts') or arm['review_trials'] + arm['control_trials'] + arm.get('review_invalid', 0)
     return arm[field] / n if n else None
 
 
@@ -43,9 +44,10 @@ def union(a, b):
         A, B = outcomes(a, key), outcomes(b, key)
         for case in set(A) & set(B):
             v = int(A[case] or B[case]); out[key][case] = [v]; out[count] += 1; out[hits] += v
-    n = out['review_trials'] + out['control_trials']
-    for field in ('tokens', 'seconds'):
-        out[field] = round(n * ((per_trial(a, field) or 0) + (per_trial(b, field) or 0)), 1)
+    kept = set(out['per_case']) | set(out['per_control']); ca, cb = a.get('cost_by_case') or {}, b.get('cost_by_case') or {}
+    if not kept <= set(ca) & set(cb): raise SystemExit('union needs cost_by_case for every retained case; re-run grade.py aggregate')
+    out['tokens'] = sum(ca[c][0] + cb[c][0] for c in kept); out['seconds'] = round(sum(ca[c][1] + cb[c][1] for c in kept), 1)
+    out['attempts'] = len(kept)
     out['detection_rate'] = round(out['detected'] / out['review_trials'], 3) if out['review_trials'] else None
     return out
 
@@ -61,7 +63,7 @@ def compare(arms, a, b, universe=None):
     cost = {}
     for field in ('tokens', 'seconds'):
         x, y = per_trial(arms[a], field), per_trial(arms[b], field)
-        cost[field] = round(x / y, 2) if x is not None and y else None
+        cost[field] = x / y if x is not None and y else None  # unrounded: verdict() compares against 2
     universe = universe or set(A) | set(B)
     return {'a': a, 'b': b, 'paired_cases': n, 'dropped': len(universe) - n, 'a_detected': sum(A[c] for c in cases),
             'b_detected': sum(B[c] for c in cases), 'a_only': wins_a, 'b_only': wins_b, 'delta': delta, 'p': mcnemar(wins_a, wins_b),
@@ -93,6 +95,7 @@ def load(paths):
         for name, arm in json.load(open(path))['arms'].items():
             if not (arm['review_trials'] or arm['control_trials'] or arm['review_invalid']): continue
             if name in arms: raise SystemExit(f'arm {name!r} appears in more than one --agg file; merge them first')
+            if arm['control_trials'] and 'per_control' not in arm: raise SystemExit(f'{path}: arm {name!r} lacks per_control; re-run grade.py aggregate')
             arms[name] = arm
     return arms
 
@@ -108,7 +111,8 @@ def main():
     pairs = lambda specs: [tuple(s.split(':', 1)) for s in specs]
     family = holm([compare(arms, x, y, universe) for x, y in pairs(a.holm)])
     rows = family + [compare(arms, x, y, universe) for x, y in pairs(a.compare)]
-    for row in rows: row['verdict'] = verdict(row)
+    for row in rows:
+        row['verdict'] = verdict(row); row['cost_ratio'] = {k: (round(v, 3) if v is not None else None) for k, v in row['cost_ratio'].items()}
     keep = ('review_trials', 'detected', 'detection_rate', 'located', 'control_trials', 'control_false_positives', 'review_invalid', 'findings', 'tokens', 'seconds')
     summary = {n: {k: arm.get(k) for k in keep} for n, arm in arms.items()}
     print(json.dumps({'arms': summary, 'comparisons': rows}, indent=1))

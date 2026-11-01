@@ -46,9 +46,25 @@ class StatsInputs(unittest.TestCase):
         row = stats.compare(arms, 'a', 'b')
         self.assertEqual((row['paired_controls'], row['delta_control_fp']), (1, 1))
 
-    def test_union_is_or_with_summed_cost(self):
-        u = stats.union(self.arm({'F01': 1, 'F02': 0}, tokens=20), self.arm({'F01': 0, 'F02': 1}, tokens=10))
-        self.assertEqual((u['detected'], u['review_trials'], u['tokens']), (2, 2, 30.0))
+    def test_union_is_or_with_cost_of_retained_cases_only(self):
+        a = dict(self.arm({'F01': 1, 'F02': 0}), cost_by_case={'F01': [10, 1], 'F02': [990, 1]})
+        b = dict(self.arm({'F01': 0}), cost_by_case={'F01': [10, 1]})
+        u = stats.union(a, b)
+        self.assertEqual((u['detected'], u['review_trials'], u['tokens']), (1, 1, 20))
+
+    def test_invalid_attempts_count_in_the_cost_denominator(self):
+        arm = dict(self.arm({f'F{i}': 1 for i in range(6)}, tokens=1600), review_invalid=1, attempts=7)
+        self.assertAlmostEqual(stats.per_trial(arm, 'tokens'), 1600 / 7)
+
+    def test_aggregate_without_per_control_is_refused(self):
+        arm = self.arm({'F01': 1}, {'C1': 1}); arm.pop('per_control')
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / 'a.json'; p.write_text(json.dumps({'arms': {'x': arm}}))
+            with self.assertRaises(SystemExit): stats.load([p])
+
+    def test_cost_ratio_is_compared_unrounded(self):
+        row = {'delta': 0.2, 'p': 0.01, 'delta_control_fp': 0, 'cost_ratio': {'tokens': 2.004, 'seconds': 1.0}}
+        self.assertEqual(stats.verdict(row), 'helps at cost')
 
     def test_cost_is_per_trial(self):
         arms = {'a': self.arm({'F01': 1, 'F02': 1}, tokens=40), 'b': self.arm({'F01': 1}, tokens=20)}

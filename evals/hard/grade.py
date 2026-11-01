@@ -147,7 +147,9 @@ def aggregate(out, matches, case_ids=None):
     for t in trials(out):
         # Selecting a primary set never drops the controls: their false positives are part of every review verdict.
         if case_ids and t['case_id'] not in case_ids and not is_control(t): continue
-        a = arms[t['arm']]; a['seconds'] += t.get('elapsed_seconds') or 0; a['tokens'] += usage_tokens(t)
+        a = arms[t['arm']]; a['seconds'] += t.get('elapsed_seconds') or 0; a['tokens'] += usage_tokens(t); a['attempts'] = a.get('attempts', 0) + 1
+        cost = a.setdefault('cost_by_case', {}).setdefault(t['case_id'], [0, 0.0])  # every attempt, valid or not
+        cost[0] += usage_tokens(t); cost[1] += t.get('elapsed_seconds') or 0
         if t['family'] == 'repair':
             # Invalid trials (host failure, timeout, network or other tool use) are excluded from the denominator and counted.
             if 'valid' not in t or 'passed_final' not in t:
