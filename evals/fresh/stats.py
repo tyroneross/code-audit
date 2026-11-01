@@ -8,7 +8,7 @@ each arm has one 0/1 outcome per defect case and per control. Detection uses an 
 defect cases valid in both arms; control false positives are compared on the controls valid in both arms. Cost is
 the mean tokens and seconds per attempt, invalid attempts included. `--union NEW=A+B` builds an arm whose outcome per
 case is A or B over cases valid in both, costed as A's plus B's cost on those cases (the two-pass arm: first pass A,
-second-pass new findings B); unions compose.
+second-pass new findings B); unions compose. A union's cost covers only the cases valid in both parts.
 """
 import argparse
 import json
