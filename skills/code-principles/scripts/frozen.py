@@ -44,7 +44,7 @@ LINE_RULES = [
 
 # Shared identifiers that must match exactly wherever they appear: file names, paths, keys, URLs, env-var names.
 # Protocol constants such as MIME types are the same everywhere by definition; they are not shared project identifiers.
-PROTOCOL_VALUE = re.compile(r"^['\"](?:application|text|image|audio|video|multipart|font|message|model)/(?![\w-]+\.[A-Za-z0-9]{2,5}['\"])[\w.+-]+['\"]$")
+PROTOCOL_VALUE = re.compile(r"^['\"](?:application|text|image|audio|video|multipart|font|message|model)/(?![\w.-]*\.[A-Za-z0-9]{2,5}['\"])[\w.+-]+['\"]$")
 IDENTIFIER_VALUE = re.compile(r"^['\"](?:[\w.-]+\.[A-Za-z]{2,5}|[\w.-]*/[\w./-]+|https?://\S+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)['\"]$")
 CONST_DEF = re.compile(r"^\s*(?:export\s+)?(?:(?:const|let|var|final|static|public|private|readonly)\s+)*([A-Z][A-Z0-9_]{2,})\s*(?::\s*[\w<>\[\]|. ]+)?\s*[:=]\s*('[^'\n]{1,200}'|\"[^\"\n]{1,200}\")\s*[;,]?\s*(?:#.*|//.*)?$")
 VERSION = re.compile(r"""['"](\d+\.\d+\.\d+(?:-[\w.]+)?)['"]""")
@@ -77,12 +77,28 @@ class RustTestScope:
     LITERALS = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])\'')
 
     def __init__(self):
-        self.pending = False; self.depth = 0
+        self.pending = False; self.depth = 0; self.in_comment = False; self.in_string = False
 
     def _braces(self, text):
-        text = self.LITERALS.sub('""', text)
-        text = re.sub(r"/\*.*?\*/", "", text).split("//", 1)[0].split("/*", 1)[0]
-        return text.count("{") - text.count("}")
+        """Net { minus } outside comments, strings and char literals; block comments and strings may span lines."""
+        n, i = 0, 0
+        while i < len(text):
+            ch = text[i]
+            if self.in_comment:
+                if text.startswith("*/", i): self.in_comment = False; i += 2; continue
+                i += 1; continue
+            if self.in_string:
+                if ch == "\\": i += 2; continue
+                if ch == '"': self.in_string = False
+                i += 1; continue
+            if text.startswith("//", i): break
+            if text.startswith("/*", i): self.in_comment = True; i += 2; continue
+            if ch == '"': self.in_string = True; i += 1; continue
+            if ch == "'":
+                m = re.match(r"'(?:\\.|[^'\\])'", text[i:])
+                if m: i += len(m.group(0)); continue
+            n += {"{": 1, "}": -1}.get(ch, 0); i += 1
+        return n
 
     def update(self, stripped):
         """Feed one stripped line; return True when the line belongs to test-only code."""
@@ -101,7 +117,7 @@ class RustTestScope:
             opened = self._braces(rest)
             if opened > 0:
                 self.pending = False; self.depth = opened
-            elif ";" in rest or (opened == 0 and "{" in self.LITERALS.sub('""', rest).split("//", 1)[0]):
+            elif not self.in_comment and not self.in_string and (";" in rest or "{" in self.LITERALS.sub('""', rest).split("//", 1)[0]):
                 self.pending = False  # a one-line item (`use ...;`, `mod x;`, `fn f() {}`) ends here
             return True
         return False
@@ -155,15 +171,33 @@ def _manifest_versions_in(base):
             except (ValueError, AttributeError):
                 v = None
         else:
-            try:
-                import tomllib
-                data = tomllib.loads(text)
-            except Exception:
-                data = {}
+            data = _toml_tables(text)
             v = next((t.get("version") for t in (data.get("project"), data.get("package"), (data.get("tool") or {}).get("poetry")) if isinstance(t, dict) and isinstance(t.get("version"), str)), None)
         if isinstance(v, str) and re.fullmatch(r"\d+\.\d+\.\d+(?:-[\w.]+)?", v):
             found[v] = name
     return found
+
+
+def _toml_tables(text):
+    """[project]/[package]/[tool.poetry] tables: tomllib when available (Python 3.11+), else a section-aware scan."""
+    try:
+        import tomllib
+        return tomllib.loads(text)
+    except ModuleNotFoundError:
+        pass
+    except Exception:
+        return {}
+    data, section = {}, None
+    for line in text.splitlines():
+        m = re.match(r"\s*\[([\w.-]+)\]\s*$", line)
+        if m:
+            section = m.group(1); continue
+        v = re.match(r'\s*version\s*=\s*"([^"]+)"', line)
+        if v and section in ("project", "package", "tool.poetry"):
+            node = data
+            for part in section.split("."): node = node.setdefault(part, {})
+            node.setdefault("version", v.group(1))
+    return data
 
 
 def nearest_manifest_versions(root, rel, cache):
