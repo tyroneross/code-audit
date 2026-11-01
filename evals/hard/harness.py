@@ -294,12 +294,23 @@ def _segment_hits(words):
         rest = list(words[1:])
         while rest and rest[0] in ('-C', '-c'): rest = rest[2:]
         while rest and rest[0].startswith('-'): rest = rest[1:]
-        return bool(rest) and (rest[0] in GIT_NETWORK or rest[0] == 'archive' and '--remote' in rest)
+        return bool(rest) and (rest[0] in GIT_NETWORK or rest[0] == 'archive' and any(w == '--remote' or w.startswith('--remote=') for w in rest))
     if tool.startswith('python') and words[1:3] in (['-m', 'pip'], ['-m', 'pip3']): return True
-    if tool in ('uv', 'pipx') and any(w in ('pip', 'install', 'add', 'run', 'tool') for w in words[1:]): return True
+    if tool in ('uv', 'pipx') and _subcommand(words) in ('pip', 'install', 'add', 'run', 'tool', 'sync'): return True
     if tool not in NETWORK_TOOLS: return False
     subs = NETWORK_SUBCOMMANDS.get(tool)
-    return subs is None or any(w in subs for w in words[1:])
+    return subs is None or _subcommand(words) in subs
+
+
+NPM_VALUE_OPTIONS = {'--prefix', '-C', '--workspace', '-w', '--registry', '--cache', '--userconfig', '--dir'}
+
+
+def _subcommand(words):
+    """The first non-option word after the tool, skipping options that take a value (npm --prefix x install)."""
+    rest = list(words[1:])
+    while rest and rest[0].startswith('-'):
+        rest = rest[2:] if rest[0] in NPM_VALUE_OPTIONS else rest[1:]
+    return rest[0] if rest else None
 
 
 HEREDOC = None
@@ -366,8 +377,21 @@ def _split_view(lines):
     return out
 
 
+SUBSTITUTION = None
+
+
+def _substitutions(text):
+    """Commands inside $(...) and backticks that sit in double-quoted text or heredoc bodies; single quotes stay data."""
+    import re
+    global SUBSTITUTION
+    SUBSTITUTION = SUBSTITUTION or re.compile(r"\$\(([^()]*(?:\([^()]*\)[^()]*)*)\)|`([^`]*)`")
+    unquoted_single = re.sub(r"'[^']*'", "''", text)
+    return [m.group(1) or m.group(2) for m in SUBSTITUTION.finditer(unquoted_single) if not (m.group(0).startswith('$((') )]
+
+
 def _flagged(command, depth=0):
     import re
+    if depth < 3 and any(_flagged(inner, depth + 1) for inner in _substitutions(command)): return True
     global LIBRARY
     LIBRARY = LIBRARY or re.compile('|'.join(f'(?:{p})' for p in LIBRARY_PATTERNS))
     for segment, heredoc in _split_commands(command):

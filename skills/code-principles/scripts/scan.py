@@ -88,7 +88,7 @@ def indent(line):
     return len(line) - len(line.lstrip(" \t"))
 
 
-def scan_file(path, rel, skipped, store=None):
+def scan_file(path, rel, skipped, store=None, root=None):
     try:
         if os.path.getsize(path) > MAX_FILE_BYTES:
             skipped.append((rel, "larger than 2 MB"))
@@ -124,7 +124,7 @@ def scan_file(path, rel, skipped, store=None):
         for item, label in frozen.line_hits(rel, no, line, in_test):
             hits.append((item, label, rel, no, stripped[:160]))
         if store is not None:
-            frozen.collect_line(rel, no, line, store, in_test)
+            frozen.collect_line(rel, no, line, store, in_test, root)
         if PARSE_CALL.search(line):
             parse_lines.append((no, stripped[:160]))
         if in_loop and IO_CALL.search(line):
@@ -197,14 +197,13 @@ def same_input_fetches(lines):
     return sorted(set(found))
 
 
-def iter_files(paths, include_tests=False, skipped=None, roots=None):
+def iter_files(paths, include_tests=False, skipped=None):
     def on_error(err):
         if skipped is not None:
             skipped.append((err.filename, f"directory not readable: {err.strerror}"))
     for root in paths:
         if os.path.isfile(root):
-            if roots is not None: roots[os.path.basename(root)] = root
-            yield root, os.path.basename(root)
+            yield root, os.path.basename(root), root
             continue
         for dirpath, dirnames, filenames in os.walk(root, followlinks=False, onerror=on_error):
             dirnames[:] = sorted(d for d in dirnames if d not in SKIP_DIRS and not os.path.islink(os.path.join(dirpath, d)))
@@ -212,8 +211,7 @@ def iter_files(paths, include_tests=False, skipped=None, roots=None):
                 full = os.path.join(dirpath, name)
                 rel = os.path.relpath(full, root)
                 if os.path.splitext(name)[1] in CODE_EXT and not os.path.islink(full) and (include_tests or not TEST_PATH.search(rel)):
-                    if roots is not None: roots[rel] = root
-                    yield full, rel
+                    yield full, rel, root
 
 
 def main(argv=None):
@@ -228,8 +226,8 @@ def main(argv=None):
             print(f"scan.py: no such path: {p}", file=sys.stderr)
             return 2
     hits, files, skipped, store = [], 0, [], frozen.new_store()
-    for full, rel in iter_files(args.paths, args.include_tests, skipped, store["file_roots"]):
-        found = scan_file(full, rel, skipped, store)
+    for full, rel, root in iter_files(args.paths, args.include_tests, skipped):
+        found = scan_file(full, rel, skipped, store, root)
         if found is not None:
             files += 1
             hits.extend(found)

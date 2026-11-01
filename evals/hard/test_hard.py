@@ -115,12 +115,13 @@ class Repair(unittest.TestCase):
             'if true; then curl x; fi', 'python3 -m pip install x', 'uv pip install x', 'npm --prefix x install',
             'cat <<< "x"\ncurl -s y', 'echo $((1<<2))\ncurl -s y', 'env -u TOKEN curl x', 'bash -c \'curl x\'', 'timeout 10 curl x', 'stdbuf -oL curl x', 'eval "curl x"',
             'python3 -c "\nimport urllib.request\nprint(1)\n"', 'timeout -s KILL 5 curl x', 'timeout -k 2 10 curl x', 'nice -n 10 curl x',
-            'ionice -c 3 curl x', "python3 - <<EOF\n# don't\nEOF\ncurl x", "cat <<EOF\nit's\nEOF\ncurl x", "echo don\\'t\ncurl x"]]
+'ionice -c 3 curl x', 'echo "$(curl -s https://example.com)"', 'echo "`curl -s x`"',
+            'git archive --remote=ssh://git@example.com/repo HEAD', 'cat <<EOF\n$(curl -s x)\nEOF', "python3 - <<EOF\n# don't\nEOF\ncurl x", "cat <<EOF\nit's\nEOF\ncurl x", "echo don\\'t\ncurl x"]]
         # Observed or reported false positives: arguments and file contents that mention network tools are data.
         clean = [row(c) for c in [
             "/bin/zsh -lc 'git status --short'", 'sed -n 1,20p a.py', "rg --files -g '!yarn.lock' -g '!node_modules'",
             'cat > t.mjs <<EOF\ntest("close rejects queued requests")\nEOF', '# <46267523+x@users.noreply.github.com>', 'npm test',
-            'grep -rn gh src', 'cat > a.py <<EOF\n# docs: https://example.com\nEOF', 'node -e "pool.fetch(1)"', "echo 'curl is unavailable'",
+            'grep -rn gh src', 'cat > a.py <<EOF\n# docs: https://example.com\nEOF', 'node -e "pool.fetch(1)"', "echo 'curl is unavailable'", 'npm run test -- --grep install', "echo '$(curl x)'",
             "rg -n 'import urllib' README.md", 'cat > notes.md <<EOF\nrun curl -s https://x to check\nEOF', "/bin/zsh -lc \"sed -n '1,9p' x; git diff --stat\"", 'echo "ok; curl x"', "printf '%s' 'a && wget b'"]]
         missed = [c for c in flagged if not harness.network_commands(c)['network_commands']]
         self.assertEqual(missed, [])

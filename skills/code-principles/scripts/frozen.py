@@ -44,7 +44,7 @@ LINE_RULES = [
 
 # Shared identifiers that must match exactly wherever they appear: file names, paths, keys, URLs, env-var names.
 # Protocol constants such as MIME types are the same everywhere by definition; they are not shared project identifiers.
-PROTOCOL_VALUE = re.compile(r"^['\"](?:application|text|image|audio|video|multipart|font|message|model)/[\w.+-]+['\"]$")
+PROTOCOL_VALUE = re.compile(r"^['\"](?:application|text|image|audio|video|multipart|font|message|model)/(?![\w-]+\.[A-Za-z0-9]{2,5}['\"])[\w.+-]+['\"]$")
 IDENTIFIER_VALUE = re.compile(r"^['\"](?:[\w.-]+\.[A-Za-z]{2,5}|[\w.-]*/[\w./-]+|https?://\S+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)['\"]$")
 CONST_DEF = re.compile(r"^\s*(?:export\s+)?(?:(?:const|let|var|final|static|public|private|readonly)\s+)*([A-Z][A-Z0-9_]{2,})\s*(?::\s*[\w<>\[\]|. ]+)?\s*[:=]\s*('[^'\n]{1,200}'|\"[^\"\n]{1,200}\")\s*[;,]?\s*(?:#.*|//.*)?$")
 VERSION = re.compile(r"""['"](\d+\.\d+\.\d+(?:-[\w.]+)?)['"]""")
@@ -107,7 +107,7 @@ class RustTestScope:
         return False
 
 
-def collect_line(rel, no, line, store, in_test=False):
+def collect_line(rel, no, line, store, in_test=False, root=None):
     """Gather cross-file data from one source line: shared-identifier constants and this package's version claims.
     Fixture files and inline test code are not sources and not copies."""
     if in_test or FIXTURE_PATH.search(rel):
@@ -125,11 +125,11 @@ def collect_line(rel, no, line, store, in_test=False):
         if SERVER_VERSION.search(line):
             store["server_context"][rel] = no
         for v in VERSION.finditer(line):
-            store["self_versions"].append((rel, no, v.group(1), line.strip()[:160], server))
+            store["self_versions"].append((rel, no, v.group(1), line.strip()[:160], server, root))
 
 
 def new_store():
-    return {"consts": defaultdict(list), "self_versions": [], "version_context": {}, "server_context": {}, "file_roots": {}}
+    return {"consts": defaultdict(list), "self_versions": [], "version_context": {}, "server_context": {}}
 
 
 # The version a CLI or server reports about itself. Script-local `__version__` values and the versions that test or
@@ -155,8 +155,12 @@ def _manifest_versions_in(base):
             except (ValueError, AttributeError):
                 v = None
         else:
-            m = re.search(r'^version\s*=\s*"([^"]+)"', text, re.M)
-            v = m.group(1) if m else None
+            try:
+                import tomllib
+                data = tomllib.loads(text)
+            except Exception:
+                data = {}
+            v = next((t.get("version") for t in (data.get("project"), data.get("package"), (data.get("tool") or {}).get("poetry")) if isinstance(t, dict) and isinstance(t.get("version"), str)), None)
         if isinstance(v, str) and re.fullmatch(r"\d+\.\d+\.\d+(?:-[\w.]+)?", v):
             found[v] = name
     return found
@@ -179,8 +183,8 @@ def nearest_manifest_versions(root, rel, cache):
 def cross_file_hits(store, roots):
     """F3 version claims that copy or contradict the owning manifest, and F7 shared identifiers defined in several files."""
     hits = []; cache = {}
-    for rel, no, version, text, server in store["self_versions"]:
-        root = store.get("file_roots", {}).get(rel) or (roots[0] if len(roots) == 1 else None)
+    for rel, no, version, text, server, root in store["self_versions"]:
+        root = root or (roots[0] if len(roots) == 1 else None)
         if root is None or CONSTANTS_PATH.search(rel):
             continue
         manifests, where = nearest_manifest_versions(root, rel, cache)
