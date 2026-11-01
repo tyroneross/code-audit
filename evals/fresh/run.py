@@ -4,6 +4,8 @@
   run.py run --out RAW --arms ARM... [--cases ID...] [--jobs N]   one repetition per arm per case
   run.py workspace --case ID --dest DIR                            materialize one tool workspace (inspection only)
   run.py set-aside --out RAW                                       move host_failed/host_timeout trials aside for one rerun
+  run.py view --out RAW --dest VIEW                                scoring view: none-2pass keeps only its new findings
+                                                                   (arm none-2pass-new); tool use recomputed on full commands
 
 Tool-less arms (none, hint) reuse the hard benchmark's packet prompt and refuse any tool use. none-2pass reuses the
 `none` trial's answer from --first-pass and adds one second review call. Tool arms get the whole repository at the
@@ -188,12 +190,31 @@ def set_aside(out):
     return moved
 
 
+def scoring_view(out, dest):
+    """Copy each trial's meta and answer for grading. Two-pass prior findings are scored from round-1 judgments, so the
+    view keeps only the second pass's new findings; tool use is re-derived from the saved host output."""
+    rows = {}
+    for meta_path in sorted(Path(out).glob('*/meta.json')):
+        meta = json.loads(meta_path.read_text()); src = meta_path.parent; target = Path(dest) / src.name; target.mkdir(parents=True)
+        answer = json.loads((src / 'answer.json').read_text()) if (src / 'answer.json').exists() else None
+        if meta['arm'] == 'none-2pass':
+            meta['arm'] = 'none-2pass-new'
+            if answer is not None: answer['findings'] = answer['findings'][len(answer['findings']) - meta.get('new_findings', 0):]
+        if meta.get('tools') and (src / 'host-output.jsonl').exists():
+            meta['commands'], meta['tools_used'] = tool_log((src / 'host-output.jsonl').read_text(errors='replace')); meta['tool_calls'] = len(meta['commands'])
+        if answer is not None: (target / 'answer.json').write_text(json.dumps(answer, indent=2) + '\n')
+        (target / 'meta.json').write_text(json.dumps(meta, indent=2) + '\n'); rows[meta['arm']] = rows.get(meta['arm'], 0) + 1
+    return rows
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('command', choices=['run', 'workspace', 'set-aside'])
+    p.add_argument('command', choices=['run', 'workspace', 'set-aside', 'view'])
     p.add_argument('--out', type=Path); p.add_argument('--arms', nargs='*', default=[]); p.add_argument('--cases', nargs='*')
     p.add_argument('--jobs', type=int, default=4); p.add_argument('--first-pass', type=Path); p.add_argument('--case'); p.add_argument('--dest', type=Path)
     a = p.parse_args()
+    if a.command == 'view':
+        print(json.dumps(scoring_view(a.out, a.dest))); return
     if a.command == 'set-aside':
         print(json.dumps(set_aside(a.out))); return
     if a.command == 'workspace':

@@ -80,6 +80,16 @@ class Runner(unittest.TestCase):
         commands, used = self.run.tool_log(line)
         self.assertTrue(used['scan']); self.assertEqual(len(commands[0]), 400)
 
+    def test_view_keeps_only_new_two_pass_findings(self):
+        with tempfile.TemporaryDirectory() as d:
+            raw = Path(d) / 'raw' / 'F01-none-2pass-1'; raw.mkdir(parents=True)
+            (raw / 'meta.json').write_text(json.dumps({'arm': 'none-2pass', 'case_id': 'F01', 'new_findings': 1}))
+            (raw / 'answer.json').write_text(json.dumps({'coverage': 'complete', 'findings': [{'id': 'old'}, {'id': 'new'}]}))
+            self.run.scoring_view(Path(d) / 'raw', Path(d) / 'view')
+            v = Path(d) / 'view' / 'F01-none-2pass-1'
+            self.assertEqual(json.loads((v / 'meta.json').read_text())['arm'], 'none-2pass-new')
+            self.assertEqual([f['id'] for f in json.loads((v / 'answer.json').read_text())['findings']], ['new'])
+
     def test_tools_come_from_the_pinned_revision(self):
         if not self.run.ARCHITECT.is_file(): self.skipTest('architect binary unavailable')
         with tempfile.TemporaryDirectory() as d:
