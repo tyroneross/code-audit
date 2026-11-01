@@ -5,7 +5,7 @@
 
 Read-only: lists files with `git ls-files` (os.walk fallback) and reads them with Python regex.
 """
-import argparse, collections, json, os, re, subprocess, sys
+import argparse, collections, json, os, re, stat, subprocess, sys
 
 SKIP = {".git", "node_modules", "dist", "build", "vendor", "target", "__pycache__", ".venv", "fixtures"}
 LANG = {".py": "python", ".ts": "typescript", ".tsx": "typescript", ".js": "javascript", ".jsx": "javascript", ".mjs": "javascript",
@@ -46,12 +46,23 @@ def recon(root, base=None, paths=None):
         paths = git(root, "diff", "--name-only", "--relative", base)
         if paths is None:
             raise SystemExit(f"recon.py: cannot diff against {base!r}")
-    targets = [p for p in (paths if scope == "diff" else files)
-               if not set(p.split("/")) & SKIP and os.path.isfile(os.path.join(root, p))]
+    targets, inaccessible = [], []
+    for p in (paths if scope == "diff" else files):
+        if set(p.split("/")) & SKIP:
+            continue
+        try:
+            st = os.stat(os.path.join(root, p))
+        except FileNotFoundError:
+            continue  # deleted in the diff, or listed but gone
+        except OSError:
+            inaccessible.append(p)  # exists but cannot be checked: coverage gap, not absence
+            continue
+        if stat.S_ISREG(st.st_mode):
+            targets.append(p)
     langs = collections.Counter(LANG[os.path.splitext(p)[1]] for p in targets if os.path.splitext(p)[1] in LANG)
     total = sum(langs.values()) or 1
     hits = {k: 0 for k in PATTERNS}
-    unreadable, truncated = [], []
+    unreadable, truncated = list(inaccessible), []
     for p in targets:
         try:
             with open(os.path.join(root, p), encoding="utf-8", errors="ignore") as fh:

@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import random
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -200,6 +201,24 @@ class Verdicts(unittest.TestCase):
         self.assertEqual(v['code-principles-audit']['review']['verdict'], 'parity')
         self.assertEqual(v['code-principles-audit']['repair']['verdict'], 'outperforms')
         self.assertFalse(v['discrimination']['review_control_below_ceiling'])
+
+
+class SourceFailure(unittest.TestCase):
+    def test_source_read_timeout_is_recorded_as_a_harness_error(self):
+        case = harness.CASES['review'][0]
+        original = harness.review_prompt
+        def stalled(*_):
+            raise subprocess.TimeoutExpired(['git', 'show'], 60)
+        harness.review_prompt = stalled
+        try:
+            with tempfile.TemporaryDirectory() as folder:
+                meta = harness.run_review(case, 'none', 1, Path(folder))
+                saved = json.loads((Path(folder) / f"{case['id']}-none-1" / 'meta.json').read_text())
+        finally:
+            harness.review_prompt = original
+        self.assertEqual(meta['status'], 'harness_error')
+        self.assertEqual(saved['stage'], 'sources')
+        self.assertEqual(saved['error_type'], 'TimeoutExpired')
 
 
 if __name__ == '__main__':

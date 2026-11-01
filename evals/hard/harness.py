@@ -136,9 +136,15 @@ def host_call(prompt, work, cwd, out_dir, protected, timeout, schema=None, sandb
 
 def run_review(case, arm, repeat, out):
     dest = out / f'{case["id"]}-{arm}-{repeat}'; dest.mkdir(parents=True, exist_ok=False)
-    prompt = review_prompt(case, arm); (dest / 'prompt.txt').write_text(prompt)
     meta = {'family': 'review', 'case_id': case['id'], 'arm': arm, 'repeat': repeat, 'requested_model': MODEL, 'effort': 'medium',
-            'served_models': None, 'guidance_sha256': guidance_sha256(arm), 'prompt_sha256': sha(prompt), 'status': 'harness_error'}
+            'served_models': None, 'guidance_sha256': guidance_sha256(arm), 'prompt_sha256': None, 'status': 'harness_error'}
+    try:  # source loading runs git; a failure here is the harness's, and the attempt must still be recorded
+        prompt = review_prompt(case, arm)
+    except Exception as error:
+        meta.update({'error': str(error)[:500], 'error_type': type(error).__name__, 'stage': 'sources'})
+        (dest / 'meta.json').write_text(json.dumps(meta, indent=2) + '\n')
+        return meta
+    (dest / 'prompt.txt').write_text(prompt); meta['prompt_sha256'] = sha(prompt)
     try:
         with tempfile.TemporaryDirectory(prefix='code-audit-hard-review-') as folder:
             work = Path(folder).resolve(); schema = work / 'schema.json'; schema.write_text(json.dumps(REVIEW_SCHEMA))
