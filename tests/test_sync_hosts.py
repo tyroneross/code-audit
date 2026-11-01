@@ -122,11 +122,11 @@ class SyncHosts(unittest.TestCase):
     def test_codex_wrong_source_blocks_and_failure_is_reported(self):
         (self.home / '.codex').mkdir()
         with mock.patch.object(sync_hosts.shutil, 'which', return_value='/bin/codex'):
-            listing = 'Marketplace `code-audit-local`\n/old/checkout/.agents/plugins/marketplace.json\n'
+            listing = 'build-loop        /x/build-loop\ncode-audit-local  /old/checkout\n'
             code, out = self.run_main('--apply', run=lambda *a, **k: done(listing))
             self.assertEqual(code, 1)
             self.assertIn('not ' + str(ROOT), out)
-            listing = f'Marketplace `code-audit-local-backup`\n/other\n'
+            listing = 'code-audit-local-backup  /other\n'
             calls = []
             def fake(cmd, **k):
                 calls.append(cmd[2:])
@@ -153,9 +153,9 @@ class SyncHosts(unittest.TestCase):
 
     def test_codex_prefix_collision_and_missing_plugin(self):
         (self.home / '.codex').mkdir()
-        good = f'Marketplace `code-audit-local`\n{ROOT}/.agents/plugins/marketplace.json\n'
+        good = f'build-loop        /x/build-loop\ncode-audit-local  {ROOT}\n'
         with mock.patch.object(sync_hosts.shutil, 'which', return_value='/bin/codex'):
-            fake, _ = self.codex_fake(f'Marketplace `code-audit-local`\n{ROOT}-old/.agents/plugins/marketplace.json\n', True)
+            fake, _ = self.codex_fake(f'code-audit-local  {ROOT}-old\n', True)
             code, out = self.run_main('--apply', run=fake)
             self.assertEqual(code, 1)
             self.assertIn('BLOCKED  codex', out)
@@ -209,7 +209,7 @@ class SyncHosts(unittest.TestCase):
     def test_codex_not_installed_row_and_list_failure(self):
         (self.home / '.codex').mkdir()
         self.run_main('--apply')
-        good = f'Marketplace `code-audit-local`\n{ROOT}/.agents/plugins/marketplace.json\n'
+        good = f'build-loop        /x/build-loop\ncode-audit-local  {ROOT}\n'
         def fake_with(list_out, list_code=0):
             calls = []
             def fake(cmd, **k):

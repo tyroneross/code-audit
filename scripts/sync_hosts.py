@@ -244,17 +244,16 @@ class Sync:
         if listed.returncode != 0:
             self.blocked.append(f'codex: `plugin marketplace list` failed: {(listed.stderr or listed.stdout).strip()[:200]}')
             return
-        lines = [line.strip() for line in listed.stdout.splitlines()]
-        heading = f'Marketplace `{self.market}`'
+        # Rows look like "<name>  <source path>", columns separated by 2+ spaces.
+        rows = [re.split(r'\s{2,}', line.strip()) for line in listed.stdout.splitlines() if line.strip()]
+        source = next((r[1] for r in rows if len(r) > 1 and r[0] == self.market), None)
         expected = {os.path.normpath(str(self.repo)), os.path.normpath(str(self.repo / '.agents' / 'plugins' / 'marketplace.json'))}
-        if heading not in lines:
+        if source is None:
             self.pending.append(('codex', f'add marketplace {self.market}', ('codex', 'marketplace', 'add', str(self.repo))))
-        else:
-            source = lines[lines.index(heading) + 1] if lines.index(heading) + 1 < len(lines) else ''
-            if os.path.normpath(source) not in expected:
-                self.blocked.append(f'codex: marketplace {self.market} points to {source or "an unknown source"}, not {self.repo}; '
-                                    f'run `codex plugin marketplace remove {self.market}` then rerun')
-                return
+        elif os.path.normpath(source) not in expected:
+            self.blocked.append(f'codex: marketplace {self.market} points to {source}, not {self.repo}; '
+                                f'run `codex plugin marketplace remove {self.market}` then rerun')
+            return
         key = f'{self.plugin}@{self.market}'
         plugins = call('list')
         if plugins.returncode != 0:
