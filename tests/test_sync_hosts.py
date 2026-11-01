@@ -206,5 +206,38 @@ class SyncHosts(unittest.TestCase):
         self.assertIn('cannot be preserved', out)
         self.assertEqual((self.home / '.cursor' / 'mcp.json').read_text(), text)
 
+    def test_codex_not_installed_row_and_list_failure(self):
+        (self.home / '.codex').mkdir()
+        self.run_main('--apply')
+        good = f'Marketplace `code-audit-local`\n{ROOT}/.agents/plugins/marketplace.json\n'
+        def fake_with(list_out, list_code=0):
+            calls = []
+            def fake(cmd, **k):
+                calls.append(cmd[2:])
+                if cmd[2:4] == ['marketplace', 'list']:
+                    return done(good)
+                if cmd[2:3] == ['list']:
+                    return done(list_out, list_code)
+                return done('ok')
+            return fake, calls
+        with mock.patch.object(sync_hosts.shutil, 'which', return_value='/bin/codex'):
+            fake, _ = fake_with('code-audit@code-audit-local  not installed  0.3.1  /x\n')
+            self.assertEqual(self.run_main(run=fake)[0], 1)
+            fake, calls = fake_with('', 1)
+            code, out = self.run_main('--apply', run=fake)
+            self.assertEqual(code, 1)
+            self.assertNotIn(['add', 'code-audit@code-audit-local'], calls)
+
+    def test_symlinked_folder_with_dotdot_is_not_treated_as_owned(self):
+        # repos/alias -> other/deep, so repos/alias/../owned resolves to other/owned, not repos/owned.
+        repos, other = self.home / 'repos', self.home / 'other' / 'deep'
+        (repos / 'owned' / 'skills').mkdir(parents=True)
+        other.mkdir(parents=True)
+        (repos / 'alias').symlink_to(other)
+        link = self.home / 'tricky-link'
+        link.symlink_to(str(repos / 'alias' / '..' / 'owned' / 'skills' / 'x'))
+        self.assertFalse(sync_hosts.inside(sync_hosts.raw_target(link), repos / 'owned'))
+        self.assertTrue(sync_hosts.inside(repos / 'owned' / 'skills' / 'x', repos / 'owned'))
+
 if __name__ == '__main__':
     unittest.main()
