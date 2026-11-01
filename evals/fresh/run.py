@@ -76,14 +76,16 @@ def starting_files(case):
 
 
 def archive(case, dest):
-    """Extract `git archive <revision>` into dest: tracked files only, no .git, no later history."""
+    """Extract `git archive <revision>` into dest: tracked files only, no .git, no later history. Returns skipped members."""
     data = subprocess.run(['git', '-c', 'credential.helper=', '-C', str(harness.ROOT / case['repo']), 'archive', '--format=tar', case['revision']],
                           capture_output=True, check=True, timeout=ARCHIVE_TIMEOUT).stdout
+    skipped = []
     def safe(member, path):  # skip members the data filter refuses (e.g. absolute symlinks) instead of failing the trial
         try: return tarfile.data_filter(member, path)
-        except tarfile.FilterError: return None
+        except tarfile.FilterError: skipped.append(member.name); return None
     with tarfile.open(fileobj=io.BytesIO(data)) as tar:
         tar.extractall(dest, filter=safe)
+    return skipped
 
 
 def install_tools(tools):
@@ -135,7 +137,7 @@ def run_trial(case, arm, out, first_pass=None):
             work = Path(folder).resolve(); schema = work / 'schema.json'; schema.write_text(json.dumps(harness.REVIEW_SCHEMA))
             prior = None
             if arm in TOOL_ARMS:
-                archive(case, work / 'repo'); meta['tools_sha256'] = install_tools(work / 'tools')
+                meta['archive_skipped'] = archive(case, work / 'repo'); meta['tools_sha256'] = install_tools(work / 'tools')
                 prompt = TOOL_PROMPT.format(files=starting_files(case)) + guidance_text(arm)
                 timeout, sandbox = TOOL_TIMEOUT, 'danger-full-access'
             else:

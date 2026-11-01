@@ -63,8 +63,16 @@ class StatsInputs(unittest.TestCase):
             with self.assertRaises(SystemExit): stats.load([p])
 
     def test_cost_ratio_is_compared_unrounded(self):
-        row = {'delta': 0.2, 'p': 0.01, 'delta_control_fp': 0, 'cost_ratio': {'tokens': 2.004, 'seconds': 1.0}}
+        cases = {f'F{i:02d}': 1 for i in range(10)}
+        arms = {'a': self.arm(cases, tokens=2004), 'b': self.arm({c: 0 for c in cases}, tokens=1000)}
+        row = stats.compare(arms, 'a', 'b')
         self.assertEqual(stats.verdict(row), 'helps at cost')
+
+    def test_unions_compose(self):
+        a = dict(self.arm({'F01': 0}), cost_by_case={'F01': [1, 1]}); b = dict(self.arm({'F01': 0}), cost_by_case={'F01': [2, 1]})
+        c = dict(self.arm({'F01': 1}), cost_by_case={'F01': [3, 1]})
+        u = stats.union(stats.union(a, b), c)
+        self.assertEqual((u['detected'], u['tokens']), (1, 6))
 
     def test_cost_is_per_trial(self):
         arms = {'a': self.arm({'F01': 1, 'F02': 1}, tokens=40), 'b': self.arm({'F01': 1}, tokens=20)}

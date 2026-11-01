@@ -50,7 +50,7 @@ The other source plugin, Coding Debugger, is not run. It tied the code-audit bun
 
 ## Tests and verdict rule
 
-Comparisons are paired by case: an exact two-sided McNemar test on discordant cases (`stats.py`). A case invalid in either arm is dropped from that comparison and counted. Host failures and timeouts are rerun once (`run.py set-aside`, then `run`). Schema-invalid and network-flagged trials are not rerun.
+Comparisons are paired by case: an exact two-sided McNemar test on discordant cases (`stats.py`). A case invalid in either arm is dropped from that comparison and counted. Host failures, timeouts and harness errors (failures before the model ran) are rerun once (`run.py set-aside`, then `run`). Schema-invalid and network-flagged trials are not rerun.
 
 **Positive control (gate).** `hint` must beat `none` with p < .05. If it does not, guidance testing stops. Round 2 then runs only to report the instrument limit, and the methods ship on their own merits.
 
@@ -110,8 +110,8 @@ An Opus audit and a Codex review of 6168d75..069f22f found no flaw in the test o
 - **Paired controls and cost per trial.** Control false positives are compared on controls valid in both arms (`grade.py` now keeps `per_control`). Cost ratios are mean tokens and seconds per valid trial, not totals. `stats.py` refuses an arm name that appears in two aggregate files, and it returns "no data" for an arm that has no valid trials.
 - **No second verdict.** `grade.py aggregate --no-verdicts` drops the hard benchmark's unpaired verdict block for this case set. The only verdict is `stats.py`.
 - **Tools.** Round-2 trials copied the scanner scripts from the worktree, which matched de06478 for the whole run: no commit or edit touched `skills/code-principles/scripts` between de06478 and the end of round 2. `run.py` now writes them from git at de06478 and records their hashes. `tools_used` was computed on commands truncated to 400 characters. It is recomputed from each trial's saved `host-output.jsonl` on the complete commands.
-- **Reruns.** Only host failures and timeouts are rerun, through `run.py set-aside`.
+- **Reruns.** Only host failures, timeouts and harness errors are rerun, through `run.py set-aside`. See the results Disclosures for the one manual set-aside.
 
 ## Addendum 4: result
 
-Results are in [results-2026-11-01.md](results-2026-11-01.md). Every primary comparison came out at parity, with 0–1 discordant cases among 54. The tool arms detected 18–19/54; the tool-less `none` detected 22/54.
+Results are in [results-2026-11-01.md](results-2026-11-01.md). Every primary comparison came out at parity: Holm-adjusted p = 1.0, with 0–1 discordant cases among the 45–46 paired cases. Under the pre-registered analysis the tool arms detected 17–19 of 47–51 valid cases. The tool-less `none` detected 22/54.
