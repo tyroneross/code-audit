@@ -32,6 +32,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from decimal import Decimal
 from pathlib import Path
 
 SERVER_NAME = 'code-audit-debugger'
@@ -78,6 +79,14 @@ def _no_nonfinite(value):
     raise ValueError(f'non-finite number {value}')
 
 
+def _exact_float(token):
+    """Refuse numbers that a float cannot carry unchanged, so a rewrite never alters them."""
+    value = float(token)
+    if Decimal(token) != Decimal(repr(value)):
+        raise ValueError(f'number {token} cannot be preserved exactly')
+    return value
+
+
 def _no_duplicates(pairs):
     keys = [k for k, _ in pairs]
     if len(keys) != len(set(keys)):
@@ -95,13 +104,21 @@ class Config:
         elif path.exists():
             self.text = path.read_text()
             try:
-                self.data = json.loads(self.text, parse_constant=_no_nonfinite, object_pairs_hook=_no_duplicates)
+                self.data = json.loads(self.text, parse_constant=_no_nonfinite, parse_float=_exact_float,
+                                       object_pairs_hook=_no_duplicates)
             except ValueError as exc:
                 self.error = f'is not plain JSON ({exc}); left untouched'
 
-    def write(self):
+    def unchanged(self):
+        if self.path.is_symlink():
+            return False
         current = self.path.read_text() if self.path.exists() else None
-        if current != self.text:
+        return current == self.text
+
+    def write(self):
+        # Other programs write these files without locking, so this narrows the race
+        # window to the final check-then-replace; it cannot remove it entirely.
+        if not self.unchanged():
             raise Blocked(f'{self.path} changed during this run; nothing written, rerun')
         if self.path.exists():
             fd, backup = tempfile.mkstemp(prefix=f'{self.path.name}.bak-{time.strftime("%Y%m%d-%H%M%S")}-', dir=self.path.parent)
@@ -113,6 +130,8 @@ class Config:
                 fh.write(json.dumps(self.data, indent=2, allow_nan=False) + '\n')
             if self.path.exists():
                 shutil.copymode(self.path, tmp)
+            if not self.unchanged():
+                raise Blocked(f'{self.path} changed during this run; nothing written, rerun')
             os.replace(tmp, self.path)
         except BaseException:
             if os.path.exists(tmp):
@@ -179,15 +198,18 @@ class Sync:
             if link.is_symlink() and target_of(link) == target:
                 continue
             if link.is_symlink() and inside(target_of(link), root):
-                self.pending.append((host, f'repoint {link}', ('relink', link, target)))
+                self.pending.append((host, f'repoint {link}', ('relink', link, target, target_of(link))))
             elif link.exists() or link.is_symlink():
                 self.blocked.append(f'{host}: {link} exists and is not a Code Audit link; left untouched')
             else:
                 self.pending.append((host, f'link {link}', ('link', link, target)))
         if folder.exists():
+            current = set(skills(self.repo))
             for link in folder.iterdir():
+                if link.name in current:
+                    continue  # handled above: exactly one action per destination
                 if link.is_symlink() and inside(target_of(link), root) and not link.exists():
-                    self.pending.append((host, f'remove stale {link}', ('unlink', link, None)))
+                    self.pending.append((host, f'remove stale {link}', ('unlink', link, None, target_of(link))))
 
     def plan_retire(self):
         roots = [self.repo.parent / r for r in RETIRED_REPOS]
@@ -197,7 +219,7 @@ class Sync:
                 continue
             for link in base.iterdir():
                 if link.is_symlink() and any(inside(target_of(link), r) for r in roots):
-                    self.pending.append(('retire', f'remove {link} -> {target_of(link)}', ('unlink', link, None)))
+                    self.pending.append(('retire', f'remove {link} -> {target_of(link)}', ('unlink', link, None, target_of(link))))
 
     def plan_codex(self, run):
         if not (self.home / '.codex').exists():
@@ -206,24 +228,37 @@ class Sync:
         if not exe:
             self.blocked.append('codex: CLI not found on PATH')
             return
-        listed = run([exe, 'plugin', 'marketplace', 'list'], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120)
-        lines = listed.stdout.splitlines()
-        heading = f'Marketplace `{self.market}`'
-        at = [i for i, line in enumerate(lines) if line.strip() == heading]
-        source_ok = bool(at) and any(str(self.repo) in line for line in lines[at[0] + 1:at[0] + 3])
-        if not at:
-            self.pending.append(('codex', f'add marketplace {self.market}', ('codex', 'marketplace', 'add', str(self.repo))))
-        elif not source_ok:
-            self.blocked.append(f'codex: marketplace {self.market} points somewhere other than {self.repo}; '
-                                f'run `codex plugin marketplace remove {self.market}` then rerun')
-            return
-        self.pending.append(('codex', f'install/refresh {self.plugin}@{self.market}', ('codex', 'add', f'{self.plugin}@{self.market}')))
         self.codex_exe = exe
+        def call(*args):
+            return run([exe, 'plugin', *args], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120)
+        listed = call('marketplace', 'list')
+        if listed.returncode != 0:
+            self.blocked.append(f'codex: `plugin marketplace list` failed: {(listed.stderr or listed.stdout).strip()[:200]}')
+            return
+        lines = [line.strip() for line in listed.stdout.splitlines()]
+        heading = f'Marketplace `{self.market}`'
+        expected = {os.path.normpath(str(self.repo)), os.path.normpath(str(self.repo / '.agents' / 'plugins' / 'marketplace.json'))}
+        if heading not in lines:
+            self.pending.append(('codex', f'add marketplace {self.market}', ('codex', 'marketplace', 'add', str(self.repo))))
+        else:
+            source = lines[lines.index(heading) + 1] if lines.index(heading) + 1 < len(lines) else ''
+            if os.path.normpath(source) not in expected:
+                self.blocked.append(f'codex: marketplace {self.market} points to {source or "an unknown source"}, not {self.repo}; '
+                                    f'run `codex plugin marketplace remove {self.market}` then rerun')
+                return
+        key = f'{self.plugin}@{self.market}'
+        plugins = call('list')
+        installed = plugins.returncode == 0 and any(line.split()[:2] == [key, 'installed,'] or
+                                                    (line.split() and line.split()[0] == key and 'installed' in line)
+                                                    for line in plugins.stdout.splitlines() if line.strip())
+        kind = 'refresh' if installed else 'install'
+        self.pending.append(('codex', f'{kind} {key}', ('codex', 'add', key), kind))
 
     # --- apply ------------------------------------------------------------------------------
     def apply_all(self, run):
         written = set()
-        for host, label, action in self.pending:
+        codex_failed = False
+        for host, label, action, *_ in self.pending:
             try:
                 if isinstance(action, Config):
                     if action.path not in written:
@@ -232,16 +267,20 @@ class Sync:
                 elif action[0] == 'link':
                     action[1].parent.mkdir(parents=True, exist_ok=True)
                     action[1].symlink_to(action[2])
-                elif action[0] == 'relink':
-                    action[1].unlink()
-                    action[1].symlink_to(action[2])
-                elif action[0] == 'unlink':
-                    if action[1].is_symlink():
-                        action[1].unlink()
+                elif action[0] in ('relink', 'unlink'):
+                    link, planned = action[1], action[3]
+                    if not (link.is_symlink() and target_of(link) == planned):
+                        raise Blocked(f'{link} changed since it was checked; left untouched')
+                    link.unlink()
+                    if action[0] == 'relink':
+                        link.symlink_to(action[2])
                 elif action[0] == 'codex':
+                    if codex_failed:
+                        raise Blocked('skipped because an earlier Codex step failed')
                     out = run([self.codex_exe, 'plugin', *action[1:]], stdin=subprocess.DEVNULL,
                               capture_output=True, text=True, timeout=180)
                     if out.returncode != 0:
+                        codex_failed = True
                         raise Blocked(f'codex plugin {" ".join(action[1:])} failed: {(out.stderr or out.stdout).strip()[:300]}')
                 self.done.append(f'{host}: {label}')
             except (Blocked, OSError) as exc:
@@ -275,7 +314,7 @@ def main(argv=None, run=subprocess.run):
         for line in s.done:
             print(f'done     {line}')
     else:
-        for host, label, _ in s.pending:
+        for host, label, *_ in s.pending:
             print(f'pending  {host}: {label}')
     for line in s.blocked:
         print(f'BLOCKED  {line}')
@@ -284,7 +323,7 @@ def main(argv=None, run=subprocess.run):
     if s.blocked:
         return 1
     # Check mode: a Codex refresh is always offered, so it alone does not count as drift.
-    drift = [p for p in s.pending if not (p[0] == 'codex' and 'refresh' in p[1])]
+    drift = [p for p in s.pending if not (len(p) > 3 and p[3] == 'refresh')]
     return 0 if a.apply or not drift else 1
 
 
