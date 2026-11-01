@@ -45,6 +45,13 @@ Claude Code, from the project being inspected:
 claude --plugin-dir /absolute/path/to/code-audit
 ```
 
+Or install it persistently from the repo's local marketplace:
+
+```sh
+claude plugin marketplace add /absolute/path/to/code-audit
+claude plugin install code-audit@code-audit-local
+```
+
 Invoke `/code-audit:code-audit` or ask to use Code Audit.
 
 Codex: this repo includes a local marketplace. Register its folder:
