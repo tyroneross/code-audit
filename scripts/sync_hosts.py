@@ -27,6 +27,7 @@ unless --repo is given. Marketplace and plugin names come from .claude-plugin/ma
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -61,6 +62,11 @@ def skills(repo):
     return sorted(p.parent.name for p in (repo / 'skills').glob('*/SKILL.md'))
 
 
+def raw_target(link):
+    """The link target joined to its folder but not normalized, so a resolved check can follow symlinked folders."""
+    return Path(os.path.join(link.parent, os.readlink(link)))
+
+
 def target_of(link):
     """Absolute, normalized target of a symlink, without following further links."""
     raw = os.readlink(link)
@@ -68,11 +74,14 @@ def target_of(link):
 
 
 def inside(path, root):
-    try:
-        path.relative_to(Path(os.path.normpath(root)))
-        return True
-    except ValueError:
-        return False
+    """True only when `path` lies under `root` both as written and after resolving symlinked folders."""
+    for p, r in ((Path(os.path.normpath(path)), Path(os.path.normpath(root))),
+                 (Path(os.path.realpath(path)), Path(os.path.realpath(root)))):
+        try:
+            p.relative_to(r)
+        except ValueError:
+            return False
+    return True
 
 
 def _no_nonfinite(value):
@@ -197,7 +206,7 @@ class Sync:
             link, target = folder / name, root / name
             if link.is_symlink() and target_of(link) == target:
                 continue
-            if link.is_symlink() and inside(target_of(link), root):
+            if link.is_symlink() and inside(raw_target(link), root):
                 self.pending.append((host, f'repoint {link}', ('relink', link, target, target_of(link))))
             elif link.exists() or link.is_symlink():
                 self.blocked.append(f'{host}: {link} exists and is not a Code Audit link; left untouched')
@@ -208,7 +217,7 @@ class Sync:
             for link in folder.iterdir():
                 if link.name in current:
                     continue  # handled above: exactly one action per destination
-                if link.is_symlink() and inside(target_of(link), root) and not link.exists():
+                if link.is_symlink() and inside(raw_target(link), root) and not link.exists():
                     self.pending.append((host, f'remove stale {link}', ('unlink', link, None, target_of(link))))
 
     def plan_retire(self):
@@ -218,7 +227,7 @@ class Sync:
             if not base.exists():
                 continue
             for link in base.iterdir():
-                if link.is_symlink() and any(inside(target_of(link), r) for r in roots):
+                if link.is_symlink() and any(inside(raw_target(link), r) for r in roots):
                     self.pending.append(('retire', f'remove {link} -> {target_of(link)}', ('unlink', link, None, target_of(link))))
 
     def plan_codex(self, run):
@@ -248,9 +257,12 @@ class Sync:
                 return
         key = f'{self.plugin}@{self.market}'
         plugins = call('list')
-        installed = plugins.returncode == 0 and any(line.split()[:2] == [key, 'installed,'] or
-                                                    (line.split() and line.split()[0] == key and 'installed' in line)
-                                                    for line in plugins.stdout.splitlines() if line.strip())
+        if plugins.returncode != 0:
+            self.blocked.append(f'codex: `plugin list` failed: {(plugins.stderr or plugins.stdout).strip()[:200]}')
+            return
+        # Rows look like "<id>  <status, ...>  <version>  <path>", columns separated by 2+ spaces.
+        rows = [re.split(r'\s{2,}', line.strip()) for line in plugins.stdout.splitlines() if line.strip()]
+        installed = any(len(r) > 1 and r[0] == key and r[1].split(',')[0].strip() == 'installed' for r in rows)
         kind = 'refresh' if installed else 'install'
         self.pending.append(('codex', f'{kind} {key}', ('codex', 'add', key), kind))
 
