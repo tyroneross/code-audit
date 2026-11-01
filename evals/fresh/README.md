@@ -88,3 +88,16 @@ Comparisons are paired by case: an exact two-sided McNemar test on discordant ca
 | `principles+tools` | a915a052cb306d6e6f76af84b8b5ef55009c3092450b9fdae371353d95bbabd5 |
 
 `adaptive` differs from `bundle+tools` by every change in de06478 to the four SKILL.md files (route line, probe-before-concluding, positive-control rule) plus `audit-methods.md`. It is the whole method package, not an ablation. `fixed-plan` removes section 4 (adaptation), recipe R6 and every R6 mention, and rewrites the router's "adapt per its rules" as "without changing it".
+
+## Addendum 2: round-1 result, the positive control (committed before any round-2 output was read)
+
+All 116 round-1 trials completed against the schema; none was invalid. Eight Opus judges graded 62 blinded packets (218 findings). Every finding got a judgment row; a check against the packets found 0 mismatches. A spot check of 4 random decisions against the oracle mechanisms agreed with all 4.
+
+| Arm | Detected | Located (primary) | Control FP | Findings | Tokens | Seconds |
+|---|---|---|---|---|---|---|
+| `none` | 22/54 (0.41) | 27/54 | 0/8 | 161 | 1.39M | 2,616 |
+| `hint` | 46/54 (0.85) | 49/54 | — | 95 | 1.19M | 1,531 |
+
+The paired test, `hint` vs `none`, gives 25 cases detected by `hint` only and 1 by `none` only, exact McNemar p = 8.0e-7. **The positive control separates, so guidance testing proceeds.** `none` detects 0.41, below the 0.75 discrimination ceiling, so the case set is not saturated.
+
+With one repetition and 54 cases, the instrument detects a large planted effect. It can resolve a guidance effect only if that effect produces about 6 or more discordant cases in one direction.
