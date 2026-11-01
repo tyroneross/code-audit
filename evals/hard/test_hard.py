@@ -118,7 +118,8 @@ class Repair(unittest.TestCase):
 'ionice -c 3 curl x', 'echo "$(curl -s https://example.com)"', 'echo "`curl -s x`"',
             'git archive --remote=ssh://git@example.com/repo HEAD', 'cat <<EOF\n$(curl -s x)\nEOF',
             'yarn --cwd app add x', 'npm --loglevel silent install x', 'gh -R o/r pr list', 'gh --repo o/r issue list', 'uv --directory d pip install x',
-            'echo "it\'s $(curl -s x) ok\'s"', 'echo "\'$(curl x)\'"', 'uv --project /tmp/p sync', "cat <<EOF\nit's $(curl x) don't\nEOF", "python3 - <<EOF\n# don't\nEOF\ncurl x", "cat <<EOF\nit's\nEOF\ncurl x", "echo don\\'t\ncurl x"]]
+            'echo "it\'s $(curl -s x) ok\'s"', 'echo "\'$(curl x)\'"', 'uv --project /tmp/p sync',
+            'echo "$(printf \')\'; curl x)"', "echo 'prefix\\' \"$(curl x)\"", 'cat <<EOF\n$(\ncurl x\n)\nEOF', 'npm -- install x', "cat <<EOF\nit's $(curl x) don't\nEOF", "python3 - <<EOF\n# don't\nEOF\ncurl x", "cat <<EOF\nit's\nEOF\ncurl x", "echo don\\'t\ncurl x"]]
         # Observed or reported false positives: arguments and file contents that mention network tools are data.
         clean = [row(c) for c in [
             "/bin/zsh -lc 'git status --short'", 'sed -n 1,20p a.py', "rg --files -g '!yarn.lock' -g '!node_modules'",

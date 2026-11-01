@@ -306,6 +306,7 @@ def _before_dashdash(words):
     """Words after the tool and before `--`: options with unknown value arguments cannot hide the subcommand, while
     arguments passed through to a script (`npm run test -- --grep install`) are not read as installer verbs."""
     rest = list(words[1:])
+    while rest and rest[0] == '--': rest = rest[1:]  # an option terminator before the command is not a pass-through
     return set(rest[:rest.index('--')] if '--' in rest else rest)
 
 
@@ -376,22 +377,36 @@ def _split_view(lines):
 SUBSTITUTION = None
 
 
+def _close_paren(text, j):
+    """Index just past the `)` that closes a `$(` opened before j, ignoring parentheses inside quotes."""
+    depth, quote = 1, None
+    while j < len(text) and depth:
+        ch = text[j]
+        if quote == "'":
+            if ch == "'": quote = None
+        elif ch == '\\': j += 1
+        elif quote == '"':
+            if ch == '"': quote = None
+        elif ch in ('"', "'"): quote = ch
+        else: depth += {'(': 1, ')': -1}.get(ch, 0)
+        j += 1
+    return j
+
+
 def _scan_substitutions(text, single_quotes=True):
     """$(...) and backtick bodies outside single quotes. Apostrophes inside double quotes, and anywhere when
     `single_quotes` is False (an unquoted heredoc body), are literal text."""
     out, i, quote = [], 0, None
     while i < len(text):
         ch = text[i]
-        if ch == '\\': i += 2; continue
-        if quote == "'":
+        if quote == "'":  # a backslash is literal inside single quotes
             if ch == "'": quote = None
             i += 1; continue
+        if ch == '\\': i += 2; continue
         if ch == '"': quote = None if quote == '"' else '"'; i += 1; continue
         if ch == "'" and quote is None and single_quotes: quote = "'"; i += 1; continue
         if text.startswith('$(', i) and not text.startswith('$((', i):
-            depth, j = 1, i + 2
-            while j < len(text) and depth:
-                depth += {'(': 1, ')': -1}.get(text[j], 0); j += 1
+            j = _close_paren(text, i + 2)
             out.append(text[i + 2:j - 1]); i = j; continue
         if ch == '`':
             j = text.find('`', i + 1)
@@ -411,9 +426,8 @@ def _substitutions(text):
         m = re.search(r"(?:^|\s)<<-?\s*(['\"]?)([A-Za-z_]\w*)\1", lines[i])
         if m:
             j = i + 1
-            while j < len(lines) and lines[j].strip() != m.group(2):
-                if not m.group(1): found.extend(_scan_substitutions(lines[j], single_quotes=False))
-                j += 1
+            while j < len(lines) and lines[j].strip() != m.group(2): j += 1
+            if not m.group(1): found.extend(_scan_substitutions('\n'.join(lines[i + 1:j]), single_quotes=False))
             i = j
         i += 1
     return _scan_substitutions('\n'.join(commands)) + found

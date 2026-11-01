@@ -77,23 +77,36 @@ class RustTestScope:
     LITERALS = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])\'')
 
     def __init__(self):
-        self.pending = False; self.depth = 0; self.in_comment = False; self.in_string = False
+        self.pending = False; self.depth = 0; self.comment_depth = 0; self.string_end = None
+
+    @property
+    def in_comment(self):
+        return self.comment_depth > 0
+
+    @property
+    def in_string(self):
+        return self.string_end is not None
 
     def _braces(self, text):
-        """Net { minus } outside comments, strings and char literals; block comments and strings may span lines."""
+        """Net { minus } outside comments, strings and char literals. Block comments nest, and strings (including
+        raw strings r#"..."#) may span lines; that state carries to the next line."""
         n, i = 0, 0
         while i < len(text):
             ch = text[i]
-            if self.in_comment:
-                if text.startswith("*/", i): self.in_comment = False; i += 2; continue
+            if self.comment_depth:
+                if text.startswith("/*", i): self.comment_depth += 1; i += 2; continue
+                if text.startswith("*/", i): self.comment_depth -= 1; i += 2; continue
                 i += 1; continue
-            if self.in_string:
-                if ch == "\\": i += 2; continue
-                if ch == '"': self.in_string = False
+            if self.string_end is not None:
+                if self.string_end == '"' and ch == "\\": i += 2; continue
+                if text.startswith(self.string_end, i): i += len(self.string_end); self.string_end = None; continue
                 i += 1; continue
             if text.startswith("//", i): break
-            if text.startswith("/*", i): self.in_comment = True; i += 2; continue
-            if ch == '"': self.in_string = True; i += 1; continue
+            if text.startswith("/*", i): self.comment_depth = 1; i += 2; continue
+            raw = re.match(r'b?r(#*)"', text[i:])
+            if raw and (i == 0 or not (text[i - 1].isalnum() or text[i - 1] == "_")):
+                self.string_end = '"' + raw.group(1); i += len(raw.group(0)); continue
+            if ch == '"': self.string_end = '"'; i += 1; continue
             if ch == "'":
                 m = re.match(r"'(?:\\.|[^'\\])'", text[i:])
                 if m: i += len(m.group(0)); continue
@@ -112,7 +125,10 @@ class RustTestScope:
             if not rest:
                 return True
         if self.pending:
-            if not rest or rest.startswith(("//", "#[", "/*", "*")):
+            if self.in_comment or rest.startswith("/*"):
+                self._braces(rest)  # keep block-comment state while waiting for the item
+                return True
+            if not rest or rest.startswith(("//", "#[", "*")):
                 return True
             opened = self._braces(rest)
             if opened > 0:
