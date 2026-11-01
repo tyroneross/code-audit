@@ -1,0 +1,30 @@
+{
+ "bl-append-run-unlocked": {
+  "fix": "bdf7cdf55f976d524c6ee348d5f8a1500123ee50",
+  "file": "scripts/append_run.py",
+  "lines": [
+   [
+    84,
+    108
+   ]
+  ],
+  "cls": "unlocked read-modify-write of a shared state file",
+  "mechanism": "Two run-close paths each read state.json, append their row and write_text the whole file with no lock, so the last writer drops the other run; write_text truncates first, so a concurrent reader can see invalid JSON, map it to {} and the next save wipes every run."
+ },
+ "bl-state-finalize-unlocked": {
+  "fix": "adde4a303d782cc4ec6887477701f3258ad7e67e",
+  "file": "scripts/state_finalize.py",
+  "lines": [
+   [
+    48,
+    52
+   ],
+   [
+    76,
+    88
+   ]
+  ],
+  "cls": "missing lock other writers hold",
+  "mechanism": "annotate_if_incomplete reads state.json and atomically replaces it without taking the LockedFile that append_run and the other state.json writers hold, so a runs[] row or execution update written between its read and replace is silently reverted."
+ }
+}

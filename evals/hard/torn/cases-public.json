@@ -1,0 +1,63 @@
+{
+ "version": 1,
+ "repos_root": "/Users/tyroneross/dev/git-folder",
+ "arms": [
+  "code-audit-full",
+  "code-audit-full-c7",
+  "none"
+ ],
+ "subject": "code-audit-full-c7",
+ "comparators": [
+  "code-audit-full",
+  "none"
+ ],
+ "repair": [],
+ "oracles": "torn/private/oracles-public.json",
+ "review": [
+  {
+   "id": "T03",
+   "key": "bl-append-run-unlocked",
+   "repo": "build-loop",
+   "revision": "8afb55f198680cb1e5800698a86704bc1e76536f",
+   "role": "defect",
+   "files": [
+    {
+     "path": "scripts/append_run.py"
+    }
+   ]
+  },
+  {
+   "id": "T05",
+   "key": "bl-state-finalize-unlocked",
+   "repo": "build-loop",
+   "revision": "560acf39cdabd35f9302a3412a625e3f7d2ab112",
+   "role": "defect",
+   "files": [
+    {
+     "path": "scripts/state_finalize.py"
+    },
+    {
+     "path": "scripts/append_run.py",
+     "ranges": [
+      [
+       220,
+       265
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "TC3",
+   "key": "bl-append-run-unlocked",
+   "repo": "build-loop",
+   "revision": "bdf7cdf55f976d524c6ee348d5f8a1500123ee50",
+   "role": "control",
+   "files": [
+    {
+     "path": "scripts/append_run.py"
+    }
+   ]
+  }
+ ]
+}
