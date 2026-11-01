@@ -1,0 +1,795 @@
+{
+ "build-loop-scan-findings-parallel-agent-attribution": {
+  "file": "scripts/scan_findings/detect.py",
+  "lines": [
+   [
+    424,
+    424
+   ],
+   [
+    456,
+    465
+   ]
+  ],
+  "cls": "async result correlation",
+  "mechanism": "iter_finding_blocks_from_jsonl keeps a single pending_agent slot: each Agent tool_use overwrites it and the first tool_result consumes it. When one assistant message issues several Agent calls in parallel, only the last call's name survives and the first result takes it, so later results are attributed to 'session' (and earlier ones possibly to the wrong agent); findings from those subagents are mislabeled and dropped by consumers that only accept agent-attributed results. Results must be matched to calls by tool_use id.",
+  "fix": "23111a2d62255dc52bf871f1a1c3048098be363c"
+ },
+ "build-loop-rally-start-hook-partial-output": {
+  "file": "hooks/session-start-rally-point.sh",
+  "lines": [
+   [
+    35,
+    35
+   ],
+   [
+    57,
+    72
+   ]
+  ],
+  "cls": "incomplete read / race",
+  "mechanism": "The perl supervisor checks readiness with select() and only afterwards calls waitpid; if the child writes its JSON and exits between those two steps, select returned 0, the child is then reaped, and the `$reaped && ($eof || $n == 0)` branch decodes the buffer without draining the pipe, so the hook emits '{}' and drops the real startup context. Separately, `use JSON::PP` is a compile-time import: on a perl without JSON::PP the whole script dies before printing anything, so the host gets no JSON at all instead of the intended '{}' no-op.",
+  "fix": "79c37dff0c57a33c3e27ee208d937e3ed430c9d6"
+ },
+ "build-loop-audit-trajectory-phase-status-strings": {
+  "file": "scripts/audit_before_commit.py",
+  "lines": [
+   [
+    1207,
+    1208
+   ]
+  ],
+  "cls": "untrusted shape / type confusion",
+  "mechanism": "_recent_trajectory falls back to last.get('phases', {}).get('execute', {}).get('chunks') when a run row has no top-level chunks. The run writer stores phases as a per-phase status map (e.g. {'execute': 'pass'}), so 'execute' is a string and .get raises AttributeError (or phases itself may be non-dict). A fresh run row with string phase statuses therefore crashes the commit-audit packet builder instead of reporting zero chunks.",
+  "fix": "3feadbd97401f47dc0d7541c61c480729c81b675"
+ },
+ "build-loop-worktree-inventory-symlinked-dir-clean": {
+  "file": "scripts/worktree_inventory.py",
+  "lines": [
+   [
+    156,
+    173
+   ]
+  ],
+  "cls": "fail-open coverage",
+  "mechanism": "_scan_collapsed_directory walks a collapsed ignored directory with os.walk, which does not descend into symlinked subdirectories, yet it still returns fully_inspected=True. A credential or other valuable file reachable through a symlinked directory is never seen, so the directory is certified clean and a worktree removal can delete it without it being archived or reported. Unseen content must mark the directory uninspected.",
+  "fix": "963cca75e3587330d32647b4b3c8ea2150513fb0"
+ },
+ "build-loop-run-ledger-merge-keeps-writer-label": {
+  "file": "scripts/write_run_entry/iohelpers.py",
+  "lines": [
+   [
+    28,
+    47
+   ]
+  ],
+  "cls": "state merge carries stale key",
+  "mechanism": "upsert_merge starts from the existing row and overlays the new entry, so keys the incoming entry omits survive. When the orchestrator's rich Review-G record is merged over a thin Stop-hook row, the floor writer's `source: append_run` label is carried forward; is_orchestrator_grade keys on that label, so the genuinely orchestrator-closed run is reported as floor-only and the Stop hook believes it may overwrite the record.",
+  "fix": "3666dad28a4e2c1e661b879489daee4d839f211e"
+ },
+ "build-loop-memory-bootstrap-partial-store-never-retried": {
+  "file": "hooks/session-start-memory.sh",
+  "lines": [
+   [
+    19,
+    31
+   ]
+  ],
+  "cls": "partial-init recovery",
+  "mechanism": "The hook decides whether to seed only from the top-level `exists` flag of install_memory --check. The installer creates the store root first and then seeds files and subdirectories, and the whole hook runs under a ~4.5 s bound; if that deadline kills the first-run install after the root is created, every later session sees exists=true and never seeds the missing scaffold (constitution, indexes/, projects/), leaving the store permanently incomplete.",
+  "fix": "2954297b1c53448069c1d8b6f270fa121d76a8e1"
+ },
+ "build-loop-closeout-hooks-module-not-importable": {
+  "file": "hooks/post-push-closeout.sh",
+  "lines": [
+   [
+    42,
+    45
+   ],
+   [
+    66,
+    74
+   ]
+  ],
+  "cls": "environment / import path",
+  "mechanism": "Both hooks run `python3 -m closeout` from the project directory, but the closeout package lives under the plugin's scripts/ directory and nothing puts that on PYTHONPATH. In the hook environment the module import fails; the post-push call is nohup'd with stderr discarded, so closeout never runs and only a 0-byte log is left, and the session-start baton drain fails the same way and never clears the armed baton.",
+  "also": [
+   {
+    "file": "hooks/session-start-closeout.sh",
+    "lines": [
+     [
+      46,
+      57
+     ]
+    ]
+   }
+  ],
+  "fix": "a7aefeb9d1d0a881f551b7fb2047530d263852cc"
+ },
+ "build-loop-dispatch-classifier-failure-scans-every-command": {
+  "file": "scripts/hooks/pre_bash_dispatch.sh",
+  "lines": [
+   [
+    128,
+    131
+   ]
+  ],
+  "cls": "over-broad error fallback",
+  "mechanism": "If the git command classifier subprocess cannot run (python3 missing from a minimal PATH, spawn failure under load), the dispatcher sets _GITCLASS='commit push' for every Bash command. Each echo/grep/python call then triggers the commit auditor and the full-repo pre-push security scan, and in a repo with HIGH findings the scan hard-blocks every command, freezing the session; a command that never mentions git cannot be a commit or push.",
+  "fix": "7e53622ab0b8500d56baf6415a9da4ea3600e7f1"
+ },
+ "build-loop-debugger-cli-loads-optional-dependency": {
+  "file": "bin/build-loop-debugger.js",
+  "lines": [
+   [
+    97,
+    98
+   ]
+  ],
+  "cls": "optional dependency load",
+  "mechanism": "The native debugger CLI requires the package index dist/src/index.js, which eagerly requires interactive-verifier.js and through it the `prompts` npm package. Plugin caches ship dist/ without node_modules, so in an installed plugin every CLI command fails at startup with a module-not-found error even though search/store only need the dependency-free retrieval, storage and config modules.",
+  "fix": "2c50197cba8a4c18075c21c4fa1f7c54ee27e2a6"
+ },
+ "build-loop-content-index-symlink-escapes-store": {
+  "file": "scripts/content_index.py",
+  "lines": [
+   [
+    96,
+    101
+   ]
+  ],
+  "cls": "path containment / symlink",
+  "mechanism": "_indexable checks containment with path.relative_to(store) on the unresolved path from rglob. A .md symlink inside the memory store that points to a file outside it passes the check, so the indexer reads and indexes arbitrary external file contents into the searchable memory index. Containment must be checked on the resolved target.",
+  "fix": "9718fcb4b8b17f9803c7e921b4aba53288b2c826"
+ },
+ "build-loop-file-findings-nonatomic-append": {
+  "file": "scripts/retrospective/file_findings.py",
+  "lines": [
+   [
+    584,
+    592
+   ]
+  ],
+  "cls": "non-atomic write",
+  "mechanism": "apply() appends a finding to another repository's KNOWN-ISSUES.md or LESSONS-LEARNED.md by reading the whole file and rewriting it in place with write_text. If the process is killed or hits an I/O error mid-write (it runs unattended at run close), the target file is left truncated and the existing issue log is lost; the write needs temp-file plus os.replace.",
+  "fix": "d09cb5fef1c9cbdb12202d35f4d4d1d4c60e69d7"
+ },
+ "build-loop-resume-validator-requires-iterate-attempt": {
+  "file": "scripts/resume_resolver.py",
+  "lines": [
+   [
+    128,
+    130
+   ]
+  ],
+  "cls": "validator stricter than consumer",
+  "mechanism": "_validate_execution_v1 reads execution.get('iterate_attempt') with no default, so an execution block that lacks the key yields None and is rejected as structurally invalid. The resolver itself reads the field as int(execution.get('iterate_attempt', 0)), so states written before the key existed (or by writers that omit it) are perfectly resumable but get aborted as invalid instead of resumed.",
+  "fix": "e3e07bb386757eab8375bbda51e3658d48e454af"
+ },
+ "build-loop-state-finalize-tombstone-crash-marker": {
+  "file": "scripts/state_finalize.py",
+  "lines": [
+   [
+    56,
+    67
+   ]
+  ],
+  "cls": "sentinel state handling",
+  "mechanism": "After a passing run, stop_closeout archives the execution block and clears state['execution'] to {} as a tombstone. annotate_if_incomplete only checks that execution is a dict, so on the next Stop the empty dict has no phase, is treated as incomplete, and gets crashed_at/crash_signal stamped into it, turning the released tombstone into a schema-less crash marker that downstream crash/resume readers see as an interrupted run.",
+  "fix": "6abe0cf9a3fbcada29b8170254211ca718c592ac"
+ },
+ "build-loop-backend-health-dict-row-positional-index": {
+  "file": "scripts/backend_health.py",
+  "lines": [
+   [
+    389,
+    390
+   ],
+   [
+    405,
+    405
+   ]
+  ],
+  "cls": "API contract mismatch",
+  "mechanism": "db.query returns rows built with row_factory=dict_row, but probe_fts indexes them positionally (r[0]) and tuple-unpacks (_name, d) from each index row. r[0] raises KeyError on every call, which the broad except reports as query_failed, so the FTS backend is always reported DOWN even when extensions and indexes exist; the tuple unpack would likewise yield column names rather than values.",
+  "fix": "72c0a9eaaafa0ab070cfdcb11ed279c1de5d3626"
+ },
+ "build-loop-private-slugs-unescaped-regex": {
+  "file": "scripts/check_private_slugs.py",
+  "lines": [
+   [
+    107,
+    116
+   ]
+  ],
+  "cls": "regex escaping",
+  "mechanism": "_compile_pattern joins the runtime denylist entries directly into an alternation without re.escape. Entries are plain literal slugs, so a dot in an entry like 'name.example' becomes a wildcard and other metacharacters change the pattern; the guard then flags legitimate text such as 'name-example' (false positives that fail CI) or errors on an entry with unbalanced parentheses.",
+  "fix": "4d2cb5123f39b32f51bc940d0d5d177619c37d4c"
+ },
+ "build-loop-arch-unbounded-cycle-enumeration": {
+  "file": "src/build_loop/architecture/analysis.py",
+  "lines": [
+   [
+    211,
+    221
+   ]
+  ],
+  "cls": "unbounded computation",
+  "mechanism": "check_rules iterates nx.simple_cycles(g) over the whole import graph with no length bound and no cap on results, materializing a violation per simple cycle. The number of simple cycles grows exponentially in a densely connected graph, so analysis of a large repository with many strongly connected components never terminates and hangs the CLI and any caller.",
+  "fix": "9b7b068f6565469ab3c263cf3270a8d88a901832"
+ },
+ "build-loop-classifier-unparseable-segment-claims-push": {
+  "file": "scripts/hooks/git_command_classifier.py",
+  "lines": [
+   [
+    258,
+    263
+   ]
+  ],
+  "cls": "over-broad error fallback",
+  "mechanism": "When shlex cannot parse a segment (unbalanced quotes, e.g. SQL string literals in a psql argument or an apostrophe in prose), classify_command adds both commit and push regardless of whether the segment mentions git at all. The dispatcher then runs the commit auditor and the pre-push security scan for a non-git command, and the scan can hard-block it; the heredoc branch above already limits this fallback to text containing 'git'.",
+  "fix": "3a01c6d540f10913471477ac7ecd9cdedab407c8"
+ },
+ "build-loop-retro-stale-cross-slug-transcript": {
+  "file": "scripts/retrospective/locate.py",
+  "lines": [
+   [
+    553,
+    562
+   ]
+  ],
+  "cls": "time-window membership",
+  "mechanism": "find_cwd_attested_transcript_for_run ranks cross-slug candidates by attestation share and accepts the first that passes _tm.is_member, which applies the default 24-hour grace bound in both directions. A transcript that ended up to 24 hours before the run started but has a higher share outranks a fresh one and is accepted, so the retrospective is built from another session's transcript.",
+  "fix": "c8284d149a8494b21bedbf71a5d0131ce99aca42"
+ },
+ "navgator-import-redos-whitespace-run": {
+  "file": "src/scanners/connections/import-scanner.ts",
+  "lines": [
+   [
+    25,
+    33
+   ],
+   [
+    42,
+    42
+   ],
+   [
+    262,
+    272
+   ]
+  ],
+  "cls": "regex backtracking / resource exhaustion",
+  "mechanism": "A scanned file containing `import` followed by a long whitespace run with no closing quote (attacker-controlled in scan-remote) drives ES_IMPORT_RE/ES_IMPORT_BARE_RE, whose clause `[\\s\\S]{0,4096}?` sits between `\\s+` quantifiers, into quadratic backtracking at every start offset. The 4,096 bound and capLongLines only remove inputs longer than the cap (or lines over 4,096 chars), so a ~4,000-character run, or one spread across many short lines, still reaches the regex. A single such file stalls the scan for tens of seconds to minutes despite the comment claiming SEC-012 is fixed.",
+  "fix": "804d3a4f16feda8ca2f7c1d4e8f7b733d068f457"
+ },
+ "navgator-degeneracy-percent-rounds-up": {
+  "file": "src/rules.ts",
+  "lines": [
+   [
+    567,
+    572
+   ]
+  ],
+  "cls": "numeric rounding in reported value",
+  "mechanism": "detectRuleDegeneracy formats share_of_components and share_of_violations with `(x * 100).toFixed(0)`, which rounds to nearest. When a rule accounts for e.g. 99.6% of violations the warning prints '100% of all violations' (and 49.5% prints as 50%), so the message asserting how dominant a rule is overstates its own evidence and can claim a rule fires on everything when it does not.",
+  "fix": "a74e52ecb335d7ca69728641060d29a83eba80b0"
+ },
+ "navgator-nextjs-route-pattern-any-depth": {
+  "file": "src/entry-points.ts",
+  "lines": [
+   [
+    102,
+    110
+   ]
+  ],
+  "cls": "over-broad path matching",
+  "mechanism": "The framework-route conventions use `(^|\\/)app\\/` and `(^|\\/)pages\\/` (and the middleware/instrumentation pattern) unanchored, so any directory named pages/ or app/ at any depth matches. Ordinary component files like `web/components/pages/Landing.tsx` or `src/lib/pages/Profile.tsx` are therefore promoted to entry points, which marks them and everything they import as reachable and makes dead code in those folders unreportable.",
+  "fix": "f4c9356ce0ad3350978de410901e71ea4eed6b24"
+ },
+ "navgator-web-cwd-fallback-missing-strip": {
+  "file": "web/app/api/graph/route.ts",
+  "lines": [
+   [
+    161,
+    164
+   ]
+  ],
+  "also": [
+   {
+    "file": "web/app/api/scan/route.ts",
+    "lines": [
+     [
+      53,
+      55
+     ],
+     [
+      114,
+      116
+     ]
+    ]
+   }
+  ],
+  "cls": "inconsistent path resolution",
+  "mechanism": "When the dashboard runs via `cd web && npm run dev` without NAVGATOR_PROJECT_PATH, process.cwd() is `<repo>/web`; the other API routes strip a trailing `/web` but /api/graph and both /api/scan handlers use process.cwd() raw. The graph route then reads `<repo>/web/.navgator/...` (missing, so it falls back to demo data while other panels show real data), and POST /api/scan scans and writes storage under web/ instead of the project root.",
+  "fix": "33bcd35c411119272233f1d87c6e3213b2f4f1e5"
+ },
+ "navgator-clearstorage-leaves-full-jsonl": {
+  "file": "src/storage.ts",
+  "lines": [
+   [
+    1519,
+    1527
+   ]
+  ],
+  "cls": "incomplete cleanup / stale data",
+  "mechanism": "clearStorage deletes the per-entity component/connection files, index and graph but not the consolidated components.full.jsonl and connections.full.jsonl, which loadAllComponents/loadAllConnections fall back to when the per-entity directories are empty. If a full scan clears storage and then fails or crashes before rewriting those files, every subsequent read serves the previous scan's components and connections as if current.",
+  "fix": "a5b6c6446eb441ee13a4a5d51fb9e035580623bb"
+ },
+ "navgator-import-cycles-recursive-dfs-overflow": {
+  "file": "src/architecture-insights.ts",
+  "lines": [
+   [
+    110,
+    143
+   ]
+  ],
+  "cls": "unbounded recursion",
+  "mechanism": "detectImportCycles walks the import graph with a recursive visit() that adds one JS stack frame per edge along the current DFS path. On a real project with a long import chain (thousands of components) the depth exceeds V8's stack and throws RangeError 'Maximum call stack size exceeded'; since buildSummary calls this on every scan, the whole scan crashes.",
+  "fix": "c0cf14ff0ef5554b832bc296d67a67d6bce555ec"
+ },
+ "navgator-document-stable-id-collision": {
+  "file": "src/scanners/content/markdown-scanner.ts",
+  "lines": [
+   [
+    139,
+    142
+   ]
+  ],
+  "cls": "identity key collision",
+  "mechanism": "makeDocument derives stable_id from pageId alone, and pageId is the frontmatter `id` when declared. Two markdown files that declare the same id (or whose id equals another file's path identity) get the same stable_id, and mergeByStableId keeps only the last one, so one document silently disappears from the graph during incremental merges even though its path is distinct.",
+  "fix": "2f1d270f0c97e63437eaf1cc8c26e797798a7e6d"
+ },
+ "navgator-mcp-stdio-buffer-poisoned": {
+  "file": "src/mcp/server.ts",
+  "lines": [
+   [
+    15,
+    26
+   ]
+  ],
+  "cls": "stream framing / parser state",
+  "mechanism": "The stdio transport appends every line to a shared `buffer` and only clears it after a successful JSON.parse. A single malformed or partial line leaves junk in the buffer, so every later well-formed line is concatenated onto it and also fails to parse; the server silently stops answering all subsequent requests with no error logged.",
+  "fix": "27f792c7905a270a9a01377ac281300dfa239c03"
+ },
+ "navgator-autorefresh-concurrent-scan-storm": {
+  "file": "src/scanner.ts",
+  "lines": [
+   [
+    2058,
+    2101
+   ]
+  ],
+  "cls": "concurrency / missing in-flight guard",
+  "mechanism": "autoRefreshIfStale checks staleness from the on-disk index and, if stale, awaits an incremental scan, with no record that a refresh is already in flight. The MCP server dispatches each request without awaiting the previous one, so a client polling `status` while the index is stale makes every call see the same old last_scan and start its own scan, producing N concurrent scans writing the same storage.",
+  "fix": "deea8655982961cb76323f6301a9424205d665e7"
+ },
+ "ibr-transparent-page-bg-read-as-black": {
+  "file": "src/consistency.ts",
+  "lines": [
+   [
+    78,
+    83
+   ],
+   [
+    120,
+    126
+   ]
+  ],
+  "also": [
+   {
+    "file": "src/consistency.ts",
+    "lines": [
+     [
+      21,
+      25
+     ]
+    ]
+   }
+  ],
+  "cls": "color parsing / alpha ignored",
+  "mechanism": "analyzeThemeConsistency falls back from body to html backgroundColor, but html's computed default is also `rgba(0, 0, 0, 0)`, and parseColor drops the alpha channel, so a fully transparent background parses as black (luminance 0). Pages painted by the default canvas or by a gradient background-image are reported as dark pages, and any light card on them triggers a false theme-mismatch finding.",
+  "fix": "9a90f38bfc6e6c160006ba40b8830b3b06e4d30e"
+ },
+ "ibr-scan-passes-chrome-error-page": {
+  "file": "src/scan.ts",
+  "lines": [
+   [
+    703,
+    708
+   ]
+  ],
+  "cls": "unchecked navigation failure",
+  "mechanism": "scan() calls page.goto and proceeds straight to grading, but Chrome does not reject navigation on connection-refused or DNS failure; it commits its own chrome-error:// page. That error page has no collisions or contrast failures, so an unreachable URL is graded PASS and the CLI exits 0 instead of reporting a tool error.",
+  "fix": "7983d3633c6523eac3261b89b096d84fd39f93e0"
+ },
+ "ibr-ax-walk-cycle-and-non-window-root": {
+  "file": "src/native/swift/ibr-ax-extract/Sources/AXCore.swift",
+  "lines": [
+   [
+    118,
+    119
+   ],
+   [
+    138,
+    145
+   ],
+   [
+    165,
+    166
+   ],
+   [
+    182,
+    189
+   ],
+   [
+    307,
+    312
+   ]
+  ],
+  "cls": "graph cycle in tree walk",
+  "mechanism": "walkElementFull/walkElementLegacy recurse into AX children with only a depth cap and no visited set, and findMainWindow accepts whatever kAXMainWindow returns without checking it is an AXWindow. When an app reports the application element as main window and a child that points back to an ancestor, the walk re-enters the same subtree at every level until maxDepth, emitting the menu bar a dozen-plus times and producing bogus window size/title and duplicated targets.",
+  "fix": "1f3b278771be04800cd9092a1fca027fbdadfbf9"
+ },
+ "ibr-find-drops-rerendered-element": {
+  "file": "src/engine/driver.ts",
+  "lines": [
+   [
+    589,
+    595
+   ]
+  ],
+  "also": [
+   {
+    "file": "src/mcp/tools.ts",
+    "lines": [
+     [
+      1627,
+      1629
+     ],
+     [
+      2345,
+      2346
+     ]
+    ]
+   }
+  ],
+  "cls": "TOCTOU between two reads",
+  "mechanism": "find() resolves an elementId from one AX read (queryAXTree in tier 2) and then requires that exact id to appear in a second, fresh snapshot. If the page re-renders the node between the two reads, the backendNodeId changes and find() returns null for an element that is present; the MCP interact/session_action handlers repeat the same exact-id lookup and also act on the stale diag.elementId, so actions fail or target a dead node.",
+  "fix": "f8edd39c4e3c3ed086bc6a19e4c2a7eb555c9853"
+ },
+ "ibr-error-state-reads-inline-css": {
+  "file": "src/semantic/state-detector.ts",
+  "lines": [
+   [
+    324,
+    327
+   ],
+   [
+    346,
+    348
+   ]
+  ],
+  "cls": "text extraction false positive",
+  "mechanism": "detectErrorState builds its search text from document.body.innerText, which in this browser bridge includes inline <style>/<script> text, then matches a bare `500` as a server error. A page with inline CSS such as `max-width: 500px` (or amounts like 2.37500%) is reported as being in a server-error state.",
+  "fix": "cce62e57bb112a682b35bddf27ff4c6f32d2cd66"
+ },
+ "ibr-zoom-track-offscreen-targets": {
+  "file": "src/zoom-track.ts",
+  "lines": [
+   [
+    103,
+    123
+   ]
+  ],
+  "cls": "coordinate-space mismatch",
+  "mechanism": "buildZoomTrackFromScan normalizes element bounds by the viewport width/height, but bounds are document-relative. Any interactive element below the fold yields cy > 1 (e.g. 3.01 on a three-viewport page) and is emitted as a zoom target outside the frame, so the consumer aims the camera at nothing while the track looks valid.",
+  "fix": "e85d54025d62a89f03c0fc502759306b5f07576c"
+ },
+ "ibr-stale-chrome-lock-leaks-temp-profiles": {
+  "file": "src/engine/cdp/browser.ts",
+  "lines": [
+   [
+    165,
+    171
+   ],
+   [
+    232,
+    253
+   ]
+  ],
+  "cls": "resource leak (temp dirs)",
+  "mechanism": "launch() treats any SingletonLock symlink, including a stale one left by a crashed Chrome whose pid is gone, as a live lock and creates a fresh mkdtemp profile, and close() never deletes that directory. After one crash leaves the lock behind, every subsequent launch takes this path forever and leaks a full Chrome profile in tmpdir per launch.",
+  "fix": "90f20783a88daf3050c51573a3353965d43830f8"
+ },
+ "ibr-obsidian-stub-sanitize-uses-innerhtml": {
+  "file": "src/obsidian/stub.ts",
+  "lines": [
+   [
+    360,
+    364
+   ]
+  ],
+  "cls": "missing sanitization",
+  "mechanism": "The harness stub's sanitizeHTMLToDom assigns the raw string to template.innerHTML and returns the fragment without removing anything. Plugin code that relies on Obsidian's contract and passes untrusted HTML gets event-handler attributes and javascript: links inserted live into the page, so the harness both behaves unlike the real API and executes injected handlers.",
+  "fix": "3aee21e1eac7df8bf1311415c2d9611dc3af9f6e"
+ },
+ "ibr-obsidian-mount-ignores-async-onopen": {
+  "file": "src/obsidian/harness.ts",
+  "lines": [
+   [
+    150,
+    159
+   ],
+   [
+    165,
+    173
+   ]
+  ],
+  "also": [
+   {
+    "file": "src/obsidian/scan.ts",
+    "lines": [
+     [
+      137,
+      139
+     ]
+    ]
+   }
+  ],
+  "cls": "unawaited async / swallowed rejection",
+  "mechanism": "The mount script calls view.render()/view.onOpen() and the post-mount snippet inside synchronous try/catch blocks and discards the returned promise, then immediately sets data-ibr-mount='ok'. Obsidian's onOpen is async, so a rejecting onOpen becomes an unhandled rejection the try/catch never sees, leaving a blank view marked mounted, which scans as PASS; isMountMarkerMissing also only recognises the 'selector not found' phrasing.",
+  "fix": "a75a5a921048d902e1d01252be171e02bf2fe559"
+ },
+ "spectra-cli-omitted-params-undefined": {
+  "file": "src/cli/index.ts",
+  "lines": [
+   [
+    102,
+    112
+   ]
+  ],
+  "cls": "missing default / null-vs-empty params",
+  "mechanism": "When the CLI is invoked with an operation but no JSON argument, forwardOperation leaves params as undefined instead of {}. DaemonClient.prepareParams then validates undefined against the operation's zod object schema, so operations whose schema is a plain object (e.g. health) fail with 'Invalid params ... Required' even though every field is optional; the documented bare `spectra health` command never works.",
+  "fix": "6dd1777a31d21951c1c01686e919fd38e73f6795"
+ },
+ "spectra-ordinal-role-list-incomplete": {
+  "file": "src/core/resolve.ts",
+  "lines": [
+   [
+    139,
+    146
+   ]
+  ],
+  "cls": "hard-coded list out of sync with source of truth",
+  "mechanism": "The ordinal pre-pass recognizes a role word only if it is in a hand-written list plus roles present in the current snapshot, but that list omits canonical roles that normalizeRole actually emits ('select', 'text', 'group'). An intent like 'click the second select' on a snapshot with no select elements therefore is not treated as an ordinal role query and falls through to fuzzy label scoring, which can return an unrelated element with nonzero confidence instead of the explicit no-match result.",
+  "fix": "5b4dfe3948283cf6a8a6992c467b1d1fa9ae6b1e"
+ },
+ "spectra-final-caption-full-clip-fallback": {
+  "file": "src/pipeline/polish.ts",
+  "lines": [
+   [
+    409,
+    416
+   ]
+  ],
+  "cls": "bad fallback after clamping",
+  "mechanism": "finalCaptionWindow clamps the placing beat's window to the clip duration; when the input video is shorter than the script, the beat starts at or after durationMs and the clamped window collapses to zero length. Instead of skipping the caption, the function falls back to {0, durationMs}, so the final caption is overlaid across the entire clip and overlaps every per-beat step card.",
+  "fix": "0cc3d21fd00b374df9556ec6a2e1f752a8a93169"
+ },
+ "spectra-app-name-first-match-binding": {
+  "file": "native/swift/AppTarget.swift",
+  "lines": [
+   [
+    41,
+    60
+   ]
+  ],
+  "cls": "ambiguous lookup silently picks first match",
+  "mechanism": "findAppSync returns the first running application whose name matches exactly (or, failing that, by substring) and ignores any further matches. When two apps share a name (e.g. an isolated dev build beside the installed copy), getAppPid binds the session to whichever instance NSWorkspace lists first, so snapshots and actions silently target an arbitrary process instead of reporting the ambiguity.",
+  "fix": "41439b804e560fc41b162b743a44c0fc0a1c33a4"
+ },
+ "spectra-adhoc-signature-always-stale": {
+  "file": "src/native/compiler.ts",
+  "lines": [
+   [
+    114,
+    129
+   ]
+  ],
+  "cls": "verification predicate never satisfiable for default config",
+  "mechanism": "The default codesign identity is '-' (ad hoc), but hasExpectedSignature requires the codesign output to contain 'Authority=-' and a TeamIdentifier other than 'not set', neither of which an ad hoc signature produces. Every helper therefore reports an unexpected signature, isStale()/isCompositeStale() etc. always return true, and ensureBinary recompiles and re-signs the native helpers on every call (changing the binary each time).",
+  "fix": "46ab8b6f991c0a4a15d8c6324361fe78863e3ed5"
+ },
+ "decision-doctor-audience-backfill-additive": {
+  "file": "scripts/backfill-content-audience.ts",
+  "lines": [
+   [
+    357,
+    375
+   ]
+  ],
+  "cls": "stale state on re-run / upsert without delete",
+  "mechanism": "applyPlan only upserts the audiences in the new plan and never removes previously written rows for the same content item, so when the classifier is re-run and drops an audience, the old 'auto' row stays and the item remains visible under that audience filter. The ON CONFLICT clause also unconditionally overwrites source/rationale, so a re-run silently converts a 'human' override row into an 'auto' row.",
+  "fix": "a664e742ca299a1a1adc4ce9ea4362f118a4c882"
+ },
+ "decision-doctor-setstate-updater-side-effect": {
+  "file": "app/app/recommendations/new/NewRecommendationClient.tsx",
+  "lines": [
+   [
+    429,
+    453
+   ]
+  ],
+  "cls": "side effect inside React state updater",
+  "mechanism": "toggleArtifact and toggleInfo call the parent's onChange from inside the setSelectedArtifacts/setSelectedInfo updater functions. Updaters run during React's render phase (and twice under StrictMode), so the child triggers a parent setState while rendering, which React reports as an update-during-render error and can append/remove the mirrored detail line twice.",
+  "fix": "1d5767d2da131326ee990e43c0f59f3b208f78d0"
+ },
+ "decision-doctor-extract-first-article-skeleton": {
+  "file": "workers/src/adapters/sitemap-adapter.ts",
+  "lines": [
+   [
+    237,
+    248
+   ]
+  ],
+  "cls": "first-match selection on repeated elements",
+  "mechanism": "extractArticleText takes only $(sel).first() and returns it as soon as its text is non-empty. Pages that contain several <article> elements where the first is a small loading skeleton yield the ~100-character placeholder text, and because any non-empty match short-circuits, the real article body (and the CDP fallback threshold logic in callers) never gets a chance, so stub bodies are stored.",
+  "also": [
+   {
+    "file": "workers/src/adapters/content-extract.ts",
+    "lines": [
+     [
+      61,
+      72
+     ]
+    ]
+   }
+  ],
+  "fix": "18e415e4d92df0a99b0cae5af023164c581e03a7"
+ },
+ "local-smartz-subagent-bare-model-string": {
+  "file": "src/localsmartz/agent.py",
+  "lines": [
+   [
+    436,
+    440
+   ]
+  ],
+  "cls": "library contract: provider-less model identifier",
+  "mechanism": "_build_subagent_specs puts the bare Ollama model tag returned by get_agent_model (e.g. 'qwen3:8b-q4_K_M') into each subagent spec. DeepAgents resolves string models through LangChain's init_chat_model, which cannot infer a provider from a bare Ollama tag and raises ValueError, so any profile with a per-agent model override crashes create_agent before the query reaches an LLM; the main agent avoids this by passing a constructed ChatOllama.",
+  "fix": "a3f49cbb8ab250a6585f61bf4f8f3b4da7263b53"
+ },
+ "local-smartz-with-retry-hides-bind-tools": {
+  "file": "src/localsmartz/pipeline.py",
+  "lines": [
+   [
+    122,
+    143
+   ]
+  ],
+  "cls": "wrapper drops required interface",
+  "mechanism": "_role_llm returns ChatOllama wrapped in .with_retry(), i.e. a RunnableRetry. _build_role_agent hands that object to langchain's create_agent, which calls llm.bind_tools(tools); RunnableRetry does not expose bind_tools, so every specialist agent in the graph pipeline fails ('RunnableRetry' object has no attribute 'bind_tools') or runs without any tools.",
+  "fix": "4f97a0e3f66fedcca7c5e82b2e65101a50481e24"
+ },
+ "local-smartz-disconnect-skips-mcp-cleanup": {
+  "file": "src/localsmartz/serve.py",
+  "lines": [
+   [
+    1596,
+    1626
+   ]
+  ],
+  "cls": "resource cleanup skipped on exception path",
+  "mechanism": "In the full-agent path, _send_event re-raises BrokenPipeError when the SSE client disconnects; the try/finally around the stream loop only stops the pulse and closes the span, and the exception then propagates to _handle_research_request, which swallows it. The post-stream code, including close_mcp_clients(mcp_clients), is never reached, so every cancelled request leaks its MCP client connections/subprocesses (and any other exception from the loop does the same).",
+  "fix": "dc7866479cc2f4d725b55a13d0f0552736e04999"
+ },
+ "rally-hook-supervisor-deadline-exceeds-host-limit": {
+  "file": "hooks/rally-coordination-hook.sh",
+  "lines": [
+   [
+    423,
+    433
+   ]
+  ],
+  "cls": "timeout budget exceeds outer limit",
+  "mechanism": "The lifecycle supervisor exists to return {} before the host's 5s hook timeout, but its deadline is RALLY_HOOK_DEADLINE_MS (accepted up to 59999) multiplied by RALLY_HOOK_MS_BUDGET_SCALE (up to 16) with no cap, and the clock $t0 starts only after `use POSIX` has been compiled. Under a scale >1 or slow module loading the supervisor waits past the host limit, so the host kills the hook and discards its output, the exact failure the supervisor is meant to prevent.",
+  "fix": "69c5dc5fad3651b9710fdfab505c91690b701a45"
+ },
+ "rally-reaper-skips-empty-scope-claims": {
+  "file": "crates/rally-cli/src/reaper.rs",
+  "lines": [
+   [
+    568,
+    593
+   ]
+  ],
+  "cls": "eligibility derived from a filtered index",
+  "mechanism": "The reaper decides lease expiry and no-lease age by looking claims up in claim_authority::index_from_facts, but that index is built from active_claim_record_from_fact, which returns None for claims with no parseable resource scope. Active claims with an empty or unparseable scope are therefore never lease-eligible nor no-lease-over-age, so they are never reaped even after their lease expires and keep the owner's claim alive indefinitely.",
+  "fix": "473135de6ff09ebf73070c429c5521ac2ca1d8d6"
+ },
+ "rally-stop-refused-for-stale-session": {
+  "file": "crates/rally-cli/src/lib.rs",
+  "lines": [
+   [
+    11200,
+    11205
+   ],
+   [
+    12277,
+    12293
+   ]
+  ],
+  "cls": "guard applied to the action meant to clear it",
+  "mechanism": "command_session_action resolves every action through find_session, which unconditionally calls reject_stale_session. For `rally stop` on a stale managed session this returns an error whose message tells the user to run `rally stop`, so the stale record can never be tombstoned via stop and the existing no-live-target stop path is unreachable.",
+  "fix": "3a79d938e9e025bafffe1e6820c05ea14b8036dc"
+ },
+ "rally-router-probe-outlives-deadline": {
+  "file": "crates/rally-cli/src/store.rs",
+  "lines": [
+   [
+    4066,
+    4072
+   ]
+  ],
+  "cls": "sub-operation timeout not clamped to caller deadline",
+  "mechanism": "acquire_direct_ownership_or_route_bounded is given a bound that leaves a 250ms reserve before the command watchdog, but it checks the deadline only after each probe, and each probe_live call does a round_trip with the fixed 3s PROBE_TIMEOUT. Against a daemon socket that accepts but never answers, one probe overruns the remaining bound, so the watchdog fires first and the command dies with an unattributed watchdog timeout instead of the router's typed busy/contender error.",
+  "also": [
+   {
+    "file": "crates/rally-cli/src/store_client.rs",
+    "lines": [
+     [
+      300,
+      318
+     ]
+    ]
+   }
+  ],
+  "fix": "b633f6fc48a4359b3d0175b5eed2a8bc8fc1a66d"
+ },
+ "rally-failed-send-reports-not-queued": {
+  "file": "crates/rally-cli/src/backends.rs",
+  "lines": [
+   [
+    281,
+    287
+   ]
+  ],
+  "cls": "status flag inconsistent with state",
+  "mechanism": "is_queued() returns true only for the three Queued* dispositions, but FailedBackendInject and FailedDaemonSend both occur after the ledger write succeeded and the directive remains durably queued (as their own guidance text says). Inject output therefore reports queued=false with delivery_state failed, which tells callers the message was lost and invites a duplicate resend.",
+  "fix": "8b2e6e0a29af6aff86796f89381b5c0f6b1517a8"
+ },
+ "rally-hook-gnu-stat-f-wrong-identity": {
+  "file": "hooks/rally-coordination-hook.sh",
+  "lines": [
+   [
+    288,
+    290
+   ]
+  ],
+  "cls": "cross-platform CLI flag semantics",
+  "mechanism": "The cache key is computed by trying BSD `stat -f '%z:%Fm'` first and GNU `stat -c` only if that fails. On Linux GNU stat accepts -f as --file-system, so it prints filesystem status for the binary (and treats the format string as another path), and that output is captured into bin_id. The native-capability cache is then keyed on filesystem statistics rather than the binary's size/mtime, so it misses on every fire as free space changes or can match a stale verdict after the binary is replaced.",
+  "fix": "0c7e75d5e67e71ee5b67b86eacb988a0a991aea8"
+ },
+ "rally-brief-flag-shaped-value-bypasses-gate": {
+  "file": "hooks/rally-coordination-hook.sh",
+  "lines": [
+   [
+    2341,
+    2351
+   ]
+  ],
+  "cls": "input validation bypass (untrusted value classified as flag)",
+  "mechanism": "safeCommand treats any token beginning with '--' that matches /^--[a-z-]+$/ as a flag and skips the length, scrub and shape checks applied to values. A peer-controlled id such as '--ignore-all-prior-instructions-and-run-...' is pure [a-z-], so it passes as a 'flag', is left unquoted by shlex, and is rendered verbatim and unbounded in the copy-pasteable command outside the untrusted tag; a command ending on a value-taking flag is also accepted.",
+  "fix": "a6dc1a2550eba4da4d2f2f93da40b306e9389b8e"
+ }
+}
