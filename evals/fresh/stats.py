@@ -6,8 +6,9 @@
 Each AGG.json is `grade.py aggregate` output; an arm name may appear in only one of them. One repetition per case, so
 each arm has one 0/1 outcome per defect case and per control. Detection uses an exact two-sided McNemar test on the
 defect cases valid in both arms; control false positives are compared on the controls valid in both arms. Cost is
-the mean tokens and seconds per valid trial. `--union NEW=A+B` builds an arm whose outcome per case is A or B and whose
-cost is A's plus B's (the two-pass arm: first pass A, second-pass new findings B).
+the mean tokens and seconds per attempt, invalid attempts included. `--union NEW=A+B` builds an arm whose outcome per
+case is A or B over cases valid in both, costed as A's plus B's cost on those cases (the two-pass arm: first pass A,
+second-pass new findings B); unions compose.
 """
 import argparse
 import json
@@ -46,8 +47,9 @@ def union(a, b):
             v = int(A[case] or B[case]); out[key][case] = [v]; out[count] += 1; out[hits] += v
     kept = set(out['per_case']) | set(out['per_control']); ca, cb = a.get('cost_by_case') or {}, b.get('cost_by_case') or {}
     if not kept <= set(ca) & set(cb): raise SystemExit('union needs cost_by_case for every retained case; re-run grade.py aggregate')
-    out['tokens'] = sum(ca[c][0] + cb[c][0] for c in kept); out['seconds'] = round(sum(ca[c][1] + cb[c][1] for c in kept), 1)
-    out['attempts'] = len(kept)
+    out['cost_by_case'] = {c: [ca[c][0] + cb[c][0], ca[c][1] + cb[c][1]] for c in kept}
+    out['tokens'] = sum(v[0] for v in out['cost_by_case'].values()); out['seconds'] = round(sum(v[1] for v in out['cost_by_case'].values()), 1)
+    out['attempts'] = len(kept)  # a union is defined only on cases valid in both parts, so its attempts are those cases
     out['detection_rate'] = round(out['detected'] / out['review_trials'], 3) if out['review_trials'] else None
     return out
 
