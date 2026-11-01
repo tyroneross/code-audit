@@ -30,6 +30,7 @@ Load only sections relevant to the operation. Pattern matches are investigation 
 - **C4 Define what partial success leaves behind.** List each effect; publish only complete state or record what needs cleanup.
 - **C5 Background work has an owner.** Every spawned task is awaited, cancelled or supervised; child failure cancels siblings when the parent needs all of them.
 - **C6 Report what was skipped.** When code skips input it cannot read, decode, fit or access, count it and say so. A result of "nothing found" must never mean "didn't look". Check that files, rows or pages skipped by `except`/`continue` paths reach the summary.
+- **C7 One record, one write, one owner.** A log or state file shared by processes or threads loses or corrupts records when a record and its newline go out in separate writes, when a writer seeks to the end instead of opening with O_APPEND, or when a reader-writer rewrites the file (read, change, replace) without the lock every other writer takes. An atomic rename prevents torn bytes, not lost updates. Check every writer of the file, including retention, rotation and crash-recovery paths, and what a reader does with a partial last line.
 
 ## D. Contract gate — must pass before any fast path ships
 
@@ -84,6 +85,7 @@ Read the referenced principle in the [canonical rule cards](../../audit/referenc
 | B6 | P28, P18 state guarantees |
 | B7, D6, D7 | P06 meaning and validation, P17 isolation, P07 |
 | C1, C2, C6 | P15 error representation, P16 where to handle |
+| C7 | P18 partial success, P21 concurrent failures |
 | C4 | P18 |
 | C5 | P20 async ownership, P21 |
 | D1–D5 | P10 substitution, P27 compatibility, P23 verification |
