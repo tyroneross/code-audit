@@ -54,6 +54,15 @@ claude plugin install code-audit@code-audit-local
 
 Invoke `/code-audit:code-audit` or ask to use Code Audit.
 
+To install or refresh Code Audit in every local host at once (Claude Code settings, Codex, Cursor, Gemini and the shared `~/.agents/skills`), run from this checkout:
+
+```sh
+python3 scripts/sync_hosts.py          # report what would change
+python3 scripts/sync_hosts.py --apply  # make the changes; edited configs are backed up first
+```
+
+Rerun `--apply` after updating the repo: Codex installs a cached copy and needs the refresh. `--retire` also removes links to the retired code-principles-audit repo.
+
 Codex: this repo includes a local marketplace. Register its folder:
 
 ```sh
