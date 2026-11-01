@@ -1,0 +1,1440 @@
+{
+ "version": 1,
+ "repos_root": "/Users/tyroneross/dev/git-folder",
+ "oracles": "../fresh/private/oracles.json",
+ "review": [
+  {
+   "id": "F01",
+   "key": "build-loop-scan-findings-parallel-agent-attribution",
+   "repo": "build-loop",
+   "revision": "2e7ccc569f6532ebdb9de07fa0880ece37eb4daf",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/scan_findings/detect.py"
+    },
+    {
+     "path": "scripts/scan_findings/__main__.py"
+    }
+   ]
+  },
+  {
+   "id": "F02",
+   "key": "build-loop-rally-start-hook-partial-output",
+   "repo": "build-loop",
+   "revision": "815da4ba6dd4172c388bcf23b5fee12a910f121f",
+   "role": "defect",
+   "language": "sh",
+   "files": [
+    {
+     "path": "hooks/session-start-rally-point.sh"
+    },
+    {
+     "path": "scripts/rally_point/hooks.py",
+     "ranges": [
+      [
+       400,
+       540
+      ],
+      [
+       700,
+       915
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F03",
+   "key": "build-loop-audit-trajectory-phase-status-strings",
+   "repo": "build-loop",
+   "revision": "1bef998d394e2fe78cf5956d7437595dedc1a522",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/audit_before_commit.py",
+     "ranges": [
+      [
+       1100,
+       1300
+      ],
+      [
+       1470,
+       1530
+      ]
+     ]
+    },
+    {
+     "path": "scripts/write_run_entry/__main__.py"
+    }
+   ]
+  },
+  {
+   "id": "F04",
+   "key": "build-loop-worktree-inventory-symlinked-dir-clean",
+   "repo": "build-loop",
+   "revision": "d1e02870a6f7fa36910b8cbd983e49c4d15d4d69",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/worktree_inventory.py"
+    },
+    {
+     "path": "scripts/collapse_run.py",
+     "ranges": [
+      [
+       40,
+       80
+      ],
+      [
+       600,
+       700
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F05",
+   "key": "build-loop-run-ledger-merge-keeps-writer-label",
+   "repo": "build-loop",
+   "revision": "963cca75e3587330d32647b4b3c8ea2150513fb0",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/write_run_entry/iohelpers.py"
+    },
+    {
+     "path": "scripts/run_close_lint.py"
+    },
+    {
+     "path": "scripts/append_run.py"
+    }
+   ]
+  },
+  {
+   "id": "F06",
+   "key": "build-loop-memory-bootstrap-partial-store-never-retried",
+   "repo": "build-loop",
+   "revision": "be5f2b88e86f9fc9a3318f60db83a64cb3c7cad2",
+   "role": "defect",
+   "language": "sh",
+   "files": [
+    {
+     "path": "hooks/session-start-memory.sh"
+    },
+    {
+     "path": "scripts/install_memory.py"
+    },
+    {
+     "path": "hooks/_bounded_hook.sh"
+    }
+   ]
+  },
+  {
+   "id": "F07",
+   "key": "build-loop-closeout-hooks-module-not-importable",
+   "repo": "build-loop",
+   "revision": "3fc60fc881dce6ee8d5b319898ed68a033c8aacd",
+   "role": "defect",
+   "language": "sh",
+   "files": [
+    {
+     "path": "hooks/post-push-closeout.sh"
+    },
+    {
+     "path": "hooks/session-start-closeout.sh"
+    },
+    {
+     "path": "scripts/closeout/__main__.py"
+    }
+   ]
+  },
+  {
+   "id": "F08",
+   "key": "build-loop-dispatch-classifier-failure-scans-every-command",
+   "repo": "build-loop",
+   "revision": "ea8bbe7151ee09b4cb31c9fb949e48373afaaa67",
+   "role": "defect",
+   "language": "sh",
+   "files": [
+    {
+     "path": "scripts/hooks/pre_bash_dispatch.sh"
+    },
+    {
+     "path": "scripts/hooks/git_command_classifier.py"
+    }
+   ]
+  },
+  {
+   "id": "F09",
+   "key": "build-loop-debugger-cli-loads-optional-dependency",
+   "repo": "build-loop",
+   "revision": "7c188f440b1294596aa12e1702d2866493fb3fa0",
+   "role": "defect",
+   "language": "js",
+   "files": [
+    {
+     "path": "bin/build-loop-debugger.js"
+    },
+    {
+     "path": "dist/src/index.js"
+    },
+    {
+     "path": "dist/src/interactive-verifier.js"
+    }
+   ]
+  },
+  {
+   "id": "F10",
+   "key": "build-loop-content-index-symlink-escapes-store",
+   "repo": "build-loop",
+   "revision": "1913c1602f9aab6714067c510bfe302e04b3551a",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/content_index.py"
+    },
+    {
+     "path": "scripts/memory_facade/__init__.py"
+    }
+   ]
+  },
+  {
+   "id": "F11",
+   "key": "build-loop-file-findings-nonatomic-append",
+   "repo": "build-loop",
+   "revision": "2fd81e4375179e6fbc18cfd73e3e455f5b6f331e",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/retrospective/file_findings.py",
+     "ranges": [
+      [
+       340,
+       600
+      ]
+     ]
+    },
+    {
+     "path": "scripts/backlog.py",
+     "ranges": [
+      [
+       1240,
+       1290
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F12",
+   "key": "build-loop-resume-validator-requires-iterate-attempt",
+   "repo": "build-loop",
+   "revision": "d1a681c327f5f15a38cba0b664b5d53f5986900d",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/resume_resolver.py",
+     "ranges": [
+      [
+       60,
+       190
+      ],
+      [
+       640,
+       830
+      ]
+     ]
+    },
+    {
+     "path": "scripts/write_run_entry/execstate.py"
+    }
+   ]
+  },
+  {
+   "id": "F13",
+   "key": "build-loop-state-finalize-tombstone-crash-marker",
+   "repo": "build-loop",
+   "revision": "9554395d16da8dc54e878c5d3c260425401a3520",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/state_finalize.py"
+    },
+    {
+     "path": "scripts/stop_closeout.py",
+     "ranges": [
+      [
+       700,
+       800
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F14",
+   "key": "build-loop-backend-health-dict-row-positional-index",
+   "repo": "build-loop",
+   "revision": "c5ad79564cdc4e3fd825a3bdd0228ab6b35bb02e",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/backend_health.py"
+    },
+    {
+     "path": "scripts/db.py"
+    }
+   ]
+  },
+  {
+   "id": "F15",
+   "key": "build-loop-private-slugs-unescaped-regex",
+   "repo": "build-loop",
+   "revision": "130478736ef889788bc3974b28fe5f705ebb56ab",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/check_private_slugs.py"
+    },
+    {
+     "path": ".private-slugs.example"
+    }
+   ]
+  },
+  {
+   "id": "F16",
+   "key": "build-loop-arch-unbounded-cycle-enumeration",
+   "repo": "build-loop",
+   "revision": "bea187c41f6b36a8fe26bdc4667a9b32b2932842",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "src/build_loop/architecture/analysis.py"
+    },
+    {
+     "path": "src/build_loop/architecture/cli.py"
+    }
+   ]
+  },
+  {
+   "id": "F17",
+   "key": "build-loop-classifier-unparseable-segment-claims-push",
+   "repo": "build-loop",
+   "revision": "9bcf138f626e3aa0ab6d54c454f962ba49439fa0",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/hooks/git_command_classifier.py"
+    },
+    {
+     "path": "scripts/hooks/pre_bash_dispatch.sh"
+    }
+   ]
+  },
+  {
+   "id": "F18",
+   "key": "build-loop-retro-stale-cross-slug-transcript",
+   "repo": "build-loop",
+   "revision": "25f64a2b478cdf9ba19a6e7f051c2945f1f155a6",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "scripts/retrospective/locate.py"
+    },
+    {
+     "path": "scripts/temporal_membership.py"
+    }
+   ]
+  },
+  {
+   "id": "F19",
+   "key": "navgator-import-redos-whitespace-run",
+   "repo": "NavGator",
+   "revision": "33f2b1dc1360ad47a582ee41e0b87148d6772b47",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/scanners/connections/import-scanner.ts",
+     "ranges": [
+      [
+       1,
+       330
+      ]
+     ]
+    },
+    {
+     "path": "src/scanners/scan-limits.ts"
+    }
+   ]
+  },
+  {
+   "id": "F20",
+   "key": "navgator-degeneracy-percent-rounds-up",
+   "repo": "NavGator",
+   "revision": "0180feb86883e2a6d38db9f983cf799129a1d8d9",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/rules.ts",
+     "ranges": [
+      [
+       480,
+       620
+      ]
+     ]
+    },
+    {
+     "path": "src/cli/commands/rules.ts"
+    }
+   ]
+  },
+  {
+   "id": "F21",
+   "key": "navgator-nextjs-route-pattern-any-depth",
+   "repo": "NavGator",
+   "revision": "251e3f9723499e442b51632abe642bb1cf71cc64",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/entry-points.ts"
+    },
+    {
+     "path": "src/rules.ts",
+     "ranges": [
+      [
+       1,
+       120
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F22",
+   "key": "navgator-web-cwd-fallback-missing-strip",
+   "repo": "NavGator",
+   "revision": "1e7bb907ffad2c8879d2bbaeeb7cf12a40bd955a",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "web/app/api/graph/route.ts"
+    },
+    {
+     "path": "web/app/api/scan/route.ts"
+    },
+    {
+     "path": "web/app/api/status/route.ts"
+    }
+   ]
+  },
+  {
+   "id": "F23",
+   "key": "navgator-clearstorage-leaves-full-jsonl",
+   "repo": "NavGator",
+   "revision": "0ff36576d37182c686b45f4bfc7125f9c2e083ed",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/storage.ts",
+     "ranges": [
+      [
+       160,
+       375
+      ],
+      [
+       1480,
+       1540
+      ]
+     ]
+    },
+    {
+     "path": "src/scanner.ts",
+     "ranges": [
+      [
+       660,
+       740
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F24",
+   "key": "navgator-import-cycles-recursive-dfs-overflow",
+   "repo": "NavGator",
+   "revision": "f6b8cecacb6beb49d94c1b543a2f1986b0c0506c",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/architecture-insights.ts"
+    },
+    {
+     "path": "src/storage.ts",
+     "ranges": [
+      [
+       860,
+       960
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F25",
+   "key": "navgator-document-stable-id-collision",
+   "repo": "NavGator",
+   "revision": "e031e3f3be779b9a15c8080a5acdb5f1c37f0d7f",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/scanners/content/markdown-scanner.ts"
+    },
+    {
+     "path": "src/types.ts",
+     "ranges": [
+      [
+       660,
+       745
+      ]
+     ]
+    },
+    {
+     "path": "src/storage.ts",
+     "ranges": [
+      [
+       1930,
+       1965
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F26",
+   "key": "navgator-mcp-stdio-buffer-poisoned",
+   "repo": "NavGator",
+   "revision": "eeff4f786bfbde428c4f0a17161dedead450e847",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/mcp/server.ts"
+    },
+    {
+     "path": "src/mcp/tools.ts",
+     "ranges": [
+      [
+       1,
+       80
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F27",
+   "key": "navgator-autorefresh-concurrent-scan-storm",
+   "repo": "NavGator",
+   "revision": "a5b6c6446eb441ee13a4a5d51fb9e035580623bb",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/scanner.ts",
+     "ranges": [
+      [
+       2020,
+       2125
+      ]
+     ]
+    },
+    {
+     "path": "src/mcp/tools.ts",
+     "ranges": [
+      [
+       360,
+       420
+      ]
+     ]
+    },
+    {
+     "path": "src/mcp/server.ts"
+    }
+   ]
+  },
+  {
+   "id": "F28",
+   "key": "ibr-transparent-page-bg-read-as-black",
+   "repo": "interface-built-right",
+   "revision": "46daf171c4fd039af833d702daf72f49d06c9496",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/consistency.ts"
+    },
+    {
+     "path": "src/scan.ts",
+     "ranges": [
+      [
+       770,
+       830
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F29",
+   "key": "ibr-scan-passes-chrome-error-page",
+   "repo": "interface-built-right",
+   "revision": "8ffd0a7df0c9f3ff9b3cf08880f070b379f297cc",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/scan.ts",
+     "ranges": [
+      [
+       600,
+       800
+      ],
+      [
+       1455,
+       1480
+      ]
+     ]
+    },
+    {
+     "path": "src/engine/compat.ts",
+     "ranges": [
+      [
+       320,
+       380
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F30",
+   "key": "ibr-ax-walk-cycle-and-non-window-root",
+   "repo": "interface-built-right",
+   "revision": "e8b38abed107b4c69032b28db6610201f7bbf3ea",
+   "role": "defect",
+   "language": "swift",
+   "files": [
+    {
+     "path": "src/native/swift/ibr-ax-extract/Sources/AXCore.swift"
+    },
+    {
+     "path": "src/native/swift/ibr-ax-extract/Sources/main.swift",
+     "ranges": [
+      [
+       195,
+       260
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F31",
+   "key": "ibr-find-drops-rerendered-element",
+   "repo": "interface-built-right",
+   "revision": "efc13213c8ec4c49dfc4b640db65e59a2d1f85bd",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/engine/driver.ts",
+     "ranges": [
+      [
+       340,
+       370
+      ],
+      [
+       580,
+       960
+      ]
+     ]
+    },
+    {
+     "path": "src/mcp/tools.ts",
+     "ranges": [
+      [
+       1600,
+       1640
+      ],
+      [
+       2330,
+       2420
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F32",
+   "key": "ibr-error-state-reads-inline-css",
+   "repo": "interface-built-right",
+   "revision": "814a0461b41b99c57e8ae9870bf1a6f3ff408a21",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/semantic/state-detector.ts"
+    },
+    {
+     "path": "src/semantic/index.ts"
+    }
+   ]
+  },
+  {
+   "id": "F33",
+   "key": "ibr-zoom-track-offscreen-targets",
+   "repo": "interface-built-right",
+   "revision": "38e888ee917b696cb14f786152c06e17831fa7fb",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/zoom-track.ts"
+    },
+    {
+     "path": "src/bin/ibr.ts",
+     "ranges": [
+      [
+       4520,
+       4580
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F34",
+   "key": "ibr-stale-chrome-lock-leaks-temp-profiles",
+   "repo": "interface-built-right",
+   "revision": "f06c6d1b8f0073b1787f93c88b99f8aa31a09ef3",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/engine/cdp/browser.ts"
+    },
+    {
+     "path": "src/engine/driver.ts",
+     "ranges": [
+      [
+       310,
+       460
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F35",
+   "key": "ibr-obsidian-stub-sanitize-uses-innerhtml",
+   "repo": "interface-built-right",
+   "revision": "a75a5a921048d902e1d01252be171e02bf2fe559",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/obsidian/stub.ts"
+    },
+    {
+     "path": "src/obsidian/harness.ts"
+    }
+   ]
+  },
+  {
+   "id": "F36",
+   "key": "ibr-obsidian-mount-ignores-async-onopen",
+   "repo": "interface-built-right",
+   "revision": "1c43a5b5822bdef3fece985169c681c5f1c02d14",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/obsidian/harness.ts"
+    },
+    {
+     "path": "src/obsidian/scan.ts"
+    }
+   ]
+  },
+  {
+   "id": "F37",
+   "key": "spectra-cli-omitted-params-undefined",
+   "repo": "spectra",
+   "revision": "48d59cee34815102169627d1111928739893c43d",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/cli/index.ts"
+    },
+    {
+     "path": "src/client/daemon-client.ts"
+    },
+    {
+     "path": "src/contract/schemas.ts",
+     "ranges": [
+      [
+       1,
+       140
+      ],
+      [
+       440,
+       520
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F38",
+   "key": "spectra-ordinal-role-list-incomplete",
+   "repo": "spectra",
+   "revision": "3d6075ecc69673d9495873e63afc42354c674c2a",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/core/resolve.ts"
+    },
+    {
+     "path": "src/core/normalize.ts"
+    }
+   ]
+  },
+  {
+   "id": "F39",
+   "key": "spectra-final-caption-full-clip-fallback",
+   "repo": "spectra",
+   "revision": "b6be4a59bbeb21d114d974ae951ec7b9d13893c4",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/pipeline/polish.ts"
+    },
+    {
+     "path": "src/pipeline/script.ts"
+    }
+   ]
+  },
+  {
+   "id": "F40",
+   "key": "spectra-app-name-first-match-binding",
+   "repo": "spectra",
+   "revision": "bd78c9575fee09a9b4a5dab8fae20e47435d64b1",
+   "role": "defect",
+   "language": "swift",
+   "files": [
+    {
+     "path": "native/swift/AppTarget.swift"
+    },
+    {
+     "path": "native/swift/main.swift"
+    }
+   ]
+  },
+  {
+   "id": "F41",
+   "key": "spectra-adhoc-signature-always-stale",
+   "repo": "spectra",
+   "revision": "7d42d48ecd00e034308fa64658fcda744010d9f1",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "src/native/compiler.ts"
+    }
+   ]
+  },
+  {
+   "id": "F42",
+   "key": "decision-doctor-audience-backfill-additive",
+   "repo": "decision-doctor-cc",
+   "revision": "149165640c4e8039e36e07619bfb510b428baf1a",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "scripts/backfill-content-audience.ts"
+    },
+    {
+     "path": "lib/audience/filter.ts"
+    },
+    {
+     "path": "drizzle/0014_content_audience.sql"
+    }
+   ]
+  },
+  {
+   "id": "F43",
+   "key": "decision-doctor-setstate-updater-side-effect",
+   "repo": "decision-doctor-cc",
+   "revision": "e5ee301807338be9d6beed21509018939e8aa50d",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "app/app/recommendations/new/NewRecommendationClient.tsx",
+     "ranges": [
+      [
+       1,
+       240
+      ],
+      [
+       390,
+       628
+      ]
+     ]
+    },
+    {
+     "path": "app/app/recommendations/new/page.tsx"
+    }
+   ]
+  },
+  {
+   "id": "F44",
+   "key": "decision-doctor-extract-first-article-skeleton",
+   "repo": "decision-doctor-cc",
+   "revision": "6eef7960f2e479b5ad1b95267b71b9ee9cc77d72",
+   "role": "defect",
+   "language": "ts",
+   "files": [
+    {
+     "path": "workers/src/adapters/sitemap-adapter.ts",
+     "ranges": [
+      [
+       200,
+       340
+      ]
+     ]
+    },
+    {
+     "path": "workers/src/adapters/content-extract.ts"
+    }
+   ]
+  },
+  {
+   "id": "F45",
+   "key": "local-smartz-subagent-bare-model-string",
+   "repo": "local-smartz",
+   "revision": "b43e85daf68f1b5b3867ba13f220465f0f06d119",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "src/localsmartz/agent.py",
+     "ranges": [
+      [
+       1,
+       60
+      ],
+      [
+       195,
+       240
+      ],
+      [
+       395,
+       605
+      ]
+     ]
+    },
+    {
+     "path": "src/localsmartz/profiles.py",
+     "ranges": [
+      [
+       1,
+       30
+      ],
+      [
+       300,
+       340
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F46",
+   "key": "local-smartz-with-retry-hides-bind-tools",
+   "repo": "local-smartz",
+   "revision": "e2fd678439cc61946f425aa7a6aa89ab2b723b95",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "src/localsmartz/pipeline.py"
+    },
+    {
+     "path": "src/localsmartz/profiles.py",
+     "ranges": [
+      [
+       1,
+       30
+      ],
+      [
+       300,
+       340
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F47",
+   "key": "local-smartz-disconnect-skips-mcp-cleanup",
+   "repo": "local-smartz",
+   "revision": "7a5c13deecf73456e39b2dd5d2a6d68185755f38",
+   "role": "defect",
+   "language": "py",
+   "files": [
+    {
+     "path": "src/localsmartz/serve.py",
+     "ranges": [
+      [
+       100,
+       180
+      ],
+      [
+       1084,
+       1100
+      ],
+      [
+       1200,
+       1630
+      ]
+     ]
+    },
+    {
+     "path": "src/localsmartz/plugins/agent_integration.py"
+    }
+   ]
+  },
+  {
+   "id": "F48",
+   "key": "rally-hook-supervisor-deadline-exceeds-host-limit",
+   "repo": "agent-rally-point",
+   "revision": "ac7a6b861b68ec85ee2d7c438641e8d6d97cfc57",
+   "role": "defect",
+   "language": "sh",
+   "files": [
+    {
+     "path": "hooks/rally-coordination-hook.sh",
+     "ranges": [
+      [
+       340,
+       520
+      ]
+     ]
+    },
+    {
+     "path": "hooks/hooks.json"
+    }
+   ]
+  },
+  {
+   "id": "F49",
+   "key": "rally-reaper-skips-empty-scope-claims",
+   "repo": "agent-rally-point",
+   "revision": "00badb9c75008583d4bc7469365ee660d29a164e",
+   "role": "defect",
+   "language": "rs",
+   "files": [
+    {
+     "path": "crates/rally-cli/src/reaper.rs",
+     "ranges": [
+      [
+       480,
+       760
+      ]
+     ]
+    },
+    {
+     "path": "crates/rally-cli/src/claim_authority.rs",
+     "ranges": [
+      [
+       140,
+       310
+      ],
+      [
+       640,
+       760
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F50",
+   "key": "rally-stop-refused-for-stale-session",
+   "repo": "agent-rally-point",
+   "revision": "325a01a177584267f0aa68658a5e5570b400fdbc",
+   "role": "defect",
+   "language": "rs",
+   "files": [
+    {
+     "path": "crates/rally-cli/src/lib.rs",
+     "ranges": [
+      [
+       11190,
+       11330
+      ],
+      [
+       12270,
+       12400
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F51",
+   "key": "rally-router-probe-outlives-deadline",
+   "repo": "agent-rally-point",
+   "revision": "987d3d0c9d5aba7ebc59b6cf66b168242327d038",
+   "role": "defect",
+   "language": "rs",
+   "files": [
+    {
+     "path": "crates/rally-cli/src/store.rs",
+     "ranges": [
+      [
+       3990,
+       4110
+      ]
+     ]
+    },
+    {
+     "path": "crates/rally-cli/src/store_client.rs",
+     "ranges": [
+      [
+       60,
+       120
+      ],
+      [
+       250,
+       420
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F52",
+   "key": "rally-failed-send-reports-not-queued",
+   "repo": "agent-rally-point",
+   "revision": "c723de53d766867f103d3d3a77732bc3ec3f365c",
+   "role": "defect",
+   "language": "rs",
+   "files": [
+    {
+     "path": "crates/rally-cli/src/backends.rs",
+     "ranges": [
+      [
+       200,
+       340
+      ]
+     ]
+    },
+    {
+     "path": "crates/rally-cli/src/lib.rs",
+     "ranges": [
+      [
+       7850,
+       7920
+      ],
+      [
+       8110,
+       8145
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F53",
+   "key": "rally-hook-gnu-stat-f-wrong-identity",
+   "repo": "agent-rally-point",
+   "revision": "12ac947203e7ee52030f71c9befa485ee1a7d021",
+   "role": "defect",
+   "language": "sh",
+   "files": [
+    {
+     "path": "hooks/rally-coordination-hook.sh",
+     "ranges": [
+      [
+       240,
+       400
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "F54",
+   "key": "rally-brief-flag-shaped-value-bypasses-gate",
+   "repo": "agent-rally-point",
+   "revision": "43238fd92e1310479b24862e70308be0fbd95395",
+   "role": "defect",
+   "language": "sh",
+   "files": [
+    {
+     "path": "hooks/rally-coordination-hook.sh",
+     "ranges": [
+      [
+       2040,
+       2180
+      ],
+      [
+       2236,
+       2420
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FC01",
+   "key": "build-loop-audit-trajectory-phase-status-strings",
+   "repo": "build-loop",
+   "revision": "3feadbd97401f47dc0d7541c61c480729c81b675",
+   "role": "control",
+   "control_of": "F03",
+   "files": [
+    {
+     "path": "scripts/audit_before_commit.py",
+     "ranges": [
+      [
+       1100,
+       1300
+      ],
+      [
+       1470,
+       1530
+      ]
+     ]
+    },
+    {
+     "path": "scripts/write_run_entry/__main__.py"
+    }
+   ]
+  },
+  {
+   "id": "FC02",
+   "key": "build-loop-worktree-inventory-symlinked-dir-clean",
+   "repo": "build-loop",
+   "revision": "963cca75e3587330d32647b4b3c8ea2150513fb0",
+   "role": "control",
+   "control_of": "F04",
+   "files": [
+    {
+     "path": "scripts/worktree_inventory.py"
+    },
+    {
+     "path": "scripts/collapse_run.py",
+     "ranges": [
+      [
+       40,
+       80
+      ],
+      [
+       600,
+       700
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FC03",
+   "key": "build-loop-memory-bootstrap-partial-store-never-retried",
+   "repo": "build-loop",
+   "revision": "2954297b1c53448069c1d8b6f270fa121d76a8e1",
+   "role": "control",
+   "control_of": "F06",
+   "files": [
+    {
+     "path": "hooks/session-start-memory.sh"
+    },
+    {
+     "path": "scripts/install_memory.py"
+    },
+    {
+     "path": "hooks/_bounded_hook.sh"
+    }
+   ]
+  },
+  {
+   "id": "FC04",
+   "key": "build-loop-dispatch-classifier-failure-scans-every-command",
+   "repo": "build-loop",
+   "revision": "7e53622ab0b8500d56baf6415a9da4ea3600e7f1",
+   "role": "control",
+   "control_of": "F08",
+   "files": [
+    {
+     "path": "scripts/hooks/pre_bash_dispatch.sh"
+    },
+    {
+     "path": "scripts/hooks/git_command_classifier.py"
+    }
+   ]
+  },
+  {
+   "id": "FC05",
+   "key": "navgator-mcp-stdio-buffer-poisoned",
+   "repo": "NavGator",
+   "revision": "27f792c7905a270a9a01377ac281300dfa239c03",
+   "role": "control",
+   "control_of": "F26",
+   "files": [
+    {
+     "path": "src/mcp/server.ts"
+    },
+    {
+     "path": "src/mcp/tools.ts",
+     "ranges": [
+      [
+       1,
+       80
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FC06",
+   "key": "local-smartz-subagent-bare-model-string",
+   "repo": "local-smartz",
+   "revision": "a3f49cbb8ab250a6585f61bf4f8f3b4da7263b53",
+   "role": "control",
+   "control_of": "F45",
+   "files": [
+    {
+     "path": "src/localsmartz/agent.py",
+     "ranges": [
+      [
+       1,
+       60
+      ],
+      [
+       195,
+       240
+      ],
+      [
+       395,
+       605
+      ]
+     ]
+    },
+    {
+     "path": "src/localsmartz/profiles.py",
+     "ranges": [
+      [
+       1,
+       30
+      ],
+      [
+       300,
+       340
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "id": "FC07",
+   "key": "rally-hook-supervisor-deadline-exceeds-host-limit",
+   "repo": "agent-rally-point",
+   "revision": "69c5dc5fad3651b9710fdfab505c91690b701a45",
+   "role": "control",
+   "control_of": "F48",
+   "files": [
+    {
+     "path": "hooks/rally-coordination-hook.sh",
+     "ranges": [
+      [
+       340,
+       520
+      ]
+     ]
+    },
+    {
+     "path": "hooks/hooks.json"
+    }
+   ]
+  },
+  {
+   "id": "FC08",
+   "key": "rally-stop-refused-for-stale-session",
+   "repo": "agent-rally-point",
+   "revision": "3a79d938e9e025bafffe1e6820c05ea14b8036dc",
+   "role": "control",
+   "control_of": "F50",
+   "files": [
+    {
+     "path": "crates/rally-cli/src/lib.rs",
+     "ranges": [
+      [
+       11190,
+       11330
+      ],
+      [
+       12270,
+       12400
+      ]
+     ]
+    }
+   ]
+  }
+ ],
+ "repair": [],
+ "arms": [
+  "none",
+  "hint",
+  "none-2pass",
+  "none+tools",
+  "bundle+tools",
+  "adaptive",
+  "fixed-plan",
+  "principles+tools"
+ ],
+ "subject": "adaptive",
+ "comparators": [
+  "none+tools",
+  "bundle+tools",
+  "fixed-plan",
+  "principles+tools"
+ ]
+}
