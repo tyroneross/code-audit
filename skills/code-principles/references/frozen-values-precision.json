@@ -1,6 +1,6 @@
 {
  "date": "2026-10-29",
- "method": "git-tracked non-test source files; scanner as committed with this record; one rater (the author) labelled each sampled hit tp/fp: tp means the value has a source of truth or varies by context and is frozen in code. Informal: single rater, no second label, samples of at most 15.",
+ "method": "git-tracked non-test source read from git archive at the recorded commits; one sample per rule (seed 20261029-<rule>, at most 15); one rater (the author) labelled every sampled hit explicitly, tp meaning the value has a source of truth or varies by context and is frozen in code. Informal: single rater, small samples.",
  "files_scanned": 2099,
  "repos": {
   "build-loop": "271c93887599f6dd8f0784fcd01f62405ffd327f",
@@ -12,7 +12,6 @@
   "decision-doctor-cc": "aa78428e786a934af00f2cee4f0880f607c86037",
   "code-audit": "a8a67ead309010596444f41925a4e03877fc7d43"
  },
- "seed": 20261029,
  "rules": {
   "F1": {
    "hits": 11,
@@ -21,217 +20,165 @@
    "precision": 0.91,
    "sample": [
     {
-     "repo": "code-audit",
-     "file": "evals/comparison/memory_arms.py",
-     "line": 14,
+     "key": "decision-doctor-cc/scripts/seed-plugins.ts:69",
      "signal": "home or machine-specific absolute path",
      "label": "tp",
      "reason": "machine-specific path in shipped code or default"
     },
     {
-     "repo": "decision-doctor-cc",
-     "file": "scripts/seed-plugins.ts",
-     "line": 117,
+     "key": "code-audit/evals/comparison/run_repair.py:17",
      "signal": "home or machine-specific absolute path",
      "label": "tp",
      "reason": "machine-specific path in shipped code or default"
     },
     {
-     "repo": "decision-doctor-cc",
-     "file": "scripts/seed-plugins.ts",
-     "line": 80,
+     "key": "decision-doctor-cc/scripts/seed-plugins.ts:117",
      "signal": "home or machine-specific absolute path",
      "label": "tp",
      "reason": "machine-specific path in shipped code or default"
     },
     {
-     "repo": "decision-doctor-cc",
-     "file": "scripts/seed-plugins.ts",
-     "line": 99,
+     "key": "decision-doctor-cc/scripts/seed-plugins.ts:99",
      "signal": "home or machine-specific absolute path",
      "label": "tp",
      "reason": "machine-specific path in shipped code or default"
     },
     {
-     "repo": "code-audit",
-     "file": "evals/comparison/run_repair.py",
-     "line": 17,
+     "key": "decision-doctor-cc/scripts/seed-plugins.ts:58",
      "signal": "home or machine-specific absolute path",
      "label": "tp",
      "reason": "machine-specific path in shipped code or default"
     },
     {
-     "repo": "decision-doctor-cc",
-     "file": "scripts/seed-plugins.ts",
-     "line": 69,
+     "key": "decision-doctor-cc/scripts/seed-plugins.ts:80",
      "signal": "home or machine-specific absolute path",
      "label": "tp",
      "reason": "machine-specific path in shipped code or default"
     },
     {
-     "repo": "decision-doctor-cc",
-     "file": "scripts/seed-plugins.ts",
-     "line": 58,
-     "signal": "home or machine-specific absolute path",
-     "label": "tp",
-     "reason": "machine-specific path in shipped code or default"
-    },
-    {
-     "repo": "decision-doctor-cc",
-     "file": "scripts/seed-plugins.ts",
-     "line": 108,
-     "signal": "home or machine-specific absolute path",
-     "label": "tp",
-     "reason": "machine-specific path in shipped code or default"
-    },
-    {
-     "repo": "code-audit",
-     "file": "evals/comparison/run_repair.py",
-     "line": 15,
-     "signal": "home or machine-specific absolute path",
-     "label": "tp",
-     "reason": "machine-specific path in shipped code or default"
-    },
-    {
-     "repo": "decision-doctor-cc",
-     "file": "scripts/seed-plugins.ts",
-     "line": 90,
-     "signal": "home or machine-specific absolute path",
-     "label": "tp",
-     "reason": "machine-specific path in shipped code or default"
-    },
-    {
-     "repo": "spectra",
-     "file": "src/cli/index.ts",
-     "line": 162,
+     "key": "spectra/src/cli/index.ts:162",
      "signal": "home or machine-specific absolute path",
      "label": "fp",
      "reason": "CLI help text showing an example pattern"
+    },
+    {
+     "key": "code-audit/evals/comparison/run_repair.py:15",
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "key": "decision-doctor-cc/scripts/seed-plugins.ts:90",
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "key": "decision-doctor-cc/scripts/seed-plugins.ts:108",
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
+    },
+    {
+     "key": "code-audit/evals/comparison/memory_arms.py:14",
+     "signal": "home or machine-specific absolute path",
+     "label": "tp",
+     "reason": "machine-specific path in shipped code or default"
     }
    ]
   },
   "F2": {
    "hits": 25,
    "sampled": 15,
-   "true_positive": 10,
-   "precision": 0.67,
+   "true_positive": 11,
+   "precision": 0.73,
    "sample": [
     {
-     "repo": "spectra",
-     "file": "macos/Spectra/DaemonCore/verify-g2-suite.ts",
-     "line": 387,
-     "signal": "environment-specific host in code",
-     "label": "fp",
-     "reason": "verification-suite fixture target"
-    },
-    {
-     "repo": "decision-doctor-cc",
-     "file": "lib/auth.ts",
-     "line": 30,
+     "key": "local-smartz/src/localsmartz/observability.py:34",
      "signal": "environment-specific host in code",
      "label": "tp",
      "reason": "local host/port frozen in code or as a default"
     },
     {
-     "repo": "decision-doctor-cc",
-     "file": "lib/auth.ts",
-     "line": 32,
+     "key": "decision-doctor-cc/lib/auth.ts:32",
      "signal": "environment-specific host in code",
      "label": "tp",
      "reason": "local host/port frozen in code or as a default"
     },
     {
-     "repo": "NavGator",
-     "file": "scripts/ibr-ui-test.mjs",
-     "line": 18,
-     "signal": "environment-specific host in code",
-     "label": "tp",
-     "reason": "local host/port frozen in code or as a default"
-    },
-    {
-     "repo": "local-smartz",
-     "file": "src/localsmartz/doctor.py",
-     "line": 43,
-     "signal": "environment-specific host in code",
-     "label": "tp",
-     "reason": "local host/port frozen in code or as a default"
-    },
-    {
-     "repo": "spectra",
-     "file": "macos/Spectra/DaemonCore/SessionStore.swift",
-     "line": 423,
-     "signal": "environment-specific host in code",
-     "label": "fp",
-     "reason": "conformance fixture URL"
-    },
-    {
-     "repo": "local-smartz",
-     "file": "src/localsmartz/observability.py",
-     "line": 34,
-     "signal": "environment-specific host in code",
-     "label": "tp",
-     "reason": "local host/port frozen in code or as a default"
-    },
-    {
-     "repo": "decision-doctor-cc",
-     "file": "lib/auth.ts",
-     "line": 29,
-     "signal": "environment-specific host in code",
-     "label": "tp",
-     "reason": "local host/port frozen in code or as a default"
-    },
-    {
-     "repo": "decision-doctor-cc",
-     "file": "lib/auth.ts",
-     "line": 31,
-     "signal": "environment-specific host in code",
-     "label": "tp",
-     "reason": "local host/port frozen in code or as a default"
-    },
-    {
-     "repo": "local-smartz",
-     "file": "app/LocalSmartz/Views/SettingsTabs.swift",
-     "line": 177,
-     "signal": "environment-specific host in code",
-     "label": "fp",
-     "reason": "UI text that displays the host"
-    },
-    {
-     "repo": "local-smartz",
-     "file": "src/localsmartz/doctor.py",
-     "line": 45,
-     "signal": "environment-specific host in code",
-     "label": "fp",
-     "reason": "status message string"
-    },
-    {
-     "repo": "spectra",
-     "file": "src/cli/index.ts",
-     "line": 158,
+     "key": "spectra/src/cli/index.ts:158",
      "signal": "environment-specific host in code",
      "label": "fp",
      "reason": "CLI help example"
     },
     {
-     "repo": "build-loop",
-     "file": "scripts/scan_transcript_for_decisions.py",
-     "line": 537,
+     "key": "build-loop/scripts/task_surface.py:35",
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local service URL frozen as a module constant"
+    },
+    {
+     "key": "spectra/macos/Spectra/DaemonCore/verify-g2-suite.ts:387",
+     "signal": "environment-specific host in code",
+     "label": "fp",
+     "reason": "verification-suite fixture target"
+    },
+    {
+     "key": "decision-doctor-cc/lib/ai-knowledge/rerank/bge-client.ts:20",
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "production deploy host frozen as the fallback endpoint"
+    },
+    {
+     "key": "local-smartz/src/localsmartz/doctor.py:68",
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "Ollama host frozen; ignores a configured host"
+    },
+    {
+     "key": "local-smartz/app/LocalSmartz/Views/SettingsTabs.swift:177",
+     "signal": "environment-specific host in code",
+     "label": "fp",
+     "reason": "UI text that displays the host"
+    },
+    {
+     "key": "interface-built-right/src/sensors/test-fixtures.ts:90",
+     "signal": "environment-specific host in code",
+     "label": "fp",
+     "reason": "test fixture file that the fixture-path filter misses"
+    },
+    {
+     "key": "local-smartz/src/localsmartz/doctor.py:43",
      "signal": "environment-specific host in code",
      "label": "tp",
      "reason": "local host/port frozen in code or as a default"
     },
     {
-     "repo": "build-loop",
-     "file": "scripts/transcript_capture.py",
-     "line": 155,
+     "key": "build-loop/scripts/procedural_governance.py:298",
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "Ollama host frozen in a request"
+    },
+    {
+     "key": "decision-doctor-cc/lib/auth.ts:31",
      "signal": "environment-specific host in code",
      "label": "tp",
      "reason": "local host/port frozen in code or as a default"
     },
     {
-     "repo": "local-smartz",
-     "file": "app/LocalSmartz/Views/SetupView.swift",
-     "line": 417,
+     "key": "local-smartz/src/localsmartz/ollama.py:16",
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "Ollama base URL frozen; ignores a configured host"
+    },
+    {
+     "key": "decision-doctor-cc/lib/auth.ts:30",
+     "signal": "environment-specific host in code",
+     "label": "tp",
+     "reason": "local host/port frozen in code or as a default"
+    },
+    {
+     "key": "local-smartz/app/LocalSmartz/Views/SetupView.swift:417",
      "signal": "environment-specific host in code",
      "label": "tp",
      "reason": "local host/port frozen in code or as a default"
@@ -245,50 +192,38 @@
    "precision": 1.0,
    "sample": [
     {
-     "repo": "local-smartz",
-     "file": "src/localsmartz/__init__.py",
-     "line": 3,
+     "key": "local-smartz/src/localsmartz/plugins/mcp_client.py:41",
      "signal": "copies pyproject.toml version 0.1.0",
      "label": "tp",
      "reason": "version literal copies or contradicts the owning manifest"
     },
     {
-     "repo": "code-audit",
-     "file": "runtime/debugger/src/mcp/server.ts",
-     "line": 54,
-     "signal": "copies runtime/debugger/package.json version 1.9.1",
+     "key": "local-smartz/src/localsmartz/observability.py:297",
+     "signal": "copies pyproject.toml version 0.1.0",
      "label": "tp",
      "reason": "version literal copies or contradicts the owning manifest"
     },
     {
-     "repo": "agent-rally-point",
-     "file": "tools/agent-rally-watcher/src/agent_rally_watcher/__init__.py",
-     "line": 13,
+     "key": "local-smartz/src/localsmartz/__init__.py:3",
+     "signal": "copies pyproject.toml version 0.1.0",
+     "label": "tp",
+     "reason": "version literal copies or contradicts the owning manifest"
+    },
+    {
+     "key": "agent-rally-point/tools/agent-rally-watcher/src/agent_rally_watcher/__init__.py:13",
      "signal": "copies tools/agent-rally-watcher/pyproject.toml version 0.1.1",
      "label": "tp",
      "reason": "version literal copies or contradicts the owning manifest"
     },
     {
-     "repo": "local-smartz",
-     "file": "src/localsmartz/observability.py",
-     "line": 297,
-     "signal": "copies pyproject.toml version 0.1.0",
-     "label": "tp",
-     "reason": "version literal copies or contradicts the owning manifest"
-    },
-    {
-     "repo": "local-smartz",
-     "file": "src/localsmartz/plugins/mcp_client.py",
-     "line": 41,
-     "signal": "copies pyproject.toml version 0.1.0",
-     "label": "tp",
-     "reason": "version literal copies or contradicts the owning manifest"
-    },
-    {
-     "repo": "interface-built-right",
-     "file": "src/mcp/server.ts",
-     "line": 142,
+     "key": "interface-built-right/src/mcp/server.ts:142",
      "signal": "states version 1.0.0 but package.json 1.6.0",
+     "label": "tp",
+     "reason": "version literal copies or contradicts the owning manifest"
+    },
+    {
+     "key": "code-audit/runtime/debugger/src/mcp/server.ts:54",
+     "signal": "copies runtime/debugger/package.json version 1.9.1",
      "label": "tp",
      "reason": "version literal copies or contradicts the owning manifest"
     }
@@ -301,9 +236,7 @@
    "precision": 1.0,
    "sample": [
     {
-     "repo": "build-loop",
-     "file": "scripts/rally_point/discovery_bridge.py",
-     "line": 869,
+     "key": "build-loop/scripts/rally_point/discovery_bridge.py:869",
      "signal": "feature toggle fixed in code",
      "label": "tp",
      "reason": "module-level toggle fixed in code"
@@ -317,122 +250,92 @@
    "precision": 0.93,
    "sample": [
     {
-     "repo": "build-loop",
-     "file": "scripts/migrate_project_memory.py",
-     "line": 91,
-     "signal": "`.build-loop/memory` is defined as a constant in 2 files; a change must reach all",
+     "key": "NavGator/web/lib/server/registry-journal.ts:128",
+     "signal": "`registry-conflicts.jsonl` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "repo": "NavGator",
-     "file": "web/hooks/use-toast.ts",
-     "line": 20,
-     "signal": "`UPDATE_TOAST` is defined as a constant in 2 files; a change must reach all",
+     "key": "build-loop/src/build_loop/architecture/storage.py:31",
+     "signal": "`.build-loop/architecture` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "repo": "build-loop",
-     "file": "scripts/install_memory.py",
-     "line": 62,
-     "signal": "`manifest.json` is defined as a constant in 2 files; a change must reach all",
-     "label": "fp",
-     "reason": "same file name, different manifest (a seed manifest, not the architecture manifest)"
+     "key": "NavGator/src/registry-journal.ts:122",
+     "signal": "`registry-conflicts.jsonl` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
     },
     {
-     "repo": "build-loop",
-     "file": "scripts/model_resolver.py",
-     "line": 91,
+     "key": "build-loop/scripts/model_resolver.py:90",
+     "signal": "`model-availability.json` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "key": "build-loop/scripts/architecture_freshness.py:46",
+     "signal": "`.build-loop/architecture` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "key": "build-loop/scripts/model_resolver.py:91",
      "signal": "`model-tier-cache.json` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "repo": "build-loop",
-     "file": "scripts/migrate_project_memory.py",
-     "line": 92,
-     "signal": "`.MOVED.md` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "repo": "NavGator",
-     "file": "web/hooks/use-toast.ts",
-     "line": 21,
-     "signal": "`DISMISS_TOAST` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "repo": "build-loop",
-     "file": "scripts/cleanup_legacy_memory_stubs.py",
-     "line": 46,
-     "signal": "`.build-loop/memory` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "repo": "NavGator",
-     "file": "src/registry-journal.ts",
-     "line": 123,
-     "signal": "`registry-conflicts.1.jsonl` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "repo": "NavGator",
-     "file": "web/lib/server/registry-journal.ts",
-     "line": 109,
+     "key": "NavGator/src/registry-journal.ts:105",
      "signal": "`registry-journal.jsonl` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "repo": "NavGator",
-     "file": "web/components/ui/use-toast.ts",
-     "line": 22,
-     "signal": "`REMOVE_TOAST` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "repo": "build-loop",
-     "file": "scripts/sync_navgator_lessons.py",
-     "line": 114,
-     "signal": "`.build-loop/sync_errors.log` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "repo": "build-loop",
-     "file": "scripts/classify_model_tier.py",
-     "line": 63,
+     "key": "build-loop/scripts/classify_model_tier.py:63",
      "signal": "`model-tier-cache.json` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "repo": "NavGator",
-     "file": "web/components/ui/use-toast.ts",
-     "line": 19,
-     "signal": "`ADD_TOAST` is defined as a constant in 2 files; a change must reach all",
+     "key": "NavGator/web/lib/server/registry-lock.ts:35",
+     "signal": "`projects.json.lock` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "repo": "NavGator",
-     "file": "web/lib/server/registry-journal.ts",
-     "line": 110,
+     "key": "NavGator/src/registry-journal.ts:106",
      "signal": "`registry-journal.1.jsonl` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "repo": "NavGator",
-     "file": "web/lib/server/registry-journal.ts",
-     "line": 129,
+     "key": "NavGator/web/lib/server/registry-journal.ts:129",
      "signal": "`registry-conflicts.1.jsonl` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "key": "build-loop/scripts/migrate_project_memory.py:91",
+     "signal": "`.build-loop/memory` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "key": "build-loop/scripts/sync_navgator_lessons.py:114",
+     "signal": "`.build-loop/sync_errors.log` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "key": "build-loop/scripts/install_memory.py:62",
+     "signal": "`manifest.json` is defined as a constant in 2 files; a change must reach all",
+     "label": "fp",
+     "reason": "same file name, different manifest (a seed manifest, not the architecture manifest)"
+    },
+    {
+     "key": "NavGator/web/components/ui/use-toast.ts:21",
+     "signal": "`DISMISS_TOAST` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     }

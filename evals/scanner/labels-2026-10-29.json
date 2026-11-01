@@ -1,0 +1,264 @@
+{
+ "F1": {
+  "code-audit/evals/comparison/memory_arms.py:14": [
+   "tp",
+   "machine-specific path in shipped code or default"
+  ],
+  "decision-doctor-cc/scripts/seed-plugins.ts:117": [
+   "tp",
+   "machine-specific path in shipped code or default"
+  ],
+  "decision-doctor-cc/scripts/seed-plugins.ts:80": [
+   "tp",
+   "machine-specific path in shipped code or default"
+  ],
+  "decision-doctor-cc/scripts/seed-plugins.ts:99": [
+   "tp",
+   "machine-specific path in shipped code or default"
+  ],
+  "code-audit/evals/comparison/run_repair.py:17": [
+   "tp",
+   "machine-specific path in shipped code or default"
+  ],
+  "decision-doctor-cc/scripts/seed-plugins.ts:69": [
+   "tp",
+   "machine-specific path in shipped code or default"
+  ],
+  "decision-doctor-cc/scripts/seed-plugins.ts:58": [
+   "tp",
+   "machine-specific path in shipped code or default"
+  ],
+  "decision-doctor-cc/scripts/seed-plugins.ts:108": [
+   "tp",
+   "machine-specific path in shipped code or default"
+  ],
+  "code-audit/evals/comparison/run_repair.py:15": [
+   "tp",
+   "machine-specific path in shipped code or default"
+  ],
+  "decision-doctor-cc/scripts/seed-plugins.ts:90": [
+   "tp",
+   "machine-specific path in shipped code or default"
+  ],
+  "spectra/src/cli/index.ts:162": [
+   "fp",
+   "CLI help text showing an example pattern"
+  ]
+ },
+ "F2": {
+  "spectra/macos/Spectra/DaemonCore/verify-g2-suite.ts:387": [
+   "fp",
+   "verification-suite fixture target"
+  ],
+  "decision-doctor-cc/lib/auth.ts:30": [
+   "tp",
+   "local host/port frozen in code or as a default"
+  ],
+  "decision-doctor-cc/lib/auth.ts:32": [
+   "tp",
+   "local host/port frozen in code or as a default"
+  ],
+  "NavGator/scripts/ibr-ui-test.mjs:18": [
+   "tp",
+   "local host/port frozen in code or as a default"
+  ],
+  "local-smartz/src/localsmartz/doctor.py:43": [
+   "tp",
+   "local host/port frozen in code or as a default"
+  ],
+  "spectra/macos/Spectra/DaemonCore/SessionStore.swift:423": [
+   "fp",
+   "conformance fixture URL"
+  ],
+  "local-smartz/src/localsmartz/observability.py:34": [
+   "tp",
+   "local host/port frozen in code or as a default"
+  ],
+  "decision-doctor-cc/lib/auth.ts:29": [
+   "tp",
+   "local host/port frozen in code or as a default"
+  ],
+  "decision-doctor-cc/lib/auth.ts:31": [
+   "tp",
+   "local host/port frozen in code or as a default"
+  ],
+  "local-smartz/app/LocalSmartz/Views/SettingsTabs.swift:177": [
+   "fp",
+   "UI text that displays the host"
+  ],
+  "local-smartz/src/localsmartz/doctor.py:45": [
+   "fp",
+   "status message string"
+  ],
+  "spectra/src/cli/index.ts:158": [
+   "fp",
+   "CLI help example"
+  ],
+  "build-loop/scripts/scan_transcript_for_decisions.py:537": [
+   "tp",
+   "local host/port frozen in code or as a default"
+  ],
+  "build-loop/scripts/transcript_capture.py:155": [
+   "tp",
+   "local host/port frozen in code or as a default"
+  ],
+  "local-smartz/app/LocalSmartz/Views/SetupView.swift:417": [
+   "tp",
+   "local host/port frozen in code or as a default"
+  ],
+  "build-loop/scripts/task_surface.py:35": [
+   "tp",
+   "local service URL frozen as a module constant"
+  ],
+  "decision-doctor-cc/lib/ai-knowledge/rerank/bge-client.ts:20": [
+   "tp",
+   "production deploy host frozen as the fallback endpoint"
+  ],
+  "local-smartz/src/localsmartz/doctor.py:68": [
+   "tp",
+   "Ollama host frozen; ignores a configured host"
+  ],
+  "interface-built-right/src/sensors/test-fixtures.ts:90": [
+   "fp",
+   "test fixture file that the fixture-path filter misses"
+  ],
+  "build-loop/scripts/procedural_governance.py:298": [
+   "tp",
+   "Ollama host frozen in a request"
+  ],
+  "local-smartz/src/localsmartz/ollama.py:16": [
+   "tp",
+   "Ollama base URL frozen; ignores a configured host"
+  ]
+ },
+ "F3": {
+  "local-smartz/src/localsmartz/__init__.py:3": [
+   "tp",
+   "version literal copies or contradicts the owning manifest"
+  ],
+  "code-audit/runtime/debugger/src/mcp/server.ts:54": [
+   "tp",
+   "version literal copies or contradicts the owning manifest"
+  ],
+  "agent-rally-point/tools/agent-rally-watcher/src/agent_rally_watcher/__init__.py:13": [
+   "tp",
+   "version literal copies or contradicts the owning manifest"
+  ],
+  "local-smartz/src/localsmartz/observability.py:297": [
+   "tp",
+   "version literal copies or contradicts the owning manifest"
+  ],
+  "local-smartz/src/localsmartz/plugins/mcp_client.py:41": [
+   "tp",
+   "version literal copies or contradicts the owning manifest"
+  ],
+  "interface-built-right/src/mcp/server.ts:142": [
+   "tp",
+   "version literal copies or contradicts the owning manifest"
+  ]
+ },
+ "F6": {
+  "build-loop/scripts/rally_point/discovery_bridge.py:869": [
+   "tp",
+   "module-level toggle fixed in code"
+  ]
+ },
+ "F7": {
+  "build-loop/scripts/migrate_project_memory.py:91": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/web/hooks/use-toast.ts:20": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "build-loop/scripts/install_memory.py:62": [
+   "fp",
+   "same file name, different manifest (a seed manifest, not the architecture manifest)"
+  ],
+  "build-loop/scripts/model_resolver.py:91": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "build-loop/scripts/migrate_project_memory.py:92": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/web/hooks/use-toast.ts:21": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "build-loop/scripts/cleanup_legacy_memory_stubs.py:46": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/src/registry-journal.ts:123": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/web/lib/server/registry-journal.ts:109": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/web/components/ui/use-toast.ts:22": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "build-loop/scripts/sync_navgator_lessons.py:114": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "build-loop/scripts/classify_model_tier.py:63": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/web/components/ui/use-toast.ts:19": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/web/lib/server/registry-journal.ts:110": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/web/lib/server/registry-journal.ts:129": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/web/lib/server/registry-journal.ts:128": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "build-loop/src/build_loop/architecture/storage.py:31": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/src/registry-journal.ts:122": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "build-loop/scripts/model_resolver.py:90": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "build-loop/scripts/architecture_freshness.py:46": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/src/registry-journal.ts:105": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/web/lib/server/registry-lock.ts:35": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/src/registry-journal.ts:106": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ],
+  "NavGator/web/components/ui/use-toast.ts:21": [
+   "tp",
+   "same identifier defined in two files that must agree"
+  ]
+ }
+}
