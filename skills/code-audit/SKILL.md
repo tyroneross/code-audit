@@ -16,6 +16,7 @@ else if planning: load ../plan/SKILL.md
 else if authorized improvement campaign: load ../improve/SKILL.md
 else: load ../code-principles/SKILL.md for focused review
 load relevant challenge details
+if affected Cargo manifests or source identify GPUI: read ../code-principles/references/gpui.md; use only checks applicable to the changed flow
 if agent dependencies or handoffs: read ../code-principles/references/challenge-guidance.md#agent-communication-and-dependency-handoffs
 if unused code, stale experiments or constant flags: read ../code-principles/references/removal-evidence.md
 if literals with a source of truth, environment-specific values, or extra layers/services: read ../code-principles/references/frozen-values-and-path-length.md; compare each version, path, id, name table and copied list with its source in every supplied file

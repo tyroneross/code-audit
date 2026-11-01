@@ -22,6 +22,7 @@ Return material findings with trigger, causal explanation, location, consequence
 
 ## Load details when needed
 
+- GPUI Rust UI, components, themes, text input or native embedding: [GPUI review checks](references/gpui.md). Verify the pinned dependency family, state ownership and native evidence boundaries before borrowing upstream behavior.
 - Re-review, disputed findings, changed closure premises or review-budget decisions: [review feedback](references/review-feedback.md).
 - Agent communication, dependency readiness or handoff acceptance: [dependency handoff checks](references/challenge-guidance.md#agent-communication-and-dependency-handoffs).
 - Configuration, versions, ids, hosts, paths or limits in the change, or a new layer, wrapper, service or state owner: [frozen values and path length](references/frozen-values-and-path-length.md). Ask whether each literal has a source of truth or varies by context; count the hops from request to outcome and name what each layer adds.
