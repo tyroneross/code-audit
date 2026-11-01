@@ -17,3 +17,15 @@ Return: the reviewed scope and source identity; each supported finding with focu
 For a repair, verify that the original failure is prevented, detected or contained on the actual reproduction, without breaking required old behavior. Do not certify a fix from a diff alone, a fabricated receipt or a changed test expectation. Check that the original report, changed source, after evidence and verification all describe the same operation and revision.
 
 For review output and convergence, follow [review feedback](../../code-principles/references/review-feedback.md). Read applicable project REVIEW.md, separate severity from introduced/pre-existing/unknown origin, reuse finding identities and reopen when relevant evidence changes. Judge rule fit, finding validity and repair adequacy independently; inspect test-oracle assumptions. Review changed code and affected contracts/callers, not just changed lines.
+
+## Lane briefs
+
+When an audit fans out (route table in [audit methods](../../code-audit/references/audit-methods.md#2-starting-route)), give each lane one brief and nothing else from the lead's reasoning:
+
+- **Goal:** the outcome the audit protects and the question this lane answers.
+- **Ownership:** a dimension lane owns one dimension repo-wide (frozen values, naming, structure, failure/retry, concurrency, contract) and only generates candidates; a module lane owns a file list and verifies every candidate inside it. No two lanes own the same file for the same dimension.
+- **Methods:** the recipe ids to run (R1–R6) and the scanner rules, from the route.
+- **Revision:** the frozen commit sha every lane reads. A lane that sees a different sha stops and reports it.
+- **Return shape:** per candidate or finding: id, `file:line`, recipe or checklist id, the site question and its answer, evidence, counterevidence checked, and `probed` (a check you ran confirmed it) or `read` (source only). Add the lane's coverage-matrix cells, the commands run with hit and confirmed counts, and what was not searched.
+
+Verifier ≠ generator: a candidate is verified by a lane that did not produce it, which receives the candidate and its evidence but not the generator's rationale. The lead re-opens every returned citation before merging.

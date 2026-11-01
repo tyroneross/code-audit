@@ -16,7 +16,7 @@ For cleanup, check dynamic registrations, external consumers, flag prerequisite 
 
 Keep severity separate from introduced/pre-existing origin. Reconcile prior findings: suppress unchanged resolved issues; reopen the same identity or explicitly link it when a closure premise changes. Cover unchanged callers affected by a changed contract. Group instances of one cause; do not invent nits or duplicates.
 
-Historical memory offers hypotheses. Check applicability, invalidation and failed approaches before reuse; no retrieval score proves current causality. Missing tools or skipped inputs are coverage gaps, not clean reviews. Do not write incidents or repair code during review-only work. In an authorized repair, reproduce when feasible, correct the cause and verify affected guarantees. Distinguish proposed checks, executed tests, runtime and deployment.
+Historical memory offers hypotheses. Check applicability, invalidation and failed approaches before reuse; no retrieval score proves current causality. Missing tools or skipped inputs are coverage gaps, not clean reviews. Before reporting a count, a "none found" or a scanner hit, run the same grep or script on a known positive and check its exit status (`scan.py --self-test` for the scanner); never infer absence from truncated output. Do not write incidents or repair code during review-only work. In an authorized repair, reproduce when feasible, correct the cause and verify affected guarantees. Distinguish proposed checks, executed tests, runtime and deployment.
 
 Return material findings with trigger, causal explanation, location, consequence, smallest adequate action and discriminating verification. Report no material findings when supported. Do not fabricate execution or certainty.
 
@@ -28,6 +28,7 @@ Return material findings with trigger, causal explanation, location, consequence
 - A concrete performance, retry, concurrency, failure or contract concern: the relevant section of [focused checklist](references/focused-checklist.md), then its linked rule cards. Do not load all cards for a small review.
 - Choosing correction scope or engineering tradeoffs: [foundations](references/engineering-foundations.md), [whole-system repair](references/whole-system-repair.md) and [challenge guidance](references/challenge-guidance.md) as applicable.
 - Available incident memory: follow [debugging memory](../debugging-memory/SKILL.md), check actual project scope, and load [incident learning](references/incident-learning.md) for lifecycle or recording questions. If unavailable, continue source investigation and disclose that limit.
+- Commands, audit recipes and probes: [audit methods](../code-audit/references/audit-methods.md).
 - Optional source scan: run `python3 <skill-dir>/scripts/scan.py --help` for supported selection and output arguments. Hits are candidates; confirm them against source and callers. Record authorized outcomes using the existing outcome tool, not a new ledger.
 - Explicit full audit, pre-build plan or repository campaign: [audit](../audit/SKILL.md), [plan](../plan/SKILL.md) or [improve](../improve/SKILL.md).
 

@@ -250,6 +250,40 @@ class S {
             self.assertEqual(scan.main([str(self.root / "nope")]), 2)
 
 
+def failure_hits(source, rule):
+    """Line numbers where one failure-path rule fires on `source`, experimental rules on."""
+    label = next(l for _, l, r, _ in scan.FAILURE_RULES if r.__name__ == rule)
+    return [n for _, l, n in scan.failure_path_hits(source.splitlines(), experimental=True) if l == label]
+
+
+class FailurePathRuleTest(unittest.TestCase):
+    def test_sibling_retryable(self):
+        fire = "function get() {\n  if (!gate.ok) {\n    return { ok: false, retryable: false }\n  }\n  return { ok: false, retryable: true }\n}\n"
+        clean = "function get() {\n  if (gate.reason === 'operational') {\n    return { ok: false, retryable: false }\n  }\n  return { ok: false, retryable: true }\n}\n"
+        self.assertEqual(failure_hits(fire, "sibling_retryable"), [3])
+        self.assertEqual(failure_hits(clean, "sibling_retryable"), [])
+
+    def test_timeout_terminal(self):
+        fire = "def finish(job):\n    if time.time() > job.deadline:\n        job.status = 'failed'\n"
+        clean = "def finish(job):\n    if job.exit_code:\n        job.status = 'failed'\n"
+        self.assertEqual(failure_hits(fire, "timeout_terminal"), [3])
+        self.assertEqual(failure_hits(clean, "timeout_terminal"), [])
+
+    def test_experimental_rules_need_the_flag(self):
+        src = "function get() {\n  if (!gate.ok) {\n    return { ok: false, retryable: false }\n  }\n  return { ok: false, retryable: true }\n}\n"
+        self.assertEqual(scan.failure_path_hits(src.splitlines()), [])
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "a.ts").write_text(src)
+            _, off = run_scan([d])
+            _, on = run_scan([d, "--experimental"])
+        self.assertEqual(lines(off, "B3"), [])
+        self.assertEqual(lines(on, "B3"), [3])
+
+    def test_self_test_passes(self):
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(scan.main(["--self-test"]), 0)
+
+
 class OutcomeTest(unittest.TestCase):
     def test_add_then_score(self):
         with tempfile.TemporaryDirectory() as repo:

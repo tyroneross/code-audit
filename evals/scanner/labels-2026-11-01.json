@@ -1,0 +1,11 @@
+{
+ "two_write_append": {
+  "agent-rally-point/crates/rally-cli/src/lib.rs:7305": ["tp", "writeln! on an unbuffered O_APPEND File writes the record and the newline separately; two watchers given the same --ack-file, or a reader tailing it, can see a torn or unterminated line"],
+  "agent-rally-point/crates/rally-cli/src/store.rs:13867": ["fp", "one-time migration runs under the room mutation lock, which every segment appender also takes, so no second writer can interleave"]
+ },
+ "failure_after_effect": {
+  "agent-rally-point/scripts/rally_model_handoff_probe.py:157": ["fp", "probe script aborts on an inbox contract violation; no caller retries the send, so a duplicate delivery cannot follow"]
+ },
+ "sibling_retryable": {},
+ "timeout_terminal": {}
+}

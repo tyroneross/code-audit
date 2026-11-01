@@ -2,7 +2,12 @@
 """Record whether code-principles findings held up, and score checklist items.
 
   outcome.py add --repo PATH --item A3 --where file:line --decision fixed [--gain TEXT] [--note TEXT] [--log-file PATH]
-  outcome.py score [--repo PATH ...] [--json]
+  outcome.py score [--repo PATH ...] [--log-file PATH ...] [--json]
+  outcome.py candidates [--min-repos 2] [--repo PATH ...] [--log-file PATH ...] [--json]
+
+--item is a checklist id (A1..G9) or an audit recipe id (R1..R6, R5a, R5b, R6:<slug>).
+Each record stores the absolute repo path it came from; `candidates` lists recipe ids
+confirmed (fixed, accepted or kept) on at least --min-repos distinct repos.
 
 Log lives at <repo>/.code-principles/outcomes.jsonl (one JSON object per line).
 Decisions: fixed (changed and verified), accepted (real issue, not fixed yet),
@@ -17,7 +22,9 @@ import sys
 from collections import Counter, defaultdict
 
 DECISIONS = ("fixed", "accepted", "rejected", "kept")
-ITEM = re.compile(r"^[A-E][0-9]{1,2}$")
+REAL = ("fixed", "accepted", "kept")
+CHECKLIST = re.compile(r"^[A-G][0-9]{1,2}$")
+RECIPE = re.compile(r"^(R[1-6][ab]?|R6:[a-z0-9][a-z0-9-]{0,40})$")
 
 
 def log_path(repo, log_file=None):
@@ -27,8 +34,8 @@ def log_path(repo, log_file=None):
 
 
 def add(args):
-    if not ITEM.match(args.item):
-        print(f"outcome.py: item must look like A3 or D1, got {args.item!r}", file=sys.stderr)
+    if not (CHECKLIST.match(args.item) or RECIPE.match(args.item)):
+        print(f"outcome.py: item must be a checklist id like A3 or a recipe id like R5b or R6:two-write-append, got {args.item!r}", file=sys.stderr)
         return 2
     if not os.path.isdir(args.repo):
         print(f"outcome.py: no such repo directory: {args.repo}", file=sys.stderr)
@@ -36,6 +43,7 @@ def add(args):
     record = {
         "at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
         "item": args.item,
+        "repo": os.path.realpath(args.repo),
         "where": args.where,
         "decision": args.decision,
     }
@@ -68,17 +76,23 @@ def read(repo, log_file=None):
     return rows
 
 
-def score(args):
-    counts = defaultdict(Counter)
+def rows_from(args):
     sources = [(None, f) for f in (args.log_file or [])] + [(r, None) for r in (args.repo or ([] if args.log_file else ["."]))]
     for repo, log_file in sources:
         for row in read(repo, log_file):
-            counts[row.get("item", "?")][row.get("decision", "?")] += 1
+            # Rows written before the repo field existed belong to the repo whose log holds them.
+            yield {**row, "repo": row.get("repo") or (os.path.realpath(repo) if repo else None)}
+
+
+def score(args):
+    counts = defaultdict(Counter)
+    for row in rows_from(args):
+        counts[row.get("item", "?")][row.get("decision", "?")] += 1
     table = {}
     for item in sorted(counts):
         c = counts[item]
         total = sum(c.values())
-        real = c["fixed"] + c["accepted"] + c["kept"]
+        real = sum(c[d] for d in REAL)
         table[item] = {**{d: c[d] for d in DECISIONS}, "total": total, "hit_rate": round(real / total, 2) if total else None}
     if args.json:
         print(json.dumps(table, indent=1))
@@ -86,9 +100,27 @@ def score(args):
     if not table:
         print("No outcomes logged yet.")
         return 0
-    print(f"{'item':<5} {'total':>5} {'fixed':>5} {'accepted':>8} {'kept':>4} {'rejected':>8} {'hit rate':>8}")
+    w = max(5, *(len(i) for i in table))
+    print(f"{'item':<{w}} {'total':>5} {'fixed':>5} {'accepted':>8} {'kept':>4} {'rejected':>8} {'hit rate':>8}")
     for item, r in table.items():
-        print(f"{item:<5} {r['total']:>5} {r['fixed']:>5} {r['accepted']:>8} {r['kept']:>4} {r['rejected']:>8} {r['hit_rate']:>8.0%}")
+        print(f"{item:<{w}} {r['total']:>5} {r['fixed']:>5} {r['accepted']:>8} {r['kept']:>4} {r['rejected']:>8} {r['hit_rate']:>8.0%}")
+    return 0
+
+
+def candidates(args):
+    repos = defaultdict(set)
+    for row in rows_from(args):
+        item = str(row.get("item", ""))
+        if RECIPE.match(item) and row.get("decision") in REAL and row.get("repo"):
+            repos[item].add(row["repo"])
+    table = {item: sorted(r) for item, r in sorted(repos.items()) if len(r) >= args.min_repos}
+    if args.json:
+        print(json.dumps(table, indent=1))
+    elif not table:
+        print(f"No recipe confirmed on {args.min_repos}+ repos yet.")
+    else:
+        for item, r in table.items():
+            print(f"{item}  {len(r)} repos  {', '.join(r)}")
     return 0
 
 
@@ -108,8 +140,13 @@ def main(argv=None):
     s.add_argument("--repo", action="append")
     s.add_argument("--log-file", action="append")
     s.add_argument("--json", action="store_true")
+    c = sub.add_parser("candidates", help="recipe ids confirmed on several repos: experimental-rule candidates")
+    c.add_argument("--min-repos", type=int, default=2)
+    c.add_argument("--repo", action="append")
+    c.add_argument("--log-file", action="append")
+    c.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
-    return add(args) if args.cmd == "add" else score(args)
+    return {"add": add, "score": score, "candidates": candidates}[args.cmd](args)
 
 
 if __name__ == "__main__":

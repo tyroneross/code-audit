@@ -54,6 +54,7 @@ Write the comparison as a differential check: run old and new over the same inpu
 - **E6 Replace in small steps** (strangler fig) rather than rewriting from scratch.
 - **E7 Pin dependencies; read a dependency's code and transitive deps before adopting it.**
 - **E8 Hand-written parsers of standard formats** (PDF, CSV, HTML, ZIP, dates, source code) need tests for escapes, nesting, string literals and encodings, or a maintained library. Regex over source code matches inside strings and comments unless it accounts for them.
+- **E9 Built ≠ wired.** Every new export, guard, setting or delegation has a non-test production caller and is actually loaded (route manifest, registration, build output); every caller of the legacy path it replaces is migrated or exempted by name. Method: for each changed exported symbol run `rosslabs-lsp refs --symbol <name> --path <root>` and list symbols whose only references are tests or the definition; when LSP reports `ready: false`, use `rg -nw <name>` excluding tests.
 
 ## F. Frozen values that should be dynamic
 
@@ -89,7 +90,7 @@ Read the referenced principle in the [canonical rule cards](../../audit/referenc
 | C4 | P18 |
 | C5 | P20 async ownership, P21 |
 | D1–D5 | P10 substitution, P27 compatibility, P23 verification |
-| E1–E8 | P08, P13, P22, P24, P25, P26, P30 |
+| E1–E9 | P08, P13, P22, P23, P24, P25, P26, P30 |
 | F1–F7 | P06 meaning and validation, P27 compatibility, P07 |
 | G1–G3 | P09 extension points, P13 splitting, P29 separate services, P18 |
 
