@@ -14,16 +14,15 @@
  },
  "rules": {},
  "zero_hit_rules": {
-  "sibling_retryable": 0,
-  "timeout_terminal": 0
+  "sibling_retryable": 0
  },
  "status": {
   "two_write_append": "cut: precision 0.50 (1 tp of 2 hits), below 0.7 (n=2; small sample, informal single rater)",
   "failure_after_effect": "cut: precision 0.00 (0 tp of 1 hit), below 0.7 (n=1; small sample, informal single rater)",
-  "sibling_retryable": "experimental (0 hits)",
-  "timeout_terminal": "experimental (0 hits)"
+  "sibling_retryable": "experimental (0 hits after the 2026-11-01 quoted-key and multi-line-return fixes)",
+  "timeout_terminal": "cut: precision 0.00 (0 tp of 2 hits), below 0.7 (n=2; small sample, informal single rater). Measured after the quoted-key fix; both hits were a distinct non-timeout branch or a status the caller already treats as unknown"
  },
- "contamination": "All four rules (two since cut) were designed after reading the hard-benchmark defects H01, H07 and H08 (evals/hard/private/oracles.json), so their recall on those cases is not evidence: two_write_append fires at H07 store.rs:1189 (window 1180-1191, agent-rally-point 25fc7e5); failure_after_effect fires at H08 lib.rs:1769 (window 1765-1780, babc9b0); sibling_retryable fires at H01 scan-lock.ts:458 (window 457-459, NavGator 3723d05); timeout_terminal does not fire on H01 363-367 because that branch returns ok:false without a status or retryable field.",
+ "contamination": "All four rules (three since cut) were designed after reading the hard-benchmark defects H01, H07 and H08 (evals/hard/private/oracles.json), so their recall on those cases is not evidence: two_write_append fires at H07 store.rs:1189 (window 1180-1191, agent-rally-point 25fc7e5); failure_after_effect fires at H08 lib.rs:1769 (window 1765-1780, babc9b0); sibling_retryable fires at H01 scan-lock.ts:458 (window 457-459, NavGator 3723d05); timeout_terminal (since cut) does not fire on H01 363-367 because that branch returns ok:false without a status or retryable field.",
  "cut_rules_informal": {
   "two_write_append on Python file handles": "not built: buffered text files usually flush a short record and its newline in one write",
   "sibling_retryable without a catch-all guard": "any function mixing retryable true/false fired; 0/3 on NavGator scan-lock.ts after the fix (each false return was a distinct operational error)",
@@ -67,6 +66,29 @@
    ],
    "status": "cut: measured precision below 0.7 (n=2 / n=1; small samples, informal single rater)",
    "cut": true
+  },
+  "timeout_terminal": {
+   "hits": 2,
+   "sampled": 2,
+   "true_positive": 0,
+   "precision": 0.0,
+   "sample": [
+    {
+     "key": "build-loop/scripts/privileged_broker.py:830",
+     "signal": "timeout branch reports a terminal failure",
+     "label": "fp",
+     "reason": "the TimeoutExpired branch two lines up already returns state 'timeout'; this 'failed' belongs to the separate OSError branch (the command could not start), which is a real terminal launch failure"
+    },
+    {
+     "key": "build-loop/scripts/verification_claim_probe.py:392",
+     "signal": "timeout branch reports a terminal failure",
+     "label": "fp",
+     "reason": "status 'error' is documented as 'harness failed (timeout, OSError)', distinct from 'contradicted'; the verdict never treats it as a failed claim, so the timeout stays an unknown outcome, not a terminal one"
+    }
+   ],
+   "status": "cut: precision 0.00 (0 tp of 2 hits), below 0.7 (n=2; small sample, informal single rater). Measured after the quoted-key fix; both hits were a distinct non-timeout branch or a status the caller already treats as unknown",
+   "cut": true
   }
- }
+ },
+ "rule_changes": "2026-11-01: retryable/status keys also match quoted and subscript forms (`\"retryable\": False`, `r['retryable'] =`); sibling_retryable walks up to 6 lines out of a multi-line return value to its branch header. Re-measured at the same commits: sibling_retryable still 0 hits, timeout_terminal 2 hits (was 0)."
 }

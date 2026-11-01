@@ -263,11 +263,27 @@ class FailurePathRuleTest(unittest.TestCase):
         self.assertEqual(failure_hits(fire, "sibling_retryable"), [3])
         self.assertEqual(failure_hits(clean, "sibling_retryable"), [])
 
-    def test_timeout_terminal(self):
-        fire = "def finish(job):\n    if time.time() > job.deadline:\n        job.status = 'failed'\n"
-        clean = "def finish(job):\n    if job.exit_code:\n        job.status = 'failed'\n"
-        self.assertEqual(failure_hits(fire, "timeout_terminal"), [3])
-        self.assertEqual(failure_hits(clean, "timeout_terminal"), [])
+    def test_quoted_keys_python(self):
+        fire = 'def call(api):\n    try:\n        api.get()\n    except Exception:\n        return {"retryable": False}\n    return {"retryable": True}\n'
+        compare = 'def call(api):\n    try:\n        api.get()\n    except Exception:\n        return r["retryable"] == False\n    return {"retryable": True}\n'
+        self.assertEqual(failure_hits(fire, "sibling_retryable"), [5])
+        self.assertEqual(failure_hits(compare, "sibling_retryable"), [])
+        subscript = "def push(out):\n    out['retryable'] = True\n    try:\n        put()\n    except Exception:\n        out[\"retryable\"] = False\n"
+        self.assertEqual(failure_hits(subscript, "sibling_retryable"), [6])
+
+    def test_quoted_keys_ts(self):
+        fire = "function get() {\n  try { run() } catch (e) {\n    return { 'retryable': false }\n  }\n  return { 'retryable': true }\n}\n"
+        typed = "type R = { 'retryable': false; message: string }\nfunction get() {\n  return { 'retryable': true }\n}\n"
+        self.assertEqual(failure_hits(fire, "sibling_retryable"), [3])
+        self.assertEqual(failure_hits(typed, "sibling_retryable"), [])
+
+    def test_multi_line_return(self):
+        fire = "function get() {\n  if (!gate.ok) {\n    return {\n      ok: false,\n      retryable: false,\n    }\n  }\n  return { ok: false, retryable: true }\n}\n"
+        specific = "function get() {\n  if (gate.code === 404) {\n    return {\n      ok: false,\n      retryable: false,\n    }\n  }\n  return { ok: false, retryable: true }\n}\n"
+        nested = "function get() {\n  if (!gate.ok) {\n    if (busy()) {\n      return {\n        retryable: false,\n      }\n    }\n  }\n  return { retryable: true }\n}\n"
+        self.assertEqual(failure_hits(fire, "sibling_retryable"), [5])
+        self.assertEqual(failure_hits(specific, "sibling_retryable"), [])
+        self.assertEqual(failure_hits(nested, "sibling_retryable"), [])
 
     def test_experimental_rules_need_the_flag(self):
         src = "function get() {\n  if (!gate.ok) {\n    return { ok: false, retryable: false }\n  }\n  return { ok: false, retryable: true }\n}\n"
