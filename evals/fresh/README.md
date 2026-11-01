@@ -111,3 +111,7 @@ An Opus audit and a Codex review of 6168d75..069f22f found no flaw in the test o
 - **No second verdict.** `grade.py aggregate --no-verdicts` drops the hard benchmark's unpaired verdict block for this case set. The only verdict is `stats.py`.
 - **Tools.** Round-2 trials copied the scanner scripts from the worktree, which matched de06478 for the whole run: no commit or edit touched `skills/code-principles/scripts` between de06478 and the end of round 2. `run.py` now writes them from git at de06478 and records their hashes. `tools_used` was computed on commands truncated to 400 characters. It is recomputed from each trial's saved `host-output.jsonl` on the complete commands.
 - **Reruns.** Only host failures and timeouts are rerun, through `run.py set-aside`.
+
+## Addendum 4: result
+
+Results are in [results-2026-11-01.md](results-2026-11-01.md). Every primary comparison came out at parity, with 0–1 discordant cases among 54. The tool arms detected 18–19/54; the tool-less `none` detected 22/54.
