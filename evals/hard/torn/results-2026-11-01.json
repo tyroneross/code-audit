@@ -1,0 +1,106 @@
+{
+ "date": "2026-11-01",
+ "model": "gpt-6.1-sol",
+ "effort": "medium",
+ "repetitions": 2,
+ "manifest_sha256": "ddc4e8ff66a635abc935b9e9202a3c710f110489cb1f9079f8f7ae04941bec32",
+ "arms": {
+  "code-audit-full": {
+   "review_trials": 12,
+   "detected": 10,
+   "located": 12,
+   "control_trials": 4,
+   "control_false_positives": 0,
+   "review_invalid": 0,
+   "findings": 26,
+   "repair_trials": 0,
+   "repair_passed": 0,
+   "repair_invalid": 0,
+   "seconds": 462.4,
+   "tokens": 834905,
+   "detection_rate": 0.833,
+   "per_case_public": {
+    "T03": [
+     1,
+     1
+    ],
+    "T05": [
+     1,
+     1
+    ]
+   }
+  },
+  "code-audit-full-c7": {
+   "review_trials": 12,
+   "detected": 12,
+   "located": 12,
+   "control_trials": 4,
+   "control_false_positives": 0,
+   "review_invalid": 0,
+   "findings": 32,
+   "repair_trials": 0,
+   "repair_passed": 0,
+   "repair_invalid": 0,
+   "seconds": 544.9,
+   "tokens": 839858,
+   "detection_rate": 1.0,
+   "per_case_public": {
+    "T03": [
+     1,
+     1
+    ],
+    "T05": [
+     1,
+     1
+    ]
+   }
+  },
+  "none": {
+   "review_trials": 12,
+   "detected": 11,
+   "located": 12,
+   "control_trials": 4,
+   "control_false_positives": 0,
+   "review_invalid": 0,
+   "findings": 29,
+   "repair_trials": 0,
+   "repair_passed": 0,
+   "repair_invalid": 0,
+   "seconds": 495.5,
+   "tokens": 316711,
+   "detection_rate": 0.917,
+   "per_case_public": {
+    "T03": [
+     1,
+     1
+    ],
+    "T05": [
+     1,
+     1
+    ]
+   }
+  }
+ },
+ "verdicts": {
+  "subject": "code-audit-full-c7",
+  "code-audit-full": {
+   "review": {
+    "delta_detection": 0.167,
+    "delta_control_fp": 0,
+    "verdict": "outperforms"
+   }
+  },
+  "none": {
+   "review": {
+    "delta_detection": 0.083,
+    "delta_control_fp": 0,
+    "verdict": "parity"
+   }
+  },
+  "discrimination": {
+   "review_control_below_ceiling": false,
+   "repair_control_below_ceiling": false
+  }
+ },
+ "note": "Per-case rows for the four private cases are kept outside this repository; totals include them."
+}
