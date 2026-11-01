@@ -41,13 +41,13 @@ Two review procedures for problems that pass tests on the author's machine and b
 | Item | Signal | Precision, informal (single rater) |
 |---|---|---|
 | F1 | home or machine-specific absolute path in code | 10/11 on 8 public repos |
-| F2 | localhost/private-IP/preview-deploy host in code, unless read from env/config, a server this code started, a URL parse base or a placeholder | 10/15 sampled of 25; weakest kept rule |
+| F2 | localhost/private-IP/preview-deploy host in code, unless read from env/config, a server this code started, a URL parse base or a placeholder | 11/15 sampled of 25; weakest kept rule |
 | F3 | this package's version stated in code: a copy of the nearest manifest's version, or a CLI/server self-report that contradicts it | 6/6 |
 | F5 | cloud account ARN; a year compared in logic | no hits to measure |
 | F6 | an upper-case feature toggle fixed to true/false at module level | 1/1 |
 | F7 | the same file name, path, URL, schema id or env-var name defined as a constant in several files (config/constants files, fixtures and MIME types excluded) | 14/15 sampled of 32 |
 
-Measured 2026-10-29 on git-tracked non-test source of 8 public repositories at the commits recorded in [frozen-values-precision.json](frozen-values-precision.json), which lists every sampled hit with its label. Reproduce with `evals/scanner/measure_precision.py` (run from a folder that holds those checkouts). One rater labelled each hit and samples are at most 15 per rule, so treat these as estimates. On 6 private repositories an earlier version of the rules measured F1 9/11, F2 9/15 and F7 15/15; those labels are not published.
+Measured 2026-10-29 on git-tracked non-test source of 8 public repositories, read at the commits recorded in [frozen-values-precision.json](frozen-values-precision.json), which lists every sampled hit with its explicit label (labels: `evals/scanner/labels-2026-10-29.json`). `evals/scanner/measure_precision.py --check` re-scans those commits and fails if the sample or any label is missing. One rater labelled each hit and samples are at most 15 per rule, so treat these as estimates. On 6 private repositories an earlier version of the rules measured F1 9/11, F2 9/15 and F7 15/15; those labels are not published.
 
 Rules measured and **cut** because they were noisier than useful: model ids in code (~25%: most are catalogs, pricing tables or docs), generic account/tenant id assignments (mostly test data and wire-name mappings), date constructors (fixtures and "last updated" stamps), and unrestricted boolean toggles (UI properties and state assignments). Review those kinds by hand with the table above.
 
