@@ -66,6 +66,13 @@ class Matching(unittest.TestCase):
         self.assertFalse(hit('src/cli/commands/scan.ts:458'))
         self.assertFalse(hit('no location'))
 
+    def test_located_counts_only_the_primary_location(self):
+        # RCA 2026-11-01: a finding about another problem listing a nearby line as a secondary location is not "located".
+        secondary = {'locations': ['src/cli/commands/scan.ts:10', 'src/scan-lock.ts:458']}
+        self.assertTrue(score.location_hit(secondary, self.oracle))
+        self.assertFalse(score.location_hit(secondary, self.oracle, primary_only=True))
+        self.assertTrue(score.location_hit({'locations': ['src/scan-lock.ts:458', 'x.ts:1']}, self.oracle, primary_only=True))
+
 
 class Blinding(unittest.TestCase):
     @unittest.skipUnless(REPOS, 'source repositories unavailable')
