@@ -21,13 +21,13 @@ Run `python3 <cp>/scripts/recon.py <root> [--base REV | --paths FILE...]`. It pr
 | Signals | Generate candidates with | Lanes | Who verifies |
 |---|---|---|---|
 | `diff`, ≤10 files, 1 module | `scan.py <changed files>`; callers of each changed public symbol; R1 if literals or config changed, R4 if `serial`, R5a if `io_conc`, R5b if `retry` | none | lead |
-| `diff`, otherwise (≥2 modules or >10 files) | as above, plus `architect impact <file>::<symbol>` per changed public symbol to pull in unchanged callers | one per module only if the modules share no changed contract; otherwise one agent | each lane its own; lead re-verifies cross-lane findings |
+| `diff`, otherwise (≥2 modules or >10 files) | as above, plus `architect scan <root> --out <scratch>/arch` once, then `architect impact <file>::<symbol> --packet <scratch>/arch/graph.json` per changed public symbol to pull in unchanged callers | one per module only if the modules share no changed contract; otherwise one agent | each lane its own; lead re-verifies cross-lane findings |
 | `repo`, <200 files, not `multi_lang` | `scan.py .`, R1, R2, R3; R4/R5a/R5b when their signal is present | none | lead |
 | `repo`, ≥200 files or `multi_lang` | Phase A by dimension, repo-wide: lane F (`scan.py` F rules + R1), lane N (R2 + R4), lane S (R3 + hop count), lane E (R5a/R5b when signalled). Never split a cross-cutting class by module. | Phase B by module (`campaign.py batch`): read the module for checklist A–D and check the Phase A candidates that land in it | module lane, never the lane that generated the candidate |
 | `services` ≥2 | add R4 across each service boundary; NavGator `connections`/`trace` only if `.navgator/` already exists (its scan writes into the repo, so ask first) | add one contract lane | both sides cited |
 | a tool is missing | use the next method for that dimension (LSP → `architect` → import grep) or mark the cell `UNAVAILABLE` | — | — |
 
-Callers: `rosslabs-lsp refs --symbol <name> --path <root>`; when it reports `ready: false`, use `architect impact` or `rg -nw <name>`. Brief every lane with the lane section of [reviewer role](../../audit/references/reviewer-role.md#lane-briefs).
+Callers: `rosslabs-lsp refs --symbol <name> --path <root>`; when it reports `ready: false`, use `architect impact <file>::<symbol> --packet <scratch>/arch/graph.json` (after the R3 scan) or `rg -nw <name>`. Brief every lane with the lane section of [reviewer role](../../audit/references/reviewer-role.md#lane-briefs).
 
 ## 3. Recipes
 
@@ -62,7 +62,7 @@ The starting route is a plan. After each recipe or lane returns, apply the first
 ## 5. Verify each candidate
 
 1. **Control the instrument first.** Before reporting a count, a "none found" or a hit, run the same grep or script on a known positive (a planted line or a site you already confirmed) and check its exit status. Never infer absence from truncated output, an errored glob or a pipe's exit code. Run `scan.py --self-test` before trusting a scan in a new environment.
-2. Read the site and its callers (`rosslabs-lsp refs` or `architect impact`).
+2. Read the site and its callers (`rosslabs-lsp refs`, or `architect impact … --packet <scratch>/arch/graph.json`).
 3. Name the source of truth or the violated contract. If you cannot name one, drop the candidate.
 4. Look for counterevidence: an existing lock, a reader that tolerates the field, a test asserting the behavior, a documented policy constant.
 5. **Probe when execution is authorized.** Write the cheapest discriminating check outside the repo (two processes appending to one file, comparing two version values, calling the classifier with a timeout raised after delivery) and keep its output. Label every finding `probed` (a check you ran confirmed it) or `read` (source reading only).
