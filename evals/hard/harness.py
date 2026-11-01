@@ -264,6 +264,8 @@ KEYWORDS = {'do', 'then', 'else', 'elif', 'if', 'while', 'until', '!', '{', '}',
 
 # Wrappers whose first non-option argument is a duration or priority, not the command.
 VALUE_WRAPPERS = {'timeout', 'gtimeout', 'nice', 'ionice', 'stdbuf', 'caffeinate', 'chrt'}
+# Options of those wrappers that take a separate value argument.
+WRAPPER_VALUE_OPTIONS = {'-s', '--signal', '-k', '--kill-after', '-n', '--adjustment', '-c', '--class', '-p', '-i', '-o', '-e', '-w', '-t'}
 OPTION_ARGS = {'-u', '--unset', '-C', '--chdir', '-S', '--split-string', '-n', '-I', '-P', '-L', '-s', '-d'}
 
 
@@ -276,7 +278,8 @@ def _strip_prefix(words):
         elif Path(w).name in PREFIXES: words = words[1:]; wrapped = True
         elif Path(w).name in VALUE_WRAPPERS:
             words = words[1:]; wrapped = True
-            while words and words[0].startswith('-'): words = words[1:]
+            while words and words[0].startswith('-'):
+                words = words[2:] if words[0] in WRAPPER_VALUE_OPTIONS else words[1:]
             if Path(w).name in ('timeout', 'gtimeout', 'chrt') and words and words[0][:1].isdigit(): words = words[1:]
         elif w.startswith('-'): words = words[2:] if wrapped and w in OPTION_ARGS else words[1:]
         else: break
@@ -304,9 +307,11 @@ HEREDOC = None
 
 def _logical_lines(text):
     """Lines of shell text, keeping newlines that sit inside quotes (a multi-line `python3 -c "..."`) in one line."""
-    out, cur, quote = [], [], None
+    out, cur, quote, escaped = [], [], None, False
     for ch in text:
-        if quote:
+        if escaped: escaped = False
+        elif ch == '\\' and quote != "'": escaped = True
+        elif quote:
             if ch == quote: quote = None
         elif ch in ('"', "'"): quote = ch
         elif ch == '\n': out.append(''.join(cur)); cur = []; continue
@@ -333,12 +338,22 @@ def _segments(line):
 
 
 def _split_commands(text):
+    """Both views of the text: physical lines (heredoc bodies and comments stay contained) and quote-joined logical
+    lines (a multi-line `python3 -c "..."`). Auditing the union means neither view can hide a command."""
+    seen, out = set(), []
+    for view in (_split_view(text.split('\n')), _split_view(_logical_lines(text))):
+        for row in view:
+            if row not in seen: seen.add(row); out.append(row)
+    return out
+
+
+def _split_view(lines):
     """Simple commands, with heredoc bodies attached to the command that reads them. Command substitutions,
     subshells and backticks open new commands; `<<<` here-strings and `<<` inside arithmetic are not heredocs."""
     import re
     global HEREDOC
     HEREDOC = HEREDOC or re.compile(r"(?:^|\s)<<-?\s*['\"]?([A-Za-z_]\w*)['\"]?")
-    lines = _logical_lines(text); out = []; i = 0
+    out = []; i = 0
     while i < len(lines):
         line = lines[i]; m = HEREDOC.search(line); body = []
         if m:

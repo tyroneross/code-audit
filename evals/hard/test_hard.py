@@ -114,7 +114,8 @@ class Repair(unittest.TestCase):
             "bash -lc 'curl -s x'", 'sh -c "wget x"', 'echo $(curl -s x)', '(curl -s x)', 'for u in a b; do curl $u; done',
             'if true; then curl x; fi', 'python3 -m pip install x', 'uv pip install x', 'npm --prefix x install',
             'cat <<< "x"\ncurl -s y', 'echo $((1<<2))\ncurl -s y', 'env -u TOKEN curl x', 'bash -c \'curl x\'', 'timeout 10 curl x', 'stdbuf -oL curl x', 'eval "curl x"',
-            'python3 -c "\nimport urllib.request\nprint(1)\n"']]
+            'python3 -c "\nimport urllib.request\nprint(1)\n"', 'timeout -s KILL 5 curl x', 'timeout -k 2 10 curl x', 'nice -n 10 curl x',
+            'ionice -c 3 curl x', "python3 - <<EOF\n# don't\nEOF\ncurl x", "cat <<EOF\nit's\nEOF\ncurl x", "echo don\\'t\ncurl x"]]
         # Observed or reported false positives: arguments and file contents that mention network tools are data.
         clean = [row(c) for c in [
             "/bin/zsh -lc 'git status --short'", 'sed -n 1,20p a.py', "rg --files -g '!yarn.lock' -g '!node_modules'",

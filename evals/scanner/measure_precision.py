@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Reproduce or rebuild the section F scanner precision record from fixed commits.
 
-  measure_precision.py --check            re-scan every repository at its recorded commit and confirm the sample
+  measure_precision.py --check [LABELS]   re-scan every repository at its recorded commit; confirm the sample, every
+                                          label against the labels file, and each count and precision value
   measure_precision.py --record LABELS    rebuild the record from explicit labels (at the recorded commits, else HEAD)
 
 Files are read from `git archive <commit>`, never from a working tree, so a moved or dirty checkout cannot change
@@ -30,8 +31,11 @@ REPOS = ['build-loop', 'NavGator', 'interface-built-right', 'agent-rally-point',
 SEED, PER_RULE = 20261029, 15
 
 
+GIT_TIMEOUT = 300  # seconds per git call; a stalled pipe must fail the run, not wait for days
+
+
 def git(repo, *args):
-    return subprocess.check_output(['git', '-c', 'credential.helper=', '-C', str(ROOT / repo), *args])
+    return subprocess.check_output(['git', '-c', 'credential.helper=', '-C', str(ROOT / repo), *args], timeout=GIT_TIMEOUT, stdin=subprocess.DEVNULL)
 
 
 def hits_at(repo, sha):
@@ -73,7 +77,8 @@ def sample(shas):
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     g = p.add_mutually_exclusive_group(required=True)
-    g.add_argument('--check', action='store_true'); g.add_argument('--record', type=Path, metavar='LABELS')
+    g.add_argument('--check', type=Path, metavar='LABELS', nargs='?', const=Path(__file__).with_name('labels-2026-10-29.json'))
+    g.add_argument('--record', type=Path, metavar='LABELS')
     a = p.parse_args()
     if a.check:
         record = json.loads(RECORD.read_text())
@@ -82,7 +87,12 @@ def main():
             want = record['rules'].get(item, {})
             keys = [k for k, _ in rows]; recorded = [s['key'] for s in want.get('sample', [])]
             if keys != recorded or total != want.get('hits'): errors.append(f'{item}: sample differs from the record')
-            if any(s.get('label') not in ('tp', 'fp') for s in want.get('sample', [])): errors.append(f'{item}: unlabelled hit')
+            labels = json.loads(a.check.read_text()).get(item, {})
+            for s in want.get('sample', []):
+                if labels.get(s['key'], [None])[0] != s.get('label'): errors.append(f"{item}: label for {s['key']} differs from the labels file")
+            tp = sum(s.get('label') == 'tp' for s in want.get('sample', []))
+            if tp != want.get('true_positive') or len(want.get('sample', [])) != want.get('sampled') or (want.get('sampled') and round(tp / want['sampled'], 2) != want.get('precision')):
+                errors.append(f'{item}: counts or precision do not match the labelled sample')
         if set(drawn) != set(record['rules']): errors.append('rule set differs from the record')
         print(json.dumps({'files_scanned': files, 'errors': errors, 'precision': {k: f"{v['true_positive']}/{v['sampled']}" for k, v in record['rules'].items()}}))
         return 1 if errors else 0
