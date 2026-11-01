@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """Paired per-case comparison of arms on the fresh case set (pre-registered rule: README.md).
 
-  stats.py --agg AGG.json [AGG.json ...] --compare A:B [A:B ...] [--holm A:B ...]
+  stats.py --agg AGG.json [AGG.json ...] [--union NEW=A+B ...] --compare A:B [A:B ...] [--holm A:B ...]
 
-Each AGG.json is `grade.py aggregate` output. One repetition per case, so each arm has one 0/1 outcome per defect
-case. The test is an exact two-sided McNemar (binomial on discordant cases). Cases missing or invalid in either arm
-are dropped from that comparison and counted.
+Each AGG.json is `grade.py aggregate` output; an arm name may appear in only one of them. One repetition per case, so
+each arm has one 0/1 outcome per defect case and per control. Detection uses an exact two-sided McNemar test on the
+defect cases valid in both arms; control false positives are compared on the controls valid in both arms. Cost is
+the mean tokens and seconds per valid trial. `--union NEW=A+B` builds an arm whose outcome per case is A or B and whose
+cost is A's plus B's (the two-pass arm: first pass A, second-pass new findings B).
 """
 import argparse
 import json
+import os
 from math import comb
+from pathlib import Path
+
+CASES = Path(os.environ.get('HARD_CASES', Path(__file__).resolve().parent / 'cases.json'))
 
 
 def mcnemar(b, c):
@@ -20,26 +26,52 @@ def mcnemar(b, c):
     return min(1.0, 2 * tail)
 
 
-def outcomes(arm):
-    return {case: runs[0] for case, runs in arm['per_case'].items() if runs}
+def outcomes(arm, key='per_case'):
+    return {case: runs[0] for case, runs in (arm.get(key) or {}).items() if runs}
 
 
-def compare(arms, a, b, threshold=0.10):
+def per_trial(arm, field):
+    n = arm['review_trials'] + arm['control_trials']
+    return arm[field] / n if n else None
+
+
+def union(a, b):
+    """Arm whose per-case outcome is a OR b, over cases valid in both, with summed per-trial cost."""
+    out = {'per_case': {}, 'per_control': {}, 'review_trials': 0, 'control_trials': 0, 'detected': 0, 'control_false_positives': 0,
+           'review_invalid': a['review_invalid'] + b['review_invalid'], 'findings': a['findings'] + b['findings'], 'located': None}
+    for key, count, hits in (('per_case', 'review_trials', 'detected'), ('per_control', 'control_trials', 'control_false_positives')):
+        A, B = outcomes(a, key), outcomes(b, key)
+        for case in set(A) & set(B):
+            v = int(A[case] or B[case]); out[key][case] = [v]; out[count] += 1; out[hits] += v
+    n = out['review_trials'] + out['control_trials']
+    for field in ('tokens', 'seconds'):
+        out[field] = round(n * ((per_trial(a, field) or 0) + (per_trial(b, field) or 0)), 1)
+    out['detection_rate'] = round(out['detected'] / out['review_trials'], 3) if out['review_trials'] else None
+    return out
+
+
+def compare(arms, a, b, universe=None):
+    if a not in arms or b not in arms:
+        return {'a': a, 'b': b, 'delta': None, 'p': 1.0, 'delta_control_fp': 0, 'cost_ratio': {}, 'note': 'arm missing'}
     A, B = outcomes(arms[a]), outcomes(arms[b]); cases = sorted(set(A) & set(B))
     wins_a = sum(A[c] and not B[c] for c in cases); wins_b = sum(B[c] and not A[c] for c in cases)
     n = len(cases); delta = round((sum(A[c] for c in cases) - sum(B[c] for c in cases)) / n, 3) if n else None
-    fp = arms[a]['control_false_positives'] - arms[b]['control_false_positives']
-    p = mcnemar(wins_a, wins_b)
-    cost = {k: round(arms[a][k] / arms[b][k], 2) if arms[b][k] else None for k in ('tokens', 'seconds')}
-    return {'a': a, 'b': b, 'paired_cases': n, 'dropped': len(set(A) ^ set(B)), 'a_detected': sum(A[c] for c in cases),
-            'b_detected': sum(B[c] for c in cases), 'a_only': wins_a, 'b_only': wins_b, 'delta': delta, 'p': round(p, 4),
-            'delta_control_fp': fp, 'cost_ratio': cost}
+    CA, CB = outcomes(arms[a], 'per_control'), outcomes(arms[b], 'per_control'); controls = sorted(set(CA) & set(CB))
+    fp = sum(CA[c] for c in controls) - sum(CB[c] for c in controls)
+    cost = {}
+    for field in ('tokens', 'seconds'):
+        x, y = per_trial(arms[a], field), per_trial(arms[b], field)
+        cost[field] = round(x / y, 2) if x is not None and y else None
+    universe = universe or set(A) | set(B)
+    return {'a': a, 'b': b, 'paired_cases': n, 'dropped': len(universe) - n, 'a_detected': sum(A[c] for c in cases),
+            'b_detected': sum(B[c] for c in cases), 'a_only': wins_a, 'b_only': wins_b, 'delta': delta, 'p': mcnemar(wins_a, wins_b),
+            'paired_controls': len(controls), 'delta_control_fp': fp, 'cost_ratio': cost}
 
 
 def verdict(row, alpha=0.05, threshold=0.10):
     """helps: delta >= +0.10, p < alpha (Holm-adjusted when given) and control-FP delta <= +1;
     worse: delta <= -0.10 with p < alpha, or control-FP delta >= +2; otherwise parity (no detectable difference).
-    'helps at cost' when helps and tokens or seconds exceed 2x the comparator."""
+    'helps at cost' when helps and mean tokens or seconds per trial exceed 2x the comparator."""
     p = row.get('p_holm', row['p'])
     if row['delta'] is None: return 'no data'
     if row['delta_control_fp'] >= 2 or (row['delta'] <= -threshold and p < alpha): return 'worse'
@@ -51,23 +83,34 @@ def verdict(row, alpha=0.05, threshold=0.10):
 def holm(rows):
     order = sorted(range(len(rows)), key=lambda i: rows[i]['p']); m = len(rows); running = 0.0
     for rank, i in enumerate(order):
-        running = max(running, min(1.0, (m - rank) * rows[i]['p'])); rows[i]['p_holm'] = round(running, 4)
+        running = max(running, min(1.0, (m - rank) * rows[i]['p'])); rows[i]['p_holm'] = running
     return rows
+
+
+def load(paths):
+    arms = {}
+    for path in paths:
+        for name, arm in json.load(open(path))['arms'].items():
+            if not (arm['review_trials'] or arm['control_trials'] or arm['review_invalid']): continue
+            if name in arms: raise SystemExit(f'arm {name!r} appears in more than one --agg file; merge them first')
+            arms[name] = arm
+    return arms
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--agg', nargs='+', required=True); p.add_argument('--compare', nargs='*', default=[]); p.add_argument('--holm', nargs='*', default=[])
-    a = p.parse_args(); arms = {}
-    for path in a.agg:
-        for name, arm in json.load(open(path))['arms'].items():
-            if arm['review_trials'] or arm['control_trials']: arms[name] = arm
+    p.add_argument('--agg', nargs='+', required=True); p.add_argument('--union', nargs='*', default=[])
+    p.add_argument('--compare', nargs='*', default=[]); p.add_argument('--holm', nargs='*', default=[])
+    a = p.parse_args(); arms = load(a.agg)
+    for spec in a.union:
+        new, parts = spec.split('=', 1); x, y = parts.split('+', 1); arms[new] = union(arms[x], arms[y])
+    universe = {c['id'] for c in json.loads(CASES.read_text())['review'] if c['role'] == 'defect'} if CASES.exists() else None
     pairs = lambda specs: [tuple(s.split(':', 1)) for s in specs]
-    family = holm([compare(arms, x, y) for x, y in pairs(a.holm)])
-    rows = family + [compare(arms, x, y) for x, y in pairs(a.compare)]
+    family = holm([compare(arms, x, y, universe) for x, y in pairs(a.holm)])
+    rows = family + [compare(arms, x, y, universe) for x, y in pairs(a.compare)]
     for row in rows: row['verdict'] = verdict(row)
-    summary = {n: {k: arm[k] for k in ('review_trials', 'detected', 'detection_rate', 'located', 'control_trials', 'control_false_positives',
-                                       'review_invalid', 'findings', 'tokens', 'seconds')} for n, arm in arms.items()}
+    keep = ('review_trials', 'detected', 'detection_rate', 'located', 'control_trials', 'control_false_positives', 'review_invalid', 'findings', 'tokens', 'seconds')
+    summary = {n: {k: arm.get(k) for k in keep} for n, arm in arms.items()}
     print(json.dumps({'arms': summary, 'comparisons': rows}, indent=1))
 
 

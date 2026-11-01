@@ -48,7 +48,7 @@ Bounds: review 300 s, repair 480 s per call, verification 180 s. Seconds and Cod
 
 ## Metrics
 
-- **Review detection** (primary, per trial): the case counts as detected only when one finding meets both conditions. It cites the defect file at a line within ±10 of an oracle window, a deterministic check. And a blinded judge rules that it describes the oracle mechanism. Location-only hits are reported as well: `located` counts a trial when some finding's **primary** (first) location falls in the window. Until 2026-11-01 any cited location counted, including secondary citations of a nearby line by a finding about another problem; that inflated figure is kept as `cited_window_any`, and earlier reports' "located" means it.
+- **Review detection** (primary, per trial): the case counts as detected only when one finding meets both conditions. It cites the defect file at a line within ±10 of an oracle window, a deterministic check. And a blinded judge rules that it describes the oracle mechanism. Location-only hits are reported as well: `located` counts a trial when some finding's **primary** (first) location is within ±10 lines of a window. Until 2026-11-01 any cited location counted, including secondary citations of a nearby line by a finding about another problem; that inflated figure is kept as `cited_window_any`, and earlier reports' "located" means it.
 - **Control false positive** (per trial): a finding on C01 or C02 that the judge rules claims the fixed defect is still present.
 - **Repair pass** (per trial): the host completed, no protected file changed and the withheld test passed.
 - Findings per trial, seconds and tokens are descriptive.
