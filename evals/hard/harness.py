@@ -302,12 +302,20 @@ def _segment_hits(words):
     return subs is None or bool(_before_dashdash(words) & subs)
 
 
+VALUE_OPTIONS = {'--prefix', '-C', '--cwd', '--workspace', '-w', '--registry', '--cache', '--userconfig', '--dir',
+                 '--loglevel', '-R', '--repo', '--directory', '--project', '--config'}
+
+
 def _before_dashdash(words):
     """Words after the tool and before `--`: options with unknown value arguments cannot hide the subcommand, while
     arguments passed through to a script (`npm run test -- --grep install`) are not read as installer verbs."""
     rest = list(words[1:])
-    while rest and rest[0] == '--': rest = rest[1:]  # an option terminator before the command is not a pass-through
-    return set(rest[:rest.index('--')] if '--' in rest else rest)
+    if '--' not in rest: return set(rest)
+    k = rest.index('--'); before = rest[:k]
+    # `--` ends a script's own arguments only after a command word; with only options before it (npm --prefix . --
+    # install x), the command comes after it. Option values are not command words.
+    positional = [w for n, w in enumerate(before) if not w.startswith('-') and not (n and before[n - 1] in VALUE_OPTIONS)]
+    return set(before) | (set() if positional else set(rest[k + 1:k + 2]))
 
 
 HEREDOC = None
@@ -382,6 +390,8 @@ def _close_paren(text, j):
     depth, quote = 1, None
     while j < len(text) and depth:
         ch = text[j]
+        if quote != "'" and text.startswith('$(', j) and not text.startswith('$((', j):
+            j = _close_paren(text, j + 2); continue  # a nested substitution has its own quoting context
         if quote == "'":
             if ch == "'": quote = None
         elif ch == '\\': j += 1
