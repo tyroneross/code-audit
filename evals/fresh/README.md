@@ -75,3 +75,16 @@ Comparisons are paired by case: an exact two-sided McNemar test on discordant ca
 | parity | anything else; it means no detectable difference, not equivalence |
 
 **Power and discrimination.** With about 50 defect cases, p < .05 needs at least 6 discordant cases in one direction and none in the other, or about 9 to 1. A comparison is informative only when `none+tools` detects at most 75% of cases. Above that the arms sit near the ceiling, and parity there is weak evidence.
+
+## Addendum 1: frozen round-2 guidance (committed before any round-2 trial)
+
+`make_guidance.py --methods-rev de06478` writes `guidance/*.txt` from git. Round 1 (`none`, `hint`) had started, but no round-1 output had been judged or read. Tool arms run `scan.py`, `frozen.py` and `recon.py` from de06478. At that commit the two new failure-path rules left in the scanner are experimental and run only with `--experimental`, which no prompt mentions except through `audit-methods.md` text in the `adaptive` and `fixed-plan` arms.
+
+| Arm | sha256 |
+|---|---|
+| `bundle+tools` | 3f670fb50eaef32c5cff76230407a45bbdc32928f63df2d1df45eb618dabd3ed |
+| `adaptive` | 685206535e984ca99a9c3967c876cf09f56ee047a179edeb8eee01b997464ac8 |
+| `fixed-plan` | 2658f8f8f77e45b69f5c0e294d2752ebc9f94c7a0044af823785726fc7a6d679 |
+| `principles+tools` | a915a052cb306d6e6f76af84b8b5ef55009c3092450b9fdae371353d95bbabd5 |
+
+`adaptive` differs from `bundle+tools` by every change in de06478 to the four SKILL.md files (route line, probe-before-concluding, positive-control rule) plus `audit-methods.md`. It is the whole method package, not an ablation. `fixed-plan` removes section 4 (adaptation), recipe R6 and every R6 mention, and rewrites the router's "adapt per its rules" as "without changing it".
