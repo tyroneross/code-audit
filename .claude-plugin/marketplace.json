@@ -1,0 +1,24 @@
+{
+  "name": "code-audit-local",
+  "owner": {
+    "name": "Tyrone Ross",
+    "url": "https://github.com/tyroneross"
+  },
+  "metadata": {
+    "description": "Local marketplace for Code Audit: register this repository folder to install the plugin in Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "code-audit",
+      "source": "./",
+      "description": "Audit, debug and improve code using shared engineering principles, causal investigation, contextual research and verified outcomes.",
+      "author": {
+        "name": "Tyrone Ross"
+      },
+      "homepage": "https://github.com/tyroneross/code-audit",
+      "repository": "https://github.com/tyroneross/code-audit",
+      "license": "Apache-2.0",
+      "category": "development"
+    }
+  ]
+}
