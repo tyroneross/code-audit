@@ -90,7 +90,7 @@ class RustTestScope:
     def _braces(self, text):
         """Net { minus } outside comments, strings and char literals. Block comments nest, and strings (including
         raw strings r#"..."#) may span lines; that state carries to the next line."""
-        n, i = 0, 0
+        n, i, kept = 0, 0, []
         while i < len(text):
             ch = text[i]
             if self.comment_depth:
@@ -103,6 +103,7 @@ class RustTestScope:
                 i += 1; continue
             if text.startswith("//", i): break
             if text.startswith("/*", i): self.comment_depth = 1; i += 2; continue
+            kept.append(ch)
             raw = re.match(r'b?r(#*)"', text[i:])
             if raw and (i == 0 or not (text[i - 1].isalnum() or text[i - 1] == "_")):
                 self.string_end = '"' + raw.group(1); i += len(raw.group(0)); continue
@@ -111,6 +112,7 @@ class RustTestScope:
                 m = re.match(r"'(?:\\.|[^'\\])'", text[i:])
                 if m: i += len(m.group(0)); continue
             n += {"{": 1, "}": -1}.get(ch, 0); i += 1
+        self.last_code = "".join(kept).strip()  # code outside comments on this line (string bodies excluded)
         return n
 
     def update(self, stripped):
@@ -125,15 +127,13 @@ class RustTestScope:
             if not rest:
                 return True
         if self.pending:
-            if self.in_comment or rest.startswith("/*"):
-                self._braces(rest)  # keep block-comment state while waiting for the item
+            opened = self._braces(rest)  # also tracks comments, so an item after `*/` on the same line is seen
+            code = self.last_code
+            if not code or code.startswith("#["):
                 return True
-            if not rest or rest.startswith(("//", "#[", "*")):
-                return True
-            opened = self._braces(rest)
             if opened > 0:
                 self.pending = False; self.depth = opened
-            elif not self.in_comment and not self.in_string and (";" in rest or "{" in self.LITERALS.sub('""', rest).split("//", 1)[0]):
+            elif not self.in_string and (";" in code or "{" in code):
                 self.pending = False  # a one-line item (`use ...;`, `mod x;`, `fn f() {}`) ends here
             return True
         return False
