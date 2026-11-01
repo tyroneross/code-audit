@@ -80,7 +80,8 @@ class RustTestScope:
         self.pending = False; self.depth = 0
 
     def _braces(self, text):
-        text = self.LITERALS.sub('""', text.split("//", 1)[0])
+        text = self.LITERALS.sub('""', text)
+        text = re.sub(r"/\*.*?\*/", "", text).split("//", 1)[0].split("/*", 1)[0]
         return text.count("{") - text.count("}")
 
     def update(self, stripped):
@@ -97,8 +98,11 @@ class RustTestScope:
         if self.pending:
             if not rest or rest.startswith(("//", "#[", "/*", "*")):
                 return True
-            self.pending = False
-            self.depth = max(0, self._braces(rest))
+            opened = self._braces(rest)
+            if opened > 0:
+                self.pending = False; self.depth = opened
+            elif ";" in rest or (opened == 0 and "{" in self.LITERALS.sub('""', rest).split("//", 1)[0]):
+                self.pending = False  # a one-line item (`use ...;`, `mod x;`, `fn f() {}`) ends here
             return True
         return False
 
