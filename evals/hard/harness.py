@@ -296,21 +296,17 @@ def _segment_hits(words):
         while rest and rest[0].startswith('-'): rest = rest[1:]
         return bool(rest) and (rest[0] in GIT_NETWORK or rest[0] == 'archive' and any(w == '--remote' or w.startswith('--remote=') for w in rest))
     if tool.startswith('python') and words[1:3] in (['-m', 'pip'], ['-m', 'pip3']): return True
-    if tool in ('uv', 'pipx') and _subcommand(words) in ('pip', 'install', 'add', 'run', 'tool', 'sync'): return True
+    if tool in ('uv', 'pipx') and _before_dashdash(words) & {'pip', 'install', 'add', 'run', 'tool', 'sync'}: return True
     if tool not in NETWORK_TOOLS: return False
     subs = NETWORK_SUBCOMMANDS.get(tool)
-    return subs is None or _subcommand(words) in subs
+    return subs is None or bool(_before_dashdash(words) & subs)
 
 
-NPM_VALUE_OPTIONS = {'--prefix', '-C', '--workspace', '-w', '--registry', '--cache', '--userconfig', '--dir'}
-
-
-def _subcommand(words):
-    """The first non-option word after the tool, skipping options that take a value (npm --prefix x install)."""
+def _before_dashdash(words):
+    """Words after the tool and before `--`: options with unknown value arguments cannot hide the subcommand, while
+    arguments passed through to a script (`npm run test -- --grep install`) are not read as installer verbs."""
     rest = list(words[1:])
-    while rest and rest[0].startswith('-'):
-        rest = rest[2:] if rest[0] in NPM_VALUE_OPTIONS else rest[1:]
-    return rest[0] if rest else None
+    return set(rest[:rest.index('--')] if '--' in rest else rest)
 
 
 HEREDOC = None
@@ -380,13 +376,47 @@ def _split_view(lines):
 SUBSTITUTION = None
 
 
+def _scan_substitutions(text, single_quotes=True):
+    """$(...) and backtick bodies outside single quotes. Apostrophes inside double quotes, and anywhere when
+    `single_quotes` is False (an unquoted heredoc body), are literal text."""
+    out, i, quote = [], 0, None
+    while i < len(text):
+        ch = text[i]
+        if ch == '\\': i += 2; continue
+        if quote == "'":
+            if ch == "'": quote = None
+            i += 1; continue
+        if ch == '"': quote = None if quote == '"' else '"'; i += 1; continue
+        if ch == "'" and quote is None and single_quotes: quote = "'"; i += 1; continue
+        if text.startswith('$(', i) and not text.startswith('$((', i):
+            depth, j = 1, i + 2
+            while j < len(text) and depth:
+                depth += {'(': 1, ')': -1}.get(text[j], 0); j += 1
+            out.append(text[i + 2:j - 1]); i = j; continue
+        if ch == '`':
+            j = text.find('`', i + 1)
+            if j < 0: break
+            out.append(text[i + 1:j]); i = j + 1; continue
+        i += 1
+    return out
+
+
 def _substitutions(text):
-    """Commands inside $(...) and backticks that sit in double-quoted text or heredoc bodies; single quotes stay data."""
+    """Executed substitutions in the command lines and in unquoted heredoc bodies. Single-quoted text and quoted
+    heredoc bodies (`<<'EOF'`) stay data."""
     import re
-    global SUBSTITUTION
-    SUBSTITUTION = SUBSTITUTION or re.compile(r"\$\(([^()]*(?:\([^()]*\)[^()]*)*)\)|`([^`]*)`")
-    unquoted_single = re.sub(r"'[^']*'", "''", text)
-    return [m.group(1) or m.group(2) for m in SUBSTITUTION.finditer(unquoted_single) if not (m.group(0).startswith('$((') )]
+    lines = text.split('\n'); commands, found, i = [], [], 0
+    while i < len(lines):
+        commands.append(lines[i])
+        m = re.search(r"(?:^|\s)<<-?\s*(['\"]?)([A-Za-z_]\w*)\1", lines[i])
+        if m:
+            j = i + 1
+            while j < len(lines) and lines[j].strip() != m.group(2):
+                if not m.group(1): found.extend(_scan_substitutions(lines[j], single_quotes=False))
+                j += 1
+            i = j
+        i += 1
+    return _scan_substitutions('\n'.join(commands)) + found
 
 
 def _flagged(command, depth=0):

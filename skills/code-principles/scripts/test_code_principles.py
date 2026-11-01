@@ -210,7 +210,7 @@ class S {
             '#[cfg(test)] mod inline {', '    const P: &str = "/Users/two/x";', '}',      # attribute on the item's own line
             '#[cfg(test)]', '// comment', 'mod commented {', '    const S: &str = "{";', '    const P: &str = "/Users/three/x";', '}',
             '#[cfg(test)]', 'fn wrapped(', '    a: u8,', ') {', '    let p = "/Users/four/x";', '}',  # rustfmt-wrapped signature
-            '#[cfg(test)]', 'mod urls {', '    fn u() -> &\'static str { "https://x" }', '    /* { */', '}',   # // inside a string; brace in a block comment
+            '#[cfg(test)]', 'mod urls {', '    fn u() -> &\'static str { "https://x" }', '    /* { */', '    /*', '    { */', '    let s = "', '    {";', '}',   # braces in strings and comments, single- and multi-line
             'const REAL: &str = "/Users/realuser/data";',                                  # production code after the tests
         ]) + "\n"
         with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
@@ -221,7 +221,7 @@ class S {
                 Path(c, "pyproject.toml").write_text('[tool.other]\nversion = "9.9.9"\n[project]\nname = "x"\n')
                 Path(c, "consts.py").write_text("LOGO = 'image/logo.svg'\n"); Path(a, "img.py").write_text("LOGO = 'image/logo.svg'\n")
                 _, out = run_scan([a, b, c])
-        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F1"]], [("lib.rs", 25)])
+        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F1"]], [("lib.rs", 29)])
         self.assertEqual(sorted(h["label"] for h in out["items"]["F3"]), ["copies package.json version 1.0.0", "states version 1.0.0 but package.json 2.0.0"])
         # a shared file path that merely starts like a MIME type; consts.py owns it, so only the copy is flagged
         self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F7"]], [("img.py", 1)])

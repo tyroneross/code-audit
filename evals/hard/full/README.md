@@ -29,3 +29,8 @@ These are the hard-benchmark cases unchanged: H01–H10, C01–C02 and X01–X06
   - **Repair:** ±3 passes, with a per-case guard of −2.
 
 The question this answers: does the full guidance outperform the bundle-only Code Audit arm and both sources? Earlier runs saw every arm miss H01, H07 and H08. Of these, checklist item C3 and cards P14 and P19 cover H08 and H01; nothing covers H07. A gain on those cases would show the references reaching the model. No checklist or card text is changed for this run.
+
+## Addendum (2026-11-01, during the run, before any grading)
+
+- **Combining comparators.** The claim "the full guidance helps" holds only if `code-audit-full` outperforms `code-audit-w3b` **and** both sources under the review rule. The result against `none` is reported separately and does not decide the claim.
+- **Harness version.** The trials ran with the harness at 3b50a7d. The network audit was hardened after that (9006f9d, cbde758 and the commit that adds this addendum). Repair trials are re-audited with the final audit before grading, as in W2 and W3.
