@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """List code signals that map to code-principles checklist items.
 
-Usage: scan.py PATH [PATH ...] [--json] [--max-hits N]
+Usage: scan.py PATH [PATH ...] [--json] [--max-hits N] [--experimental]
+       scan.py --self-test     run the planted fixtures; exit 1 if a planted signal is missed or a clean sample fires
 
 Each hit is a place to look, not a defect. Read-only: never executes scanned code.
 """
@@ -72,6 +73,61 @@ PREFIX_RESCAN = re.compile(r"\.(substring|slice|substr)\(\s*0\s*,|\[\s*:\s*\w+\.
 KEYWORDS = {"if", "for", "while", "switch", "catch", "return", "function", "constructor", "with", "elif", "else"}
 SAME_INPUT_WINDOW = 25
 
+# Failure-path rules: each looks at the enclosing function, found by walking up to the nearest definition line.
+FN_START = re.compile(r"^\s*(?:pub(?:\([\w:]+\))?\s+)?(?:(?:export|async|default|private|public|protected|static|override|unsafe|const)\s+)*(?:fn|def|func|function)\s+\w+|^\s*(?:export\s+)?(?:const|let)\s+\w+\s*=\s*(?:async\s*)?\([^)]*\)\s*(?::[^=]*)?=>|^\s*(?:(?:async|private|public|protected|static)\s+)*(?!if\b|for\b|while\b|switch\b|catch\b|return\b)\w+\s*\([^)]*\)\s*(?::\s*[^{=]+)?\{\s*$")
+FN_WINDOW = 80  # lines searched up or down for a function boundary
+RETRYABLE_TRUE = re.compile(r"\bretryable\s*[:=]\s*(?:true|True)\b")
+RETRYABLE_FALSE = re.compile(r"\bretryable\s*[:=]\s*(?:false|False)\b(?!\s*[;|])")
+ANY_FAILURE = re.compile(r"if\s*\(\s*!\s*[\w.]+\.ok\s*\)|if\s+not\s+[\w.]+\.ok\b|\.is_err\(\)|\bErr\(_\)\s*=>|catch\s*(?:\(\s*\w*\s*\))?\s*\{|except\s*(?:Exception\s*)?(?:as\s+\w+\s*)?:")
+TERMINAL = re.compile(r"\bretryable\s*[:=]\s*(?:false|False)\b|\b(?:status|state|outcome)\s*[:=]\s*['\"](?:failed|failure|error|errored|fatal)['\"]|\b(?:Status|State|Outcome)\.(?:FAILED|Failed|ERROR|Error)\b")
+TIMEOUT = re.compile(r"timed?[\s_-]?out|\btimeout\b|deadline|ETIMEDOUT|AbortError|TimeoutError|DeadlineExceeded|\bElapsed\b", re.I)
+REACH = 4  # lines around a hit searched for its guard or timeout branch
+
+
+def function_span(lines, i):
+    """(start, end) line indexes of the function around lines[i]: back to the nearest definition, forward to the next."""
+    start = next((k for k in range(i, max(-1, i - FN_WINDOW), -1) if FN_START.search(lines[k])), max(0, i - FN_WINDOW))
+    end = next((k for k in range(i + 1, min(len(lines), i + FN_WINDOW)) if FN_START.search(lines[k])), min(len(lines), i + FN_WINDOW))
+    return start, end
+
+
+def sibling_retryable(lines, i):
+    """B3: every failure of a callee becomes retryable:false while a sibling return in the same function says true."""
+    if not RETRYABLE_FALSE.search(lines[i]) or not any(ANY_FAILURE.search(l) for l in lines[max(0, i - 1):i + 1]):
+        return None
+    s, e = function_span(lines, i)
+    return i if any(RETRYABLE_TRUE.search(l) for l in lines[s:e]) else None
+
+
+def timeout_terminal(lines, i):
+    """C3: a timeout branch reports a terminal or non-retryable failure instead of an unknown outcome."""
+    near = lines[max(0, i - REACH):i + REACH + 1]
+    return i if TERMINAL.search(lines[i]) and any(TIMEOUT.search(l) for l in near) else None
+
+
+# (item, label, function(lines, i) -> index of the line to report or None, experimental). Experimental rules run only with
+# --experimental; each has fewer than 8 hits on the measured repositories (failure-path-precision.json).
+FAILURE_RULES = [
+    ("B3", "callee failure mapped to retryable:false while a sibling return is retryable", sibling_retryable, True),
+    ("C3", "timeout branch reports a terminal failure", timeout_terminal, True),
+]
+
+
+def failure_path_hits(lines, test_lines=frozenset(), experimental=False):
+    """(item, label, line_no) for the failure-path rules. Leads only: each needs the reviewer to trace the caller."""
+    out = set()
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if i + 1 in test_lines or not stripped or stripped.startswith(("#", "//", "*", "/*")):
+            continue
+        for item, label, rule, exp in FAILURE_RULES:
+            if exp and not experimental:
+                continue
+            at = rule(lines, i)
+            if at is not None:
+                out.add((item, label, at + 1))
+    return sorted(out, key=lambda h: h[2])
+
 
 def call_window(lines, start):
     """Text of the statement starting at lines[start], until its brackets close."""
@@ -88,7 +144,7 @@ def indent(line):
     return len(line) - len(line.lstrip(" \t"))
 
 
-def scan_file(path, rel, skipped, store=None, root=None):
+def scan_file(path, rel, skipped, store=None, root=None, experimental=False):
     try:
         if os.path.getsize(path) > MAX_FILE_BYTES:
             skipped.append((rel, "larger than 2 MB"))
@@ -105,9 +161,12 @@ def scan_file(path, rel, skipped, store=None, root=None):
     parse_lines = []
     loop_stack = []  # (indent, line_no)
     test_scope = frozen.RustTestScope()  # `#[cfg(test)]` items, tracked by brace depth
+    test_lines = set()
     for no, line in enumerate(lines, 1):
         stripped = line.strip()
         in_test = test_scope.update(stripped)
+        if in_test:
+            test_lines.add(no)
         if not stripped or stripped.startswith(("#", "//", "*", "/*")):
             continue
         ind = indent(line)
@@ -138,6 +197,8 @@ def scan_file(path, rel, skipped, store=None, root=None):
     if len(parse_lines) >= 2:
         for no, text in parse_lines:
             hits.append(("A1", f"one of {len(parse_lines)} parse calls in this file", rel, no, text))
+    for item, label, no in failure_path_hits(lines, test_lines, experimental):
+        hits.append((item, label, rel, no, lines[no - 1].strip()[:160]))
     same = same_input_fetches(lines)
     if same:
         flagged = {no for no, _ in same}
@@ -214,20 +275,93 @@ def iter_files(paths, include_tests=False, skipped=None):
                     yield full, rel, root
 
 
+# Planted fixtures: (file name, source, items checked, (item, line) hits expected for those items). Every other line of
+# the source is a clean sample: a hit there for a checked item fails the self-test.
+SELF_TEST = [
+    ("lease.ts", """\
+type R = | { ok: false; retryable: false; message: string }
+export function acquire(): R {
+  const gate = takeGate()
+  if (!gate.ok) {
+    return { ok: false, retryable: false, message: gate.message }
+  }
+  if (busy()) {
+    return { ok: false, retryable: true, message: 'busy' }
+  }
+  return { ok: true }
+}
+export function open(): R {
+  if (!disk.ok) {
+    return { ok: false, retryable: false, message: 'disk' }
+  }
+  return { ok: true }
+}
+""", {"B3", "C3"}, {("B3", 5)}),
+    ("job.ts", """\
+function finish(job) {
+  if (Date.now() > job.deadline) {
+    job.status = 'failed'
+    return
+  }
+  job.status = 'done'
+}
+
+
+
+
+function fail(job) {
+  job.status = 'failed'
+}
+""", {"C3"}, {("C3", 3)}),
+    ("worker.py", """\
+import requests
+r = requests.get(url)
+r2 = requests.get(url, timeout=5)
+try:
+    work()
+except ValueError: pass
+except KeyError:
+    log(1)
+""", {"B2", "C1"}, {("B2", 2), ("C1", 6)}),
+]
+
+
+def self_test():
+    """Scan each planted fixture with experimental rules on; report every missed or unexpected hit."""
+    import tempfile
+    failures = []
+    with tempfile.TemporaryDirectory(prefix="scan-self-test-") as folder:
+        for name, source, items, want in SELF_TEST:
+            path = os.path.join(folder, name)
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(source)
+            got = {(h[0], h[3]) for h in scan_file(path, name, [], experimental=True) or [] if h[0] in items}
+            failures += [f"{name}: planted {i} on line {n} not found" for i, n in sorted(want - got)]
+            failures += [f"{name}: clean line {n} fired {i}" for i, n in sorted(got - want)]
+    print("\n".join(failures) if failures else f"self-test passed: {len(SELF_TEST)} fixtures")
+    return 1 if failures else 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("paths", nargs="+")
+    ap.add_argument("paths", nargs="*")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--experimental", action="store_true", help="also run rules too rare to measure (see FAILURE_RULES)")
+    ap.add_argument("--self-test", action="store_true", help="run the planted fixtures and exit")
     ap.add_argument("--include-tests", action="store_true", help="also scan test and fixture files")
     ap.add_argument("--max-hits", type=int, default=5, help="hits shown per item in text output")
     args = ap.parse_args(argv)
+    if args.self_test:
+        return self_test()
+    if not args.paths:
+        ap.error("at least one PATH is required")
     for p in args.paths:
         if not os.path.exists(p):
             print(f"scan.py: no such path: {p}", file=sys.stderr)
             return 2
     hits, files, skipped, store = [], 0, [], frozen.new_store()
     for full, rel, root in iter_files(args.paths, args.include_tests, skipped):
-        found = scan_file(full, rel, skipped, store, root)
+        found = scan_file(full, rel, skipped, store, root, args.experimental)
         if found is not None:
             files += 1
             hits.extend(found)

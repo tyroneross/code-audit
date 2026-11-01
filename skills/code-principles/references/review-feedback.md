@@ -14,7 +14,7 @@ Set a time/round/tool budget intentionally from prior comparable work or a state
 
 ## Findings and dispositions
 
-Begin with the number of material findings and their main consequence, or "No material findings in the reviewed scope" plus coverage/gaps. Missing access or an empty scan is not a clean result. Prioritize consequential failures; omit style-only suggestions unless requested or tied to a demonstrated contract/maintenance cost. Agree a small advisory budget when advice is requested; do not invent nits to fill it.
+Begin with the number of material findings and their main consequence, or "No material findings in the reviewed scope" plus coverage/gaps. Missing access or an empty scan is not a clean result. Prioritize consequential failures; omit style-only suggestions unless requested or tied to a demonstrated contract/maintenance cost. Agree a small advisory budget when advice is requested; do not invent nits to fill it. Never cap material findings at a top N: report all of them in order of consequence, and state what was searched and what was not.
 
 For each material finding, retain the existing trigger, location, cause, consequence, counterevidence, correction and verification. Add only what this review needs:
 
@@ -23,6 +23,8 @@ For each material finding, retain the existing trigger, location, cause, consequ
 - **Disposition:** open, proposed repair, fixed but unverified, fixed and verified, closed with reason, or reopened. A reported fix is not verified without current evidence. Preserve unresolved risks and disagreements.
 - **Scope and evidence:** reviewed revision, relevant contracts/callers, confirmed versus suspected, whether repair is authorized, and actual check boundaries. Review-only work stays read-only. Origin alone neither authorizes extra work nor exempts an authorized required repair.
 
+Record the reviewed commit sha in every finding set. Before reporting, re-open every cited line, your own and every lane's, and reject a citation that lands on a comment or a different statement than the one described.
+
 Keep the ledger in the conversation or existing task report for small work. Persist workflow state only when authorized; no automatic global database, mining, background audit or external telemetry is required.
 
 ## Re-review changed and affected behavior
@@ -30,6 +32,8 @@ Keep the ledger in the conversation or existing task report for small work. Pers
 On the first pass, trace the operation in context. Later passes focus on the new diff **and causally affected callers, dependencies, state owners and contracts**, including unchanged files. A renamed unit, newly asynchronous function or changed return contract can break an unchanged caller. Use dependency/reference tools or direct registration/call-site inspection for missing connections; prose review alone can overlook unwired code. Disclose missing structural coverage.
 
 Compare against prior finding IDs, dispositions and their evidence. Suppress unchanged resolved/dismissed comments and refer to an existing open issue instead of posting it anew. Reopen the same identity when a closure premise, dependent contract or reproducer changes; reuse its ID or explicitly link it, and explain the new evidence. Do not suppress a real regression to achieve a zero-repeat metric. A resolved label without relevant verification remains pending.
+
+A fix commit reopens review of the fix diff, with the prior findings carried as regression checks. Stop when a round returns zero high-severity findings; otherwise stop at the agreed budget (3 rounds when none was set) and file the remaining findings by id. Report the reviewed sha beside the final sha so an unreviewed tip is visible.
 
 Separate pre-existing discoveries from the change's introduced defects. Relevant inherited risks remain visible; unrelated audit discoveries belong in a separately authorized campaign rather than causing an endless PR loop. Do not let this separation conceal a blocker to the required behavior or leave an authorized confirmed repair unfinished.
 
@@ -40,6 +44,8 @@ Evaluate finding validity, rule applicability, repair adequacy, preserved guaran
 Compare a local containment patch with the simplest adequate mechanism repair and its migration cost. Test a discriminating prediction against the baseline when feasible, then the changed behavior and relevant old behavior. Include boundaries, adverse completion order and differential/property checks when the contract warrants them. A larger timeout can hide one symptom while leaving duplicate effects or total-budget failure intact.
 
 Inspect the test oracle itself. Assertions must enforce required behavior, not one implementation: an upper bound on attempts is not a requirement to use every attempt; a cached valid receipt need not be transported again. Preserve the original oracle, record why it changed, apply the corrected contract fairly to every candidate and report any rank change. Do not weaken a required behavior merely to make a candidate pass.
+
+A fix counts as "fixed and verified" only when its test fails on the pre-fix code or on a one-line mutant, and the test uses the finding's literal hostile input. Vacuous shapes to reject: assertions inside a conditional that may not run, existence checks where the value matters, single-writer tests of a concurrency fix, wiring asserts that match the name on the definition line, and baselines re-recorded from the defective output.
 
 ## Learn from outcomes without inventing benefit
 

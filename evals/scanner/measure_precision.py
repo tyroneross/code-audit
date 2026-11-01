@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Reproduce or rebuild the section F scanner precision record from fixed commits.
+"""Reproduce or rebuild a scanner precision record from fixed commits.
 
-  measure_precision.py --check [LABELS]   re-scan every repository at its recorded commit; confirm the sample, every
-                                          label against the labels file, and each count and precision value
-  measure_precision.py --record LABELS    rebuild the record from explicit labels (at the recorded commits, else HEAD)
+  measure_precision.py [--set S] --check [LABELS]   re-scan every repository at its recorded commit; confirm the sample,
+                                                    every label against the labels file, and each count and precision
+  measure_precision.py [--set S] --record LABELS    rebuild the record from explicit labels (at the recorded commits,
+                                                    else the section F record's commits, else HEAD)
+
+Sets: `frozen` (section F rules, keyed by item) and `failure` (failure-path rules, keyed by rule name, experimental
+rules included).
 
 Files are read from `git archive <commit>`, never from a working tree, so a moved or dirty checkout cannot change
 the result. Every sampled hit needs an explicit tp/fp label; an unlabelled hit is an error, never a default.
@@ -26,9 +30,18 @@ import scan  # noqa: E402
 import frozen  # noqa: E402
 
 ROOT = Path(os.environ.get('SCANNER_REPOS_ROOT', str(REPO.parent)))
-RECORD = REPO / 'skills/code-principles/references/frozen-values-precision.json'
+REFS = REPO / 'skills/code-principles/references'
 REPOS = ['build-loop', 'NavGator', 'interface-built-right', 'agent-rally-point', 'spectra', 'local-smartz', 'decision-doctor-cc', 'code-audit']
-SEED, PER_RULE = 20261029, 15
+PER_RULE = 15
+FAILURE_NAMES = {label: rule.__name__ for _, label, rule, _ in scan.FAILURE_RULES}
+SETS = {
+    'frozen': {'record': REFS / 'frozen-values-precision.json', 'labels': 'labels-2026-10-29.json', 'seed': 20261029, 'date': '2026-10-29',
+               'select': lambda item, label: item if item[0] == 'F' else None},
+    'failure': {'record': REFS / 'failure-path-precision.json', 'labels': 'labels-2026-11-01.json', 'seed': 20261101, 'date': '2026-11-01',
+                'select': lambda item, label: FAILURE_NAMES.get(label)},
+}
+SET = SETS['frozen']
+RECORD = SET['record']
 
 
 GIT_TIMEOUT = 300  # seconds per git call; a stalled pipe must fail the run, not wait for days
@@ -39,7 +52,7 @@ def git(repo, *args):
 
 
 def hits_at(repo, sha):
-    """Section F hits for git-tracked, non-test source files at one commit, read from `git archive` (regular files only)."""
+    """Selected-set hits for git-tracked, non-test source files at one commit, read from `git archive` (regular files only)."""
     archive = git(repo, 'archive', '--format=tar', sha)
     rows = []; files = 0; rels = []
     with tempfile.TemporaryDirectory(prefix='code-audit-precision-') as folder:
@@ -55,11 +68,12 @@ def hits_at(repo, sha):
                 if source: rels.append(rel)
         store = frozen.new_store(); skipped = []
         for rel in sorted(rels):
-            found = scan.scan_file(os.path.join(folder, rel), rel, skipped, store)
+            found = scan.scan_file(os.path.join(folder, rel), rel, skipped, store, experimental=True)
             if found is not None:
-                files += 1; rows.extend(h for h in found if h[0][0] == 'F')
-        rows.extend(h for h in frozen.cross_file_hits(store, [folder]) if h[0][0] == 'F')
-    return files, [(item, f'{repo}/{f}:{n}', label) for item, label, f, n, _ in rows]
+                files += 1; rows.extend(found)
+        rows.extend(frozen.cross_file_hits(store, [folder]))
+    rows = [(SET['select'](item, label), f, n, label) for item, label, f, n, _ in rows]
+    return files, [(key, f'{repo}/{f}:{n}', label) for key, f, n, label in rows if key]
 
 
 def sample(shas):
@@ -69,17 +83,22 @@ def sample(shas):
         for item, key, label in rows: by_rule.setdefault(item, []).append((key, label))
     out = {}
     for item in sorted(by_rule):
-        rng = random.Random(f'{SEED}-{item}')  # one stream per rule: a change in one rule cannot reshuffle another
+        rng = random.Random(f"{SET['seed']}-{item}")  # one stream per rule: a change in one rule cannot reshuffle another
         out[item] = (len(by_rule[item]), rng.sample(by_rule[item], min(PER_RULE, len(by_rule[item]))))
     return files, out
 
 
 def main():
-    p = argparse.ArgumentParser(description=__doc__)
+    global SET, RECORD
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument('--set', choices=sorted(SETS), default='frozen')
     g = p.add_mutually_exclusive_group(required=True)
-    g.add_argument('--check', type=Path, metavar='LABELS', nargs='?', const=Path(__file__).with_name('labels-2026-10-29.json'))
+    g.add_argument('--check', type=Path, metavar='LABELS', nargs='?', const=True)
     g.add_argument('--record', type=Path, metavar='LABELS')
     a = p.parse_args()
+    SET = SETS[a.set]; RECORD = SET['record']
+    if a.check is True:
+        a.check = Path(__file__).with_name(SET['labels'])
     if a.check:
         record = json.loads(RECORD.read_text())
         files, drawn = sample(record['repos']); errors = []
@@ -97,8 +116,11 @@ def main():
         print(json.dumps({'files_scanned': files, 'errors': errors, 'precision': {k: f"{v['true_positive']}/{v['sampled']}" for k, v in record['rules'].items()}}))
         return 1 if errors else 0
     labels = json.loads(a.record.read_text())
-    # Keep the recorded commits when a record exists, so a rebuild relabels the same code; otherwise pin HEAD.
-    shas = json.loads(RECORD.read_text())['repos'] if RECORD.exists() else {r: git(r, 'rev-parse', 'HEAD').decode().strip() for r in REPOS}
+    # Keep the recorded commits when a record exists, so a rebuild relabels the same code; a new set reuses the section F
+    # commits so both sets describe the same code; otherwise pin HEAD.
+    base = json.loads(RECORD.read_text()) if RECORD.exists() else {}
+    frozen_record = SETS['frozen']['record']
+    shas = base.get('repos') or (json.loads(frozen_record.read_text())['repos'] if frozen_record.exists() else {r: git(r, 'rev-parse', 'HEAD').decode().strip() for r in REPOS})
     files, drawn = sample(shas); rules = {}; missing = []
     for item, (total, rows) in drawn.items():
         graded = []
@@ -110,10 +132,14 @@ def main():
         rules[item] = {'hits': total, 'sampled': len(graded), 'true_positive': tp, 'precision': round(tp / len(graded), 2) if graded else None, 'sample': graded}
     if missing:
         print('unlabelled sampled hits:\n  ' + '\n  '.join(missing)); return 1
-    record = {'date': '2026-10-29', 'method': 'git-tracked non-test source read from git archive at the recorded commits; one sample per rule (seed 20261029-<rule>, at most 15); one rater (the author) labelled every sampled hit explicitly, tp meaning the value has a source of truth or varies by context and is frozen in code. Informal: single rater, small samples.',
-              'files_scanned': files, 'repos': shas, 'rules': rules,
-              'held_out_informal': {'repos': 6, 'note': 'private local repositories; labels kept outside this repository. Measured on 2026-10-28 with an earlier version of the rules: F1 9/11, F2 9/15, F7 15/15.'},
-              'cut_rules_informal': {'model ids': '~25% (3 of 12 sampled)', 'pass-through functions': '~20% (2-3 of 12)', 'generic account/tenant ids': 'mostly test data and wire-name mappings', 'unrestricted boolean toggles': 'mostly UI properties and state assignments', 'single-implementation interfaces': 'second implementation is usually a test fake the scanner skips'}}
+    seed = SET['seed']
+    template = {'date': SET['date'], 'method': f'git-tracked non-test source read from git archive at the recorded commits; one sample per rule (seed {seed}-<rule>, at most 15); one rater (the author) labelled every sampled hit explicitly. Informal: single rater, small samples.'}
+    if a.set == 'frozen':
+        template = {'date': '2026-10-29', 'method': 'git-tracked non-test source read from git archive at the recorded commits; one sample per rule (seed 20261029-<rule>, at most 15); one rater (the author) labelled every sampled hit explicitly, tp meaning the value has a source of truth or varies by context and is frozen in code. Informal: single rater, small samples.',
+                    'held_out_informal': {'repos': 6, 'note': 'private local repositories; labels kept outside this repository. Measured on 2026-10-28 with an earlier version of the rules: F1 9/11, F2 9/15, F7 15/15.'},
+                    'cut_rules_informal': {'model ids': '~25% (3 of 12 sampled)', 'pass-through functions': '~20% (2-3 of 12)', 'generic account/tenant ids': 'mostly test data and wire-name mappings', 'unrestricted boolean toggles': 'mostly UI properties and state assignments', 'single-implementation interfaces': 'second implementation is usually a test fake the scanner skips'}}
+    # Hand-written notes in an existing record (contamination, cut rules) survive a rebuild; computed fields are replaced.
+    record = {**template, **base, 'files_scanned': files, 'repos': shas, 'rules': rules}
     RECORD.write_text(json.dumps(record, indent=1) + '\n')
     print({k: f"{v['true_positive']}/{v['sampled']} of {v['hits']}" for k, v in rules.items()})
     return 0

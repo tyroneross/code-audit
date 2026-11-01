@@ -1662,7 +1662,7 @@
       "path": "skills/audit/references/reviewer-role.md",
       "source": "code-principles-audit",
       "source_sha256": "d01b89ac25741a035fa66e18575241ef1b5c89ce0f9b980cc9f45dc0809f6dc0",
-      "current_sha256": "f6d44da799dccbef288c4be848a0ee072c8da06a1a2fb25b0a3781cbea96ff02",
+      "current_sha256": "1e3b8d23d9f56a485f55d76d01bb9af2279860a5a1d6639984d5622d02a7efec",
       "modified_from_import": true
     },
     {
@@ -1739,7 +1739,7 @@
       "path": "skills/code-principles/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "f2ee9ee90f9e2a01cb0f2e799246dd37330819cac0673c461fba514de7731244",
+      "current_sha256": "d9d733badf2986945a5fcd09941c1320c0d5132ac54e87edeaf83c9d04dd812d",
       "modified_from_import": true
     },
     {
@@ -1778,13 +1778,6 @@
       "modified_from_import": false
     },
     {
-      "path": "skills/code-principles/references/tool-use.md",
-      "source": "code-principles-audit",
-      "source_sha256": "bdc4b4d2643e054dbd42e8897dcf570e5fce6eccd507c0ef2cfd4f448e15b318",
-      "current_sha256": "ddf00781aabc4c59990ce3d90d5b37cf7f79e9c69a414e3cc2223bafae2bb876",
-      "modified_from_import": true
-    },
-    {
       "path": "skills/code-principles/references/whole-system-repair.md",
       "source": "code-principles-audit",
       "source_sha256": "635df09592b701e5a97952210ad6adfaca06acf0c014b56c9142255c5cca18bd",
@@ -1795,21 +1788,21 @@
       "path": "skills/code-principles/scripts/outcome.py",
       "source": "code-principles-audit",
       "source_sha256": "5b276ef7b788fefc680484bb735e755d0ae39f2533bb578c5199ca69627d9bed",
-      "current_sha256": "5b276ef7b788fefc680484bb735e755d0ae39f2533bb578c5199ca69627d9bed",
-      "modified_from_import": false
+      "current_sha256": "a8ee7b6717df417e81b2fa24f70695c2d85c1adba5069234b239e3464dd37262",
+      "modified_from_import": true
     },
     {
       "path": "skills/code-principles/scripts/scan.py",
       "source": "code-principles-audit",
       "source_sha256": "97cf11fcb5f0da3f47d9423f32ccc5b6d3ccbefbfdac3565333dc88d3a763cd0",
-      "current_sha256": "281b8c3796b889855df86f9e230e2ca4bcb5e3378f4ea006cb17be56cd23c20a",
+      "current_sha256": "e3ebc634e50c16baafa154d96aaa5f48d68cd6a3d3618ca1612f56b61b93a650",
       "modified_from_import": true
     },
     {
       "path": "skills/code-principles/scripts/test_code_principles.py",
       "source": "code-principles-audit",
       "source_sha256": "9c80362958d93924a150b65478c7140fd7c087c761fd53d96032c82eeb9932ae",
-      "current_sha256": "a12027094832e37be712f0b960a7df160966dc20b7dc253f8ba337622a9fc9d2",
+      "current_sha256": "33859edf3689ecbbec0e02896699f197571030f37efd407fe13ed50dae3aca89",
       "modified_from_import": true
     },
     {
@@ -1887,7 +1880,7 @@
       "source": "code-principles-audit",
       "source_path": "skills/code-principles/SKILL.md",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "351980793b9f05a9906f9c71cfd579ac19fb947567086c3b4ddafb2151329b80",
+      "current_sha256": "20266c6d528ad58c4bd50012ddf7ef58734812f4f504a4f27c9cce157d2dae5a",
       "modified_from_import": true,
       "adaptation": "Checklist extracted from the imported focused skill; contextual failure-handler wording and relative links updated."
     },
@@ -1916,7 +1909,7 @@
       "path": "agents/fix-critique.md",
       "source": "coding-debugger",
       "source_sha256": "b3dfda836f02c3043d288dfddd09eb696305717239cc45ffb4c4a5820f9f3a35",
-      "current_sha256": "f450f22033d8c237dd2e198ad4617a6613d5bc861bd07d25e1413950fff50c25",
+      "current_sha256": "fcbe2fdbc717c90659695c1e1fb2f98fdf94fa69439c3e24431d0a8f4f08f203",
       "modified_from_import": true
     },
     {
@@ -1955,7 +1948,8 @@
     "2026-10-28: incident IDs accept the legacy INCIDENT_ prefix through one exported isValidIncidentId (storage, MCP list and detail routing), still restricted to word characters and hyphens. On the 100-file comparison corpus code-audit loads 87 records; 13 remain visibly skipped for non-string symptoms (10), non-enum verification status (4), fix shape (2) and filename/ID mismatch (1); coding-debugger loads all 100 without validation.",
     "2026-10-28: read-time normalization maps the remaining legacy incident shapes without rewriting files: a structured symptom becomes its description (else a fixed-order join of its text fields) with the object kept in legacy.symptom; a verification status outside the enum reads as unverified with the raw value kept; path-like string changes become {file} and command/summary or prose entries become fix.notes; a missing incident_id comes from a filename that matches the ID pattern, and a missing timestamp from the ID's embedded creation time (never file mtime). SESSION_ files (the debugger's temporary session namespace) and filename/ID mismatches stay skipped with named reasons. On the 100-file comparison corpus code-audit now loads 98; the two skips are one SESSION_ record and one filename/ID mismatch.",
     "2026-10-28 (review fixes): a string change maps to {file} only when it has a directory separator or a file extension, so single words such as 'Refactored' become notes; a prior non-array fix.notes is kept (as the first note and in legacy.fix_notes); INCIDENT_ IDs with a 13-digit millisecond epoch also supply a timestamp. Normalization never rewrites files on read; an explicit user-initiated store of a normalized record (for example batch review) saves the normalized shape with its legacy block.",
-    "2026-10-28 (W3): code-principles gains checklist sections F (frozen values that should be dynamic) and G (path length and brittle structure), a procedure reference (frozen-values-and-path-length.md), a P06 card section on values with a source of truth, P09/P13/P29 links to the path-length procedure, and scan.py section F signals in scripts/frozen.py (home paths, environment hosts, copied manifest version, fixed toggles, shared identifiers defined in several files). Model-id, generic account-id, date-constructor, pass-through and single-implementation detectors were measured on real repositories and cut for low precision. scan.py also treats capitalized Tests/ directories, *Tests.swift and Rust #[cfg(test)] modules as tests."
+    "2026-10-28 (W3): code-principles gains checklist sections F (frozen values that should be dynamic) and G (path length and brittle structure), a procedure reference (frozen-values-and-path-length.md), a P06 card section on values with a source of truth, P09/P13/P29 links to the path-length procedure, and scan.py section F signals in scripts/frozen.py (home paths, environment hosts, copied manifest version, fixed toggles, shared identifiers defined in several files). Model-id, generic account-id, date-constructor, pass-through and single-implementation detectors were measured on real repositories and cut for low precision. scan.py also treats capitalized Tests/ directories, *Tests.swift and Rust #[cfg(test)] modules as tests.",
+    "2026-11-01: Added audit methods (recon, route, recipes R1-R6, adaptation, coverage matrix, self-update) and folded tool-use.md into it; outcome.py accepts recipe ids, records the repo and lists experimental-rule candidates; fix-critique gains read-only Bash; review-feedback, focused-checklist E9 and reviewer-role lane briefs added."
   ],
   "removed_imports": [
     {
@@ -2263,6 +2257,12 @@
       "source": "coding-debugger",
       "source_sha256": "db49ff92f71b2f1e9f6706d0b6760292dc1ddf07a15ea54bfcf1d5e3979600f0",
       "reason": "Not imported: verifies the debugger's Codex surface; docs/verification.md records code-audit host checks."
+    },
+    {
+      "path": "skills/code-principles/references/tool-use.md",
+      "source": "code-principles-audit",
+      "source_sha256": "bdc4b4d2643e054dbd42e8897dcf570e5fce6eccd507c0ef2cfd4f448e15b318",
+      "reason": "2026-11-01: content moved into skills/code-audit/references/audit-methods.md section 7; the file had no inbound links."
     }
   ]
 }
