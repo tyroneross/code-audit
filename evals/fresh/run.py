@@ -79,8 +79,11 @@ def archive(case, dest):
     """Extract `git archive <revision>` into dest: tracked files only, no .git, no later history."""
     data = subprocess.run(['git', '-c', 'credential.helper=', '-C', str(harness.ROOT / case['repo']), 'archive', '--format=tar', case['revision']],
                           capture_output=True, check=True, timeout=ARCHIVE_TIMEOUT).stdout
+    def safe(member, path):  # skip members the data filter refuses (e.g. absolute symlinks) instead of failing the trial
+        try: return tarfile.data_filter(member, path)
+        except tarfile.FilterError: return None
     with tarfile.open(fileobj=io.BytesIO(data)) as tar:
-        tar.extractall(dest, filter='data')
+        tar.extractall(dest, filter=safe)
 
 
 def install_tools(tools):
@@ -164,7 +167,9 @@ def run_trial(case, arm, out, first_pass=None):
             (dest / 'answer.json').write_text(json.dumps(answer, indent=2) + '\n'); meta['findings'] = len(answer['findings'])
             if meta['status'] == 'harness_error': meta['status'] = 'completed'
     except Exception as error:  # every attempt keeps a row
-        meta.update({'status': 'invalid_response' if meta['status'] == 'harness_error' else meta['status'], 'error': str(error)[:500], 'error_type': type(error).__name__})
+        # Before the host ran, the failure is the harness's (rerun once); after it, the model's answer is invalid.
+        status = meta['status'] if meta['status'] != 'harness_error' else ('invalid_response' if 'exit_code' in meta else 'harness_error')
+        meta.update({'status': status, 'error': str(error)[:500], 'error_type': type(error).__name__})
     (dest / 'meta.json').write_text(json.dumps(meta, indent=2) + '\n')
     return meta
 
@@ -180,10 +185,10 @@ def jobs_for(arms, ids):
 
 
 def set_aside(out):
-    """Move host failures and timeouts aside so `run` repeats them once. Schema- or audit-invalid trials stay invalid."""
+    """Move host failures, timeouts and harness errors aside so `run` repeats them once. Schema- or audit-invalid trials stay invalid."""
     moved = []
     for meta_path in sorted(Path(out).glob('*/meta.json')):
-        if json.loads(meta_path.read_text()).get('status') in ('host_failed', 'host_timeout'):
+        if json.loads(meta_path.read_text()).get('status') in ('host_failed', 'host_timeout', 'harness_error'):
             target = Path(out) / 'set-aside' / meta_path.parent.name
             if target.exists(): continue  # already rerun once; the rerun's result stands
             target.parent.mkdir(exist_ok=True); meta_path.parent.rename(target); moved.append(target.name)
