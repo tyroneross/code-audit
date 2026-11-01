@@ -162,7 +162,8 @@ def aggregate(out, matches, case_ids=None):
         a['findings'] += len(found)
         judged = [f for n, f in enumerate(found) if matches.get((t['folder'], finding_key(n, f)))]
         if case['role'] == 'control':
-            a['control_trials'] += 1; a['control_false_positives'] += bool(judged); continue
+            a['control_trials'] += 1; a['control_false_positives'] += bool(judged)
+            a.setdefault('per_control', {}).setdefault(t['case_id'], []).append(int(bool(judged))); continue
         a['review_trials'] += 1
         hit = any(location_hit(f, oracle) for f in judged)
         a['detected'] += hit; a['located'] += any(location_hit(f, oracle, primary_only=True) for f in found)
@@ -203,12 +204,13 @@ def main():
     p.add_argument('command', choices=['judge-packets', 'aggregate'])
     p.add_argument('--out', type=Path, required=True); p.add_argument('--judges', type=Path); p.add_argument('--judgments', type=Path)
     p.add_argument('--labels', type=Path, required=True); p.add_argument('--cases', nargs='*')
+    p.add_argument('--no-verdicts', action='store_true', help='omit the hard-benchmark verdict block (case sets with their own pre-registered rule)')
     a = p.parse_args()
     if a.command == 'judge-packets':
         labels = judge_packets(a.out, a.judges, a.labels); print(len([k for k in labels if k.startswith('J-')]), 'packets'); return
     labels = json.loads(a.labels.read_text())
     arms = aggregate(a.out, load_judgments(a.judgments, labels), a.cases)
-    print(json.dumps({'arms': arms, 'verdicts': verdicts(arms)}, indent=1))
+    print(json.dumps({'arms': arms} if a.no_verdicts else {'arms': arms, 'verdicts': verdicts(arms)}, indent=1))
 
 
 if __name__ == '__main__':

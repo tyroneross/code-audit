@@ -21,8 +21,8 @@ Run `python3 <cp>/scripts/recon.py <root> [--base REV | --paths FILE...]`. It pr
 | Signals | Generate candidates with | Lanes | Who verifies |
 |---|---|---|---|
 | `diff`, ≤10 files, 1 module | `scan.py <changed files>`; callers of each changed public symbol; R1 if literals or config changed, R4 if `serial`, R5a if `io_conc`, R5b if `retry` | none | lead |
-| `diff`, ≥3 modules or >10 files | as above, plus `architect impact <file>::<symbol>` per changed public symbol to pull in unchanged callers | one per module only if the modules share no changed contract; otherwise one agent | each lane its own; lead re-verifies cross-lane findings |
-| `repo`, <200 files, 1 language | `scan.py .`, R1, R2, R3; R4/R5a/R5b when their signal is present | none | lead |
+| `diff`, otherwise (≥2 modules or >10 files) | as above, plus `architect impact <file>::<symbol>` per changed public symbol to pull in unchanged callers | one per module only if the modules share no changed contract; otherwise one agent | each lane its own; lead re-verifies cross-lane findings |
+| `repo`, <200 files, not `multi_lang` | `scan.py .`, R1, R2, R3; R4/R5a/R5b when their signal is present | none | lead |
 | `repo`, ≥200 files or `multi_lang` | Phase A by dimension, repo-wide: lane F (`scan.py` F rules + R1), lane N (R2 + R4), lane S (R3 + hop count), lane E (R5a/R5b when signalled). Never split a cross-cutting class by module. | Phase B by module (`campaign.py batch`): read the module for checklist A–D and check the Phase A candidates that land in it | module lane, never the lane that generated the candidate |
 | `services` ≥2 | add R4 across each service boundary; NavGator `connections`/`trace` only if `.navgator/` already exists (its scan writes into the repo, so ask first) | add one contract lane | both sides cited |
 | a tool is missing | use the next method for that dimension (LSP → `architect` → import grep) or mark the cell `UNAVAILABLE` | — | — |
@@ -95,7 +95,7 @@ A method that keeps finding real defects should become a rule; one that stops sh
 1. **Capture.** Log every recipe, sweep and convention grep that produced a confirmed finding with `outcome.py add --item <recipe id>`; keep the script beside the audit output.
 2. **Candidate.** `outcome.py candidates --min-repos 2` lists recipe ids with confirmed outcomes (`fixed`, `accepted` or `kept`) on at least 2 distinct repos; pass every log with `--repo` or `--log-file`.
 3. **Experimental rule.** Implement the candidate behind `scan.py --experimental`; nothing enters the default scan at this stage.
-4. **Measure precision.** Use the section F method: run on the pinned public repos, sample and label hits, and record them in a `*-precision.json` like [frozen-values-precision.json](../../code-principles/references/frozen-values-precision.json). Keep only at precision ≥ ~0.7 on ≥8 labelled hits; record a cut with its number.
+4. **Measure precision.** Use the section F method: run on the pinned public repos, sample and label hits, and record them in a `*-precision.json` like [frozen-values-precision.json](../../code-principles/references/frozen-values-precision.json). Cut a rule whose measured precision is below ~0.7, at any sample size, and record the numbers (owner rule, 2026-11-01). Promote only at ≥ ~0.7 on ≥8 labelled hits; a rule with fewer hits and no measured shortfall stays experimental.
 5. **Pre-registered eval.** Commit the decision rule first, then test on cases mined after the rule froze. Wins on cases known while writing the rule do not count.
 6. **Promote.** build-loop's promotion-reviewer agent gives a verdict; the owner approves the move into the default scanner or checklist. Neither step is automatic.
 7. **Retire.** A rule or recipe whose `outcome.py score` hit rate falls below the keep threshold over a rolling window is flagged for removal.

@@ -2,7 +2,7 @@
 
 Earlier benchmarks could not separate any arms: detection was all-or-nothing per case, 6–12 cases gave power near 0.14, and two repetitions added almost no information (`.build-loop/reviews/2026-11-01-rca-guidance-ties.md`, untracked). This benchmark fixes the instrument before testing guidance. It uses many more cases, one repetition, a paired per-case test, and a positive control that must separate before any guidance arm is scored.
 
-This file, `run.py`, `stats.py`, the guidance files named below and the case set were committed before any trial on these cases ran. Cases are never edited after a trial; a broken case can only be removed, with the reason reported.
+This file, `run.py`, `stats.py` and the case set were committed before any trial on these cases ran. The round-2 guidance files were committed before any trial of the arms that use them (Addendum 1). Cases are never edited after a trial; a broken case can only be removed, with the reason reported.
 
 ## Cases
 
@@ -45,12 +45,12 @@ The other source plugin, Coding Debugger, is not run. It tied the code-audit bun
 `grade.py judge-packets` writes one blinded packet per case. It holds the oracle mechanism, the pre-fix lines and every finding that cites the defect file, under random labels. Judges are Claude Opus-tier subagents. They see no arm names and run nothing. Round 1 is judged and its positive-control result computed before any round-2 trial runs.
 
 - **Detection** (primary, one 0/1 per case): one finding is judged to describe the oracle mechanism and cites a line within ±10 of a window.
-- **Located**: the finding's primary location falls in the window.
+- **Located**: the finding's primary (first) location is within ±10 lines of a window, the same tolerance detection uses.
 - Also reported: control false positives, findings, tokens and seconds per trial; for tool arms, tool calls and which tools ran.
 
 ## Tests and verdict rule
 
-Comparisons are paired by case: an exact two-sided McNemar test on discordant cases (`stats.py`). A case invalid in either arm is dropped from that comparison and counted. Host failures and timeouts are rerun once.
+Comparisons are paired by case: an exact two-sided McNemar test on discordant cases (`stats.py`). A case invalid in either arm is dropped from that comparison and counted. Host failures and timeouts are rerun once (`run.py set-aside`, then `run`). Schema-invalid and network-flagged trials are not rerun.
 
 **Positive control (gate).** `hint` must beat `none` with p < .05. If it does not, guidance testing stops. Round 2 then runs only to report the instrument limit, and the methods ship on their own merits.
 
@@ -101,3 +101,13 @@ All 116 round-1 trials completed against the schema; none was invalid. Eight Opu
 The paired test, `hint` vs `none`, gives 25 cases detected by `hint` only and 1 by `none` only, exact McNemar p = 8.0e-7. **The positive control separates, so guidance testing proceeds.** `none` detects 0.41, below the 0.75 discrimination ceiling, so the case set is not saturated.
 
 With one repetition and 54 cases, the instrument detects a large planted effect. It can resolve a guidance effect only if that effect produces about 6 or more discordant cases in one direction.
+
+## Addendum 3: analysis corrections from independent review (committed before any round-2 output was read)
+
+An Opus audit and a Codex review of 6168d75..069f22f found no flaw in the test or the verdict thresholds. They did find analysis paths that could mislabel a verdict. Round 2 was already running, so these changes touch analysis and future runs only.
+
+- **Two-pass judging and cost.** A `none-2pass` trial's answer repeats the round-1 `none` findings. Judges score only the findings that pass added. A case counts as detected by two-pass when the round-1 judgments of `none` detected it, or the judged new findings did (`stats.py --union none-2pass=none+none-2pass-new`). The prior findings are therefore never re-judged by a different judge. The union's cost per trial is the first call plus the second call.
+- **Paired controls and cost per trial.** Control false positives are compared on controls valid in both arms (`grade.py` now keeps `per_control`). Cost ratios are mean tokens and seconds per valid trial, not totals. `stats.py` refuses an arm name that appears in two aggregate files, and it returns "no data" for an arm that has no valid trials.
+- **No second verdict.** `grade.py aggregate --no-verdicts` drops the hard benchmark's unpaired verdict block for this case set. The only verdict is `stats.py`.
+- **Tools.** Round-2 trials copied the scanner scripts from the worktree, which matched de06478 for the whole run: no commit or edit touched `skills/code-principles/scripts` between de06478 and the end of round 2. `run.py` now writes them from git at de06478 and records their hashes. `tools_used` was computed on commands truncated to 400 characters. It is recomputed from each trial's saved `host-output.jsonl` on the complete commands.
+- **Reruns.** Only host failures and timeouts are rerun, through `run.py set-aside`.
