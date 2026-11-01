@@ -9,6 +9,7 @@ oracle file. A failing case is reported and left out, never repaired. Controls: 
 reviewed again at the fix revision.
 """
 import argparse
+import os
 import json
 from pathlib import Path
 import random
@@ -16,7 +17,7 @@ import subprocess
 import sys
 
 HERE = Path(__file__).resolve().parent
-ROOT = Path('/Users/tyroneross/dev/git-folder')
+ROOT = None  # set in main() from --repos-root or $CODE_AUDIT_REPOS_ROOT; recorded in the manifest
 SEED, CONTROLS = 20261101, 8
 
 
@@ -55,7 +56,13 @@ def problems(c):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__); p.add_argument('lanes', nargs='+', type=Path); p.add_argument('--check', action='store_true')
+    p.add_argument('--repos-root', type=Path, default=os.environ.get('CODE_AUDIT_REPOS_ROOT'),
+                   help='folder holding the source repositories (default: $CODE_AUDIT_REPOS_ROOT)')
     a = p.parse_args()
+    global ROOT
+    if not a.repos_root or not Path(a.repos_root).is_dir():
+        sys.exit('build_cases.py: pass --repos-root DIR or set CODE_AUDIT_REPOS_ROOT to the folder holding the source repositories')
+    ROOT = Path(a.repos_root).resolve()
     mined = [c for lane in a.lanes for c in json.loads(lane.read_text())]
     keys = [c['key'] for c in mined]
     if len(keys) != len(set(keys)): sys.exit('duplicate keys')

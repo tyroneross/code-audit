@@ -11,6 +11,7 @@ SKIP = {".git", "node_modules", "dist", "build", "vendor", "target", "__pycache_
 LANG = {".py": "python", ".ts": "typescript", ".tsx": "typescript", ".js": "javascript", ".jsx": "javascript", ".mjs": "javascript",
         ".cjs": "javascript", ".rs": "rust", ".go": "go", ".swift": "swift", ".java": "java", ".kt": "kotlin", ".rb": "ruby", ".cs": "csharp"}
 SERVICE = {"package.json", "pyproject.toml", "Cargo.toml", "go.mod", "Dockerfile", "Package.swift", "vercel.json", "fly.toml", "wrangler.toml"}
+READ_LIMIT = 2_000_000  # characters read per file for signal detection
 PATTERNS = {
     "io_conc": r"O_APPEND|appendFile|writeln!|flock|lockf|\.rename\(|os\.replace|open\([^)]*['\"]a|create_task|spawn|Promise\.all|asyncio\.gather",
     "retry": r"retry|backoff|timeout|deadline|retryable",
@@ -20,10 +21,11 @@ PATTERNS = {
 
 def git(root, *args):
     try:
-        out = subprocess.run(["git", "-C", root, *args], capture_output=True, text=True, timeout=20)
+        out = subprocess.run(["git", "-C", root, *args, "-z"], capture_output=True, timeout=20)
     except (OSError, subprocess.TimeoutExpired):
         return None
-    return [l for l in out.stdout.splitlines() if l] if out.returncode == 0 else None
+    # -z gives raw NUL-separated paths; without it git quotes unusual names and they fail isfile().
+    return [p for p in out.stdout.decode("utf-8", "surrogateescape").split("\0") if p] if out.returncode == 0 else None
 
 
 def all_files(root):
@@ -49,20 +51,27 @@ def recon(root, base=None, paths=None):
     langs = collections.Counter(LANG[os.path.splitext(p)[1]] for p in targets if os.path.splitext(p)[1] in LANG)
     total = sum(langs.values()) or 1
     hits = {k: 0 for k in PATTERNS}
+    unreadable, truncated = [], []
     for p in targets:
         try:
             with open(os.path.join(root, p), encoding="utf-8", errors="ignore") as fh:
-                text = fh.read(2_000_000)
+                text = fh.read(READ_LIMIT + 1)
         except OSError:
+            unreadable.append(p)
             continue
+        if len(text) > READ_LIMIT:
+            truncated.append(p)
         for k, pat in PATTERNS.items():
             hits[k] += bool(re.search(pat, text))
     services = {os.path.dirname(p) for p in files if os.path.basename(p) in SERVICE and not set(p.split("/")) & SKIP}
     modules = {p.split("/")[0] if "/" in p else "." for p in targets}
     s = {"scope": scope, "files": len(targets), "repo_files": len(files), "languages": dict(langs.most_common()),
          "multi_lang": sum(n / total > 0.10 for n in langs.values()) >= 2, "diff_modules": len(modules) if scope == "diff" else None,
-         "services": len(services), **hits}
-    recipes = [r for r, k in (("R4", "serial"), ("R5a", "io_conc"), ("R5b", "retry")) if s[k]]
+         "services": len(services), **hits,
+         "incomplete": {"unreadable": unreadable, "truncated": truncated}}
+    # A zero signal only means absent when every file was read in full; otherwise keep the recipe.
+    complete = not unreadable and not truncated
+    recipes = [r for r, k in (("R4", "serial"), ("R5a", "io_conc"), ("R5b", "retry")) if s[k] or not complete]
     if scope == "diff" and s["files"] <= 10 and s["diff_modules"] == 1:
         route = {"row": "diff-small", "recipes": ["R1", *recipes], "lanes": "none"}
     elif scope == "diff":

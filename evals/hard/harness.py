@@ -69,7 +69,8 @@ def sha(data):
 
 
 def git_show(repo, rev, path):
-    return subprocess.check_output(['git', '-c', 'credential.helper=', '-C', str(ROOT / repo), 'show', f'{rev}:{path}'])
+    # Bounded: a stalled git read must fail the attempt, not hang the worker.
+    return subprocess.check_output(['git', '-c', 'credential.helper=', '-C', str(ROOT / repo), 'show', f'{rev}:{path}'], timeout=60)
 
 
 def case_by_id(family, ident):

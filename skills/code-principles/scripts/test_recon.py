@@ -28,6 +28,29 @@ def git(root, *args):
 
 
 class ReconTest(unittest.TestCase):
+    def test_git_listing_keeps_names_git_would_quote(self):
+        # Without -z, git quotes these names and recon dropped them, losing their signals.
+        with tempfile.TemporaryDirectory() as root:
+            write(root, {"tab\tname.py": "x = retry()\n", "\u00e9.py": "y = 1\n"})
+            git(root, "init", "-q")
+            git(root, "add", "-A")
+            r = recon.recon(root)
+            self.assertEqual(r["signals"]["files"], 2)
+            self.assertIn("R5b", r["route"]["recipes"])
+
+    def test_unread_files_keep_signal_gated_recipes(self):
+        with tempfile.TemporaryDirectory() as root:
+            write(root, {"a.py": "x = 1\n", "big.py": "y = 2\n"})
+            limit = recon.READ_LIMIT
+            recon.READ_LIMIT = 3
+            try:
+                r = recon.recon(root)
+            finally:
+                recon.READ_LIMIT = limit
+            self.assertEqual(sorted(r["signals"]["incomplete"]["truncated"]), ["a.py", "big.py"])
+            for rid in ("R4", "R5a", "R5b"):
+                self.assertIn(rid, r["route"]["recipes"])
+
     def test_repo_scope_signals_and_route_without_git(self):
         with tempfile.TemporaryDirectory() as root:
             write(root, {
