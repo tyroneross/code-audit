@@ -129,7 +129,13 @@ class RustTestScope:
         if self.pending:
             opened = self._braces(rest)  # also tracks comments, so an item after `*/` on the same line is seen
             code = self.last_code
-            if not code or code.startswith("#["):
+            while code.startswith("#["):  # attributes on the item's line; balanced brackets
+                depth, k = 0, 0
+                for k, c in enumerate(code):
+                    depth += {"[": 1, "]": -1}.get(c, 0)
+                    if depth == 0 and k: break
+                code = code[k + 1:].strip() if depth == 0 else ""
+            if not code:
                 return True
             if opened > 0:
                 self.pending = False; self.depth = opened

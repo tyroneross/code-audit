@@ -213,6 +213,7 @@ class S {
             '#[cfg(test)]', 'mod urls {', '    fn u() -> &\'static str { "https://x" }', '    /* { */', '    /*', '    { */', '    let s = "', '    {";', '    /* outer /* inner */ { */', '    const S: &str = r#""{"#;', '}',   # braces in strings, raw strings and nested comments
             '#[cfg(test)]', '/* c */ fn t() {}', 'fn prod1() {', '    let p = "/Users/realone/x";', '}',  # comment and item on one line
             '#[cfg(test)]', '/*', '*/ fn t2() {}', 'const P2: &str = "/Users/realtwo/x";',              # item right after a multi-line comment
+            '#[cfg(test)]', '/* c */ #[allow(dead_code)] fn t3() {}', 'const P3: &str = "/Users/realthree/x";',  # attribute and item on one line
             'const REAL: &str = "/Users/realuser/data";',                                  # production code after the tests
         ]) + "\n"
         with tempfile.TemporaryDirectory() as a, tempfile.TemporaryDirectory() as b:
@@ -223,7 +224,7 @@ class S {
                 Path(c, "pyproject.toml").write_text('[tool.other]\nversion = "9.9.9"\n[project]\nname = "x"\n')
                 Path(c, "consts.py").write_text("LOGO = 'image/logo.svg'\n"); Path(a, "img.py").write_text("LOGO = 'image/logo.svg'\n")
                 _, out = run_scan([a, b, c])
-        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F1"]], [("lib.rs", 34), ("lib.rs", 39), ("lib.rs", 40)])
+        self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F1"]], [("lib.rs", 34), ("lib.rs", 39), ("lib.rs", 42), ("lib.rs", 43)])
         self.assertEqual(sorted(h["label"] for h in out["items"]["F3"]), ["copies package.json version 1.0.0", "states version 1.0.0 but package.json 2.0.0"])
         # a shared file path that merely starts like a MIME type; consts.py owns it, so only the copy is flagged
         self.assertEqual([(h["file"], h["line"]) for h in out["items"]["F7"]], [("img.py", 1)])

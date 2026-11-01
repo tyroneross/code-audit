@@ -302,10 +302,7 @@ def _segment_hits(words):
     return subs is None or bool(_before_dashdash(words) & subs)
 
 
-VALUE_OPTIONS = {'--prefix', '-C', '--cwd', '--workspace', '-w', '--registry', '--cache', '--userconfig', '--dir',
-                 '--loglevel', '-R', '--repo', '--directory', '--project', '--config'}
-
-
+PASS_THROUGH = {'run', 'run-script', 'rum', 'urn', 'exec', 'x', 'test', 't', 'tst', 'start', 'stop', 'restart', 'dlx'}
 def _before_dashdash(words):
     """Words after the tool and before `--`: options with unknown value arguments cannot hide the subcommand, while
     arguments passed through to a script (`npm run test -- --grep install`) are not read as installer verbs."""
@@ -314,8 +311,9 @@ def _before_dashdash(words):
     k = rest.index('--'); before = rest[:k]
     # `--` ends a script's own arguments only after a command word; with only options before it (npm --prefix . --
     # install x), the command comes after it. Option values are not command words.
-    positional = [w for n, w in enumerate(before) if not w.startswith('-') and not (n and before[n - 1] in VALUE_OPTIONS)]
-    return set(before) | (set() if positional else set(rest[k + 1:k + 2]))
+    # Conservative: only a known pass-through command (run, exec, test, ...) before `--` makes the rest data, so an
+    # option whose value looks like a word (npm --tag latest -- install x) cannot hide the command.
+    return set(before) | (set() if set(before) & PASS_THROUGH else set(rest[k + 1:k + 2]))
 
 
 HEREDOC = None
