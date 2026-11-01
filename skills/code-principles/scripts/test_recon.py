@@ -51,6 +51,17 @@ class ReconTest(unittest.TestCase):
             self.assertEqual(r["signals"]["incomplete"]["unreadable"], ["locked/a.py"])
             self.assertIn("R5b", r["route"]["recipes"])
 
+    def test_unlistable_directories_without_git_count_as_incomplete(self):
+        with tempfile.TemporaryDirectory() as root:
+            write(root, {"locked/a.py": "x = retry()\n", "b.py": "y = 1\n"})
+            os.chmod(os.path.join(root, "locked"), 0)
+            try:
+                r = recon.recon(root)
+            finally:
+                os.chmod(os.path.join(root, "locked"), 0o755)
+            self.assertEqual(r["signals"]["incomplete"]["unreadable"], ["locked/"])
+            self.assertIn("R5b", r["route"]["recipes"])
+
     def test_unread_files_keep_signal_gated_recipes(self):
         with tempfile.TemporaryDirectory() as root:
             write(root, {"a.py": "x = 1\n", "big.py": "y = 2\n"})

@@ -29,18 +29,19 @@ def git(root, *args):
 
 
 def all_files(root):
+    """Return (paths, unreadable dirs). The walk fallback records directories it could not list."""
     listed = git(root, "ls-files")
     if listed is not None:
-        return listed
-    found = []
-    for d, dirs, files in os.walk(root):
+        return listed, []
+    found, errors = [], []
+    for d, dirs, files in os.walk(root, onerror=lambda e: errors.append(os.path.relpath(e.filename, root) + "/")):
         dirs[:] = [x for x in dirs if x not in SKIP]
         found += [os.path.relpath(os.path.join(d, f), root) for f in files]
-    return found
+    return found, errors
 
 
 def recon(root, base=None, paths=None):
-    files = all_files(root)
+    files, walk_errors = all_files(root)
     scope = "diff" if base or paths else "repo"
     if base:
         paths = git(root, "diff", "--name-only", "--relative", base)
@@ -62,7 +63,7 @@ def recon(root, base=None, paths=None):
     langs = collections.Counter(LANG[os.path.splitext(p)[1]] for p in targets if os.path.splitext(p)[1] in LANG)
     total = sum(langs.values()) or 1
     hits = {k: 0 for k in PATTERNS}
-    unreadable, truncated = list(inaccessible), []
+    unreadable, truncated = list(walk_errors) + list(inaccessible), []
     for p in targets:
         try:
             with open(os.path.join(root, p), encoding="utf-8", errors="ignore") as fh:
