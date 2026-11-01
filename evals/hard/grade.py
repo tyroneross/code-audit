@@ -52,8 +52,11 @@ def windows(oracle):
     return [(oracle['file'], oracle['lines'])] + [(w['file'], w['lines']) for w in oracle.get('also', [])]
 
 
-def location_hit(finding, oracle, tolerance=TOLERANCE):
-    for text in finding.get('locations') or []:
+def location_hit(finding, oracle, tolerance=TOLERANCE, primary_only=False):
+    """True when a cited location falls in an oracle window. primary_only checks only the finding's first location,
+    the one the finding is about; secondary citations often name a nearby line while describing another problem."""
+    texts = finding.get('locations') or []
+    for text in texts[:1] if primary_only else texts:
         loc = parse_location(text)
         if not loc: continue
         for path, lines in windows(oracle):
@@ -136,7 +139,8 @@ def usage_tokens(meta):
 
 
 def aggregate(out, matches, case_ids=None):
-    blank = lambda: {'review_trials': 0, 'detected': 0, 'located': 0, 'control_trials': 0, 'control_false_positives': 0, 'review_invalid': 0,
+    # located = a finding's PRIMARY location hits the window; cited_window_any = any location does (the old, inflated "located").
+    blank = lambda: {'review_trials': 0, 'detected': 0, 'located': 0, 'cited_window_any': 0, 'control_trials': 0, 'control_false_positives': 0, 'review_invalid': 0,
                      'findings': 0, 'repair_trials': 0, 'repair_passed': 0, 'repair_invalid': 0, 'seconds': 0.0, 'tokens': 0, 'per_case': {}}
     rows = trials(out)
     arms = {arm: blank() for arm in ARMS + sorted({t['arm'] for t in rows} - set(ARMS))}
@@ -161,7 +165,8 @@ def aggregate(out, matches, case_ids=None):
             a['control_trials'] += 1; a['control_false_positives'] += bool(judged); continue
         a['review_trials'] += 1
         hit = any(location_hit(f, oracle) for f in judged)
-        a['detected'] += hit; a['located'] += any(location_hit(f, oracle) for f in found)
+        a['detected'] += hit; a['located'] += any(location_hit(f, oracle, primary_only=True) for f in found)
+        a['cited_window_any'] += any(location_hit(f, oracle) for f in found)
         a['per_case'].setdefault(t['case_id'], []).append(int(hit))
     for a in arms.values():
         a['detection_rate'] = round(a['detected'] / a['review_trials'], 3) if a['review_trials'] else None
