@@ -29,6 +29,28 @@ For upgrades, shared daemons or claims that unrelated work survives a change, us
 
 For agent lifecycle hooks, use [hook boundary checks](hook-boundaries.md). Verify host invocation, decision handling, scoped evidence and any required human approval before crediting a hook with enforcing the workflow.
 
+## Workflow efficiency and repeated work
+
+Use industrial engineering lenses when latency, redundant work or agent handoffs
+are the question. Map trigger to accepted outcome, including useful work, required
+protection, waiting and rework. Record each step's owner, input revision, output,
+consumer, effect and source/trace evidence. Counts and timings require observations;
+a call graph alone cannot show frequency or waiting.
+
+Compare eliminate, combine, rearrange and simplify against preserved guarantees.
+Find the constrained resource before adding parallelism; measure end-to-end cost on
+equivalent workloads. Similar task titles or repeated code are only candidates.
+Compare deliverable, inputs, revision and acceptance obligations. Retain independent
+review, trust-boundary checks, isolation, retry reconciliation and recovery when
+these provide distinct guarantees. Never cancel or reassign work by inference.
+
+For caches check keys, invalidation, permissions, ownership changes, restart and
+fallback. For batches check per-item identity, authority, ordering, conflicts and
+partial or unknown outcomes. A lookup followed by an edit is not an atomic guarded
+write. Start with the riskiest applicable counterexample, then verify the ordinary
+path. Keep suspected waste separate from source-supported duplication and measured
+improvement; a smaller implementation or passing test does not prove a speedup.
+
 ## Usability
 
 | Criterion | Failure pattern to investigate | Useful check |
