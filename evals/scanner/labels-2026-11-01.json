@@ -7,5 +7,8 @@
   "agent-rally-point/scripts/rally_model_handoff_probe.py:157": ["fp", "probe script aborts on an inbox contract violation; no caller retries the send, so a duplicate delivery cannot follow"]
  },
  "sibling_retryable": {},
- "timeout_terminal": {}
+ "timeout_terminal": {
+  "build-loop/scripts/privileged_broker.py:830": ["fp", "the TimeoutExpired branch two lines up already returns state 'timeout'; this 'failed' belongs to the separate OSError branch (the command could not start), which is a real terminal launch failure"],
+  "build-loop/scripts/verification_claim_probe.py:392": ["fp", "status 'error' is documented as 'harness failed (timeout, OSError)', distinct from 'contradicted'; the verdict never treats it as a failed claim, so the timeout stays an unknown outcome, not a terminal one"]
+ }
 }

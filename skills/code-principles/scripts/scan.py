@@ -76,12 +76,10 @@ SAME_INPUT_WINDOW = 25
 # Failure-path rules: each looks at the enclosing function, found by walking up to the nearest definition line.
 FN_START = re.compile(r"^\s*(?:pub(?:\([\w:]+\))?\s+)?(?:(?:export|async|default|private|public|protected|static|override|unsafe|const)\s+)*(?:fn|def|func|function)\s+\w+|^\s*(?:export\s+)?(?:const|let)\s+\w+\s*=\s*(?:async\s*)?\([^)]*\)\s*(?::[^=]*)?=>|^\s*(?:(?:async|private|public|protected|static)\s+)*(?!if\b|for\b|while\b|switch\b|catch\b|return\b)\w+\s*\([^)]*\)\s*(?::\s*[^{=]+)?\{\s*$")
 FN_WINDOW = 80  # lines searched up or down for a function boundary
-RETRYABLE_TRUE = re.compile(r"\bretryable\s*[:=]\s*(?:true|True)\b")
-RETRYABLE_FALSE = re.compile(r"\bretryable\s*[:=]\s*(?:false|False)\b(?!\s*[;|])")
+KEY_END = r"['\"]?\]?\s*[:=]"  # after a key name: optional closing quote and subscript bracket (`"retryable": False`, `r['retryable'] =`)
+RETRYABLE_TRUE = re.compile(r"\bretryable" + KEY_END + r"\s*(?:true|True)\b")
+RETRYABLE_FALSE = re.compile(r"\bretryable" + KEY_END + r"\s*(?:false|False)\b(?!\s*[;|])")
 ANY_FAILURE = re.compile(r"if\s*\(\s*!\s*[\w.]+\.ok\s*\)|if\s+not\s+[\w.]+\.ok\b|\.is_err\(\)|\bErr\(_\)\s*=>|catch\s*(?:\(\s*\w*\s*\))?\s*\{|except\s*(?:Exception\s*)?(?:as\s+\w+\s*)?:")
-TERMINAL = re.compile(r"\bretryable\s*[:=]\s*(?:false|False)\b|\b(?:status|state|outcome)\s*[:=]\s*['\"](?:failed|failure|error|errored|fatal)['\"]|\b(?:Status|State|Outcome)\.(?:FAILED|Failed|ERROR|Error)\b")
-TIMEOUT = re.compile(r"timed?[\s_-]?out|\btimeout\b|deadline|ETIMEDOUT|AbortError|TimeoutError|DeadlineExceeded|\bElapsed\b", re.I)
-REACH = 4  # lines around a hit searched for its guard or timeout branch
 
 
 def function_span(lines, i):
@@ -91,25 +89,40 @@ def function_span(lines, i):
     return start, end
 
 
+OPENER = re.compile(r"^\s*(?:return|yield|raise|throw)\b|^\s*\}?\s*(?=[^\s}])(?!(?:if|elif|else|for|while|switch|case|catch|except|try|finally|def|fn|func|function|async|with|match)\b).*[\[({]\s*$")  # a line that opens the value a failure branch returns
+BRANCH_REACH = 6  # lines searched up from a key for its branch header, so a return object spread over lines still counts
+
+
+def failure_guarded(lines, i):
+    """True when lines[i] sits directly in a catch-all failure branch: same line, or the nearest enclosing header above it
+    (walking out of a multi-line return value) is the guard. Any other enclosing header stops the search."""
+    if ANY_FAILURE.search(lines[i]):
+        return True
+    indent = len(lines[i]) - len(lines[i].lstrip())
+    for k in range(i - 1, max(-1, i - 1 - BRANCH_REACH), -1):
+        text = lines[k]
+        if not text.strip() or len(text) - len(text.lstrip()) >= indent:
+            continue  # blank, or a sibling key in the same value
+        if ANY_FAILURE.search(text):
+            return True
+        if not OPENER.search(text):
+            return False  # enclosed by some other header (a specific condition, else, a function)
+        indent = len(text) - len(text.lstrip())
+    return False
+
+
 def sibling_retryable(lines, i):
     """B3: every failure of a callee becomes retryable:false while a sibling return in the same function says true."""
-    if not RETRYABLE_FALSE.search(lines[i]) or not any(ANY_FAILURE.search(l) for l in lines[max(0, i - 1):i + 1]):
+    if not RETRYABLE_FALSE.search(lines[i]) or not failure_guarded(lines, i):
         return None
     s, e = function_span(lines, i)
     return i if any(RETRYABLE_TRUE.search(l) for l in lines[s:e]) else None
-
-
-def timeout_terminal(lines, i):
-    """C3: a timeout branch reports a terminal or non-retryable failure instead of an unknown outcome."""
-    near = lines[max(0, i - REACH):i + REACH + 1]
-    return i if TERMINAL.search(lines[i]) and any(TIMEOUT.search(l) for l in near) else None
 
 
 # (item, label, function(lines, i) -> index of the line to report or None, experimental). Experimental rules run only with
 # --experimental; each has fewer than 8 hits on the measured repositories (failure-path-precision.json).
 FAILURE_RULES = [
     ("B3", "callee failure mapped to retryable:false while a sibling return is retryable", sibling_retryable, True),
-    ("C3", "timeout branch reports a terminal failure", timeout_terminal, True),
 ]
 
 
@@ -296,23 +309,57 @@ export function open(): R {
   }
   return { ok: true }
 }
-""", {"B3", "C3"}, {("B3", 5)}),
-    ("job.ts", """\
-function finish(job) {
-  if (Date.now() > job.deadline) {
-    job.status = 'failed'
-    return
+""", {"B3"}, {("B3", 5)}),
+    ("results.py", """\
+def call(api):
+    try:
+        r = api.get()
+    except Exception as e:
+        return {"ok": False, "retryable": False, "error": str(e)}
+    if r.busy:
+        return {"ok": False, "retryable": True}
+    if r.code == 404:
+        return {
+            "ok": False,
+            "retryable": False,
+        }
+    return {"ok": True}
+
+
+def push(api, out):
+    out['retryable'] = True
+    try:
+        api.put()
+    except Exception:
+        out["retryable"] = False
+        if out["retryable"] == False:
+            log(out)
+    return out
+""", {"B3"}, {("B3", 5), ("B3", 21)}),
+    ("client.ts", """\
+export async function send(req) {
+  try {
+    await post(req)
+  } catch (err) {
+    return {
+      'ok': false,
+      'retryable': false,
+      'message': String(err),
+    }
   }
-  job.status = 'done'
+  return { 'ok': false, 'retryable': true }
 }
-
-
-
-
-function fail(job) {
-  job.status = 'failed'
+export function load(r) {
+  try { r.open() } catch (err) {
+    if (err.code === 404) {
+      return {
+        "retryable": false,
+      }
+    }
+  }
+  return { "retryable": true }
 }
-""", {"C3"}, {("C3", 3)}),
+""", {"B3"}, {("B3", 7)}),
     ("worker.py", """\
 import requests
 r = requests.get(url)

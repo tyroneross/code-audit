@@ -53,16 +53,16 @@ Rules measured and **cut** because they were noisier than useful: model ids in c
 
 #### Failure-path rules (experimental, `scan.py --experimental`)
 
-Two rules for sections B and C run only with `--experimental`, because each fired 0 times on the same 8 repositories and commits, so their precision is not yet measurable. Two further rules were cut: measured precision below 0.7 (see below). A hit is a lead for tracing callers, never a finding.
+One rule for section B runs only with `--experimental`, because it fired 0 times on the same 8 repositories and commits, so its precision is not yet measurable. Three further rules were cut: measured precision below 0.7 (see below). A hit is a lead for tracing callers, never a finding.
 
 | Rule | Item | Signal | Hits | Sampled | tp | Precision |
 |---|---|---|---|---|---|---|
-| `sibling_retryable` | B3 | a catch-all failure branch (`if (!x.ok)`, `is_err()`, bare `catch`/`except`) returns `retryable: false` while a sibling return says `true` | 0 | 0 | 0 | — |
-| `timeout_terminal` | C3 | `retryable: false` or a failed/error status within 4 lines of a timeout or deadline | 0 | 0 | 0 | — |
+| `sibling_retryable` | B3 | a catch-all failure branch (`if (!x.ok)`, `is_err()`, bare `catch`/`except`) returns `retryable: false` (quoted, subscript, or inside a multi-line return value) while a sibling return says `true` | 0 | 0 | 0 | — |
+| `timeout_terminal` | C3 | cut: measured precision below 0.7 (n=2; small sample, informal single rater) | 2 | 2 | 0 | 0.0 |
 | `two_write_append` | C7 | cut: measured precision below 0.7 (n=2 / n=1; small samples, informal single rater) | 2 | 2 | 1 | 0.5 |
 | `failure_after_effect` | C3 | cut: measured precision below 0.7 (n=2 / n=1; small samples, informal single rater) | 1 | 1 | 0 | 0.0 |
 
-Measured 2026-11-01 by the same method (record: [failure-path-precision.json](failure-path-precision.json); labels: `evals/scanner/labels-2026-11-01.json`; check: `measure_precision.py --set failure --check`). The rules were written after reading hard-benchmark cases H01, H07 and H08, so firing on them is not evidence of recall: the two cut rules fired on H07 (`two_write_append`) and H08 (`failure_after_effect`), and `sibling_retryable` on H01 (`scan-lock.ts:458`), each inside the defect window; `timeout_terminal` misses H01 (`363-367`), which returns `ok: false` with no status field. Cut while building: a version of `sibling_retryable` without the catch-all guard (0/3 on NavGator after the fix) and `injected` as an effect flag (dependency injection). `scan.py --self-test` runs planted fixtures for these and several older rules.
+Measured 2026-11-01 by the same method (record: [failure-path-precision.json](failure-path-precision.json); labels: `evals/scanner/labels-2026-11-01.json`; check: `measure_precision.py --set failure --check`). The rules were written after reading hard-benchmark cases H01, H07 and H08, so firing on them is not evidence of recall: two of the cut rules fired on H07 (`two_write_append`) and H08 (`failure_after_effect`), and `sibling_retryable` on H01 (`scan-lock.ts:458`), each inside the defect window; `timeout_terminal` (since cut) missed H01 (`363-367`), which returns `ok: false` with no status field. Cut while building: a version of `sibling_retryable` without the catch-all guard (0/3 on NavGator after the fix) and `injected` as an effect flag (dependency injection). On 2026-11-01 the keys were widened to quoted and subscript forms (`"retryable": False`, `r['retryable'] =`) and `sibling_retryable` learned to walk out of a multi-line return value to its branch header; at the same commits `sibling_retryable` still fired 0 times and `timeout_terminal` fired twice, both false (a separate `OSError` branch beside a correct `timeout` state, and an `error` status the caller already treats as unobserved), so it was cut. `scan.py --self-test` runs planted fixtures for these and several older rules.
 
 ## 2. Shortest path and brittle structure
 
