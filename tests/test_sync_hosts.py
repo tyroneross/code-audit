@@ -125,7 +125,7 @@ class SyncHosts(unittest.TestCase):
             listing = 'Marketplace `code-audit-local`\n/old/checkout/.agents/plugins/marketplace.json\n'
             code, out = self.run_main('--apply', run=lambda *a, **k: done(listing))
             self.assertEqual(code, 1)
-            self.assertIn('points somewhere other than', out)
+            self.assertIn('not ' + str(ROOT), out)
             listing = f'Marketplace `code-audit-local-backup`\n/other\n'
             calls = []
             def fake(cmd, **k):
@@ -136,6 +136,75 @@ class SyncHosts(unittest.TestCase):
             self.assertEqual(code, 1)
             self.assertIn('failed', out)
 
+
+    def codex_fake(self, listing, installed, fail=()):
+        calls = []
+        def fake(cmd, **k):
+            sub = cmd[2:]
+            calls.append(sub)
+            if sub[:1] and sub[0] in fail or ' '.join(sub[:2]) in fail:
+                return done('', 1)
+            if sub[:2] == ['marketplace', 'list']:
+                return done(listing)
+            if sub[:1] == ['list']:
+                return done('code-audit@code-audit-local  installed, enabled  0.3.1\n' if installed else 'other@x  installed\n')
+            return done('ok')
+        return fake, calls
+
+    def test_codex_prefix_collision_and_missing_plugin(self):
+        (self.home / '.codex').mkdir()
+        good = f'Marketplace `code-audit-local`\n{ROOT}/.agents/plugins/marketplace.json\n'
+        with mock.patch.object(sync_hosts.shutil, 'which', return_value='/bin/codex'):
+            fake, _ = self.codex_fake(f'Marketplace `code-audit-local`\n{ROOT}-old/.agents/plugins/marketplace.json\n', True)
+            code, out = self.run_main('--apply', run=fake)
+            self.assertEqual(code, 1)
+            self.assertIn('BLOCKED  codex', out)
+            self.run_main('--apply')  # settle the other hosts
+            fake, _ = self.codex_fake(good, installed=False)
+            self.assertEqual(self.run_main(run=fake)[0], 1)  # missing plugin is drift
+            fake, _ = self.codex_fake(good, installed=True)
+            self.assertEqual(self.run_main(run=fake)[0], 0)  # refresh alone is not drift
+
+    def test_codex_stops_after_a_failed_step(self):
+        (self.home / '.codex').mkdir()
+        with mock.patch.object(sync_hosts.shutil, 'which', return_value='/bin/codex'):
+            fake, calls = self.codex_fake('', False, fail=('marketplace list',))
+            self.assertEqual(self.run_main('--apply', run=fake)[0], 1)
+            self.assertNotIn(['add', 'code-audit@code-audit-local'], calls)
+            fake, calls = self.codex_fake('', False, fail=('marketplace add',))
+            self.run_main('--apply', run=fake)
+            self.assertIn(['marketplace', 'add', str(ROOT)], calls)
+            self.assertNotIn(['add', 'code-audit@code-audit-local'], calls)
+
+    def test_link_to_removed_skill_is_repaired_not_deleted(self):
+        shared = self.home / '.agents' / 'skills'
+        shared.mkdir(parents=True)
+        (shared / 'plan').symlink_to(str(ROOT / 'skills' / 'removed'))
+        self.run_main('--apply')
+        self.assertEqual(sync_hosts.target_of(shared / 'plan'), ROOT / 'skills' / 'plan')
+
+    def test_link_changed_after_planning_is_not_deleted(self):
+        claude_skills = self.home / '.claude' / 'skills'
+        claude_skills.mkdir()
+        link = claude_skills / 'retired'
+        link.symlink_to(str(ROOT.parent / 'code-principles-audit' / 'skills' / 'x'))
+        original = sync_hosts.Sync.apply_all
+        def retarget_then_apply(sync, run):
+            link.unlink()
+            link.symlink_to('/somewhere/else')
+            return original(sync, run)
+        with mock.patch.object(sync_hosts.Sync, 'apply_all', retarget_then_apply):
+            code, out = self.run_main('--apply', '--retire')
+        self.assertEqual(code, 1)
+        self.assertEqual(os.readlink(link), '/somewhere/else')
+
+    def test_numbers_that_cannot_round_trip_block_the_write(self):
+        text = '{"precise": 1.234567890123456789, "tiny": 1e-400}'
+        (self.home / '.cursor' / 'mcp.json').write_text(text)
+        code, out = self.run_main('--apply')
+        self.assertEqual(code, 1)
+        self.assertIn('cannot be preserved', out)
+        self.assertEqual((self.home / '.cursor' / 'mcp.json').read_text(), text)
 
 if __name__ == '__main__':
     unittest.main()
