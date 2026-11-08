@@ -3,6 +3,8 @@ import contextlib
 import hashlib
 import io
 import json
+import shutil
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -130,6 +132,42 @@ class ComplexityTests(unittest.TestCase):
             self.assertEqual(report["status"], "incomplete")
             self.assertEqual(report["function_count"], 0)
             self.assertEqual(report["gaps"][0]["reason"], "outside source root")
+
+    def test_directory_selection_ignores_package_metadata_but_reports_other_languages(self):
+        package = self.root / "pkg"
+        package.mkdir()
+        (package / "a.py").write_text("def f(): return 1\n")
+        (package / "py.typed").write_text("")
+        (package / "README.md").write_text("Package documentation.\n")
+        report = self.report(["pkg"])
+        self.assertEqual(report["status"], "measured")
+        self.assertEqual(report["selected_files"], ["pkg/a.py"])
+        self.assertEqual(report["function_count"], 1)
+        (package / "b.ts").write_text("function f() {}\n")
+        report = self.report(["pkg"])
+        self.assertEqual(report["status"], "incomplete")
+        self.assertEqual(report["gaps"][0]["path"], "pkg/b.ts")
+        self.assertEqual(self.report(["pkg/README.md"])["status"], "incomplete")
+
+    @unittest.skipUnless(shutil.which("git"), "Git is required for fsmonitor regression")
+    def test_git_inventory_does_not_execute_configured_fsmonitor(self):
+        self.source("def f(): return 1\n")
+        def git(*args):
+            subprocess.run(["git", "-C", str(self.root), *args],
+                           check=True, capture_output=True)
+        git("init")
+        git("add", "module.py")
+        marker = self.root / "fsmonitor-executed"
+        hook = self.root / "fsmonitor-hook"
+        hook.write_text('#!/bin/sh\n: > "' + str(marker) + '"\nprintf "token\\0"\n')
+        hook.chmod(0o700)
+        git("config", "core.fsmonitor", str(hook))
+        git("config", "core.fsmonitorHookVersion", "2")
+        report = complexity.measure(self.root)
+        self.assertEqual(report["status"], "measured")
+        self.assertEqual(report["selection"], "tracked-source")
+        self.assertEqual(report["selected_files"], ["module.py"])
+        self.assertFalse(marker.exists(), "source inventory executed repository fsmonitor")
 
     def test_invalid_threshold_is_rejected(self):
         self.source("def f(): return 1\n")

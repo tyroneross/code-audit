@@ -13,8 +13,9 @@ Coverage percentages must be finite numbers in [0,100]. A matching source digest
 is required. Missing compatible function coverage means coverage and CRAP null.
 CRAP = CC**2 * (1 - coverage/100)**3 + CC. Scores are review leads, not defects.
 Only Python is supported; selected other source languages remain explicit gaps.
-Directory walks exclude generated/vendor directories (SKIP below) and do not
-follow symlinked subdirectories. Explicit file selections override SKIP.
+Directory walks select source suffixes, exclude generated/vendor directories
+(SKIP below), and do not follow symlinked subdirectories. Explicit files override
+these filters. Git inventory disables repository-configured fsmonitor hooks.
 """
 import argparse
 import ast
@@ -107,7 +108,7 @@ def coverage_document(path):
 
 def git(root, *args):
     try:
-        result = subprocess.run(["git", "-C", str(root), *args], capture_output=True, timeout=10)
+        result = subprocess.run(["git", "-c", "core.fsmonitor=false", "-C", str(root), *args], capture_output=True, timeout=10)
         return result.stdout if result.returncode == 0 else None
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -133,7 +134,8 @@ def select(root, paths):
             except (ValueError, OSError):
                 gaps.append({"path": str(path), "reason": "outside source root"})
                 continue
-            chosen.extend(walk(path, gaps) if path.is_dir() else [path])
+            chosen.extend((p for p in walk(path, gaps) if p.suffix in SOURCE_SUFFIXES)
+                          if path.is_dir() else [path])
         return chosen, "explicit", gaps
     tracked = git(root, "ls-files", "-z")
     if tracked is not None:
