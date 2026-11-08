@@ -11,22 +11,43 @@ Record revision, source digests, analyzer/version, exact command, selection, exc
 - **Duplication:** structural similarity >= 0.8 is a candidate. Confirm that the fragments implement one policy that should change together before sharing them. Similar syntax can encode independent decisions.
 - **Mutation:** report selected, executed, behaviorally killed, surviving, uncovered and inconclusive counts separately. Compilation/import failures, infrastructure errors and timeouts do not prove assertion sensitivity. Zero executed mutants is unavailable evidence, not a perfect score.
 
-## Bundled Python scorer
+## Bundled scorers
 
-Resolve `<cp>` to the installed `skills/code-principles` directory. The stdlib AST scorer reads Python without importing or executing the target. Consult `--help` for its counting rules and source-bound coverage schema:
+Resolve `<cp>` to the installed `skills/code-principles` directory. One entry point measures Python with the stdlib AST and Rust, TypeScript/TSX, Java, Go and Swift with the bundled tree-sitter analyzer in `runtime/complexity`. Neither imports, builds nor runs the target. Consult `--help` and `runtime/complexity/src/main.rs` for the per-language counting rules:
 
 ```sh
-python3 <cp>/scripts/complexity.py --help
-python3 <cp>/scripts/complexity.py /absolute/project --paths src/module.py > /scratch/complexity.json
+cargo build --release --offline --manifest-path <plugin>/runtime/complexity/Cargo.toml   # once; or cargo install --offline --path <plugin>/runtime/complexity
+python3 <cp>/scripts/complexity.py /absolute/project --paths src > /scratch/complexity.json
+python3 <cp>/scripts/complexity.py /absolute/project --paths crates/x/src --duplicates > /scratch/complexity.json
+python3 <cp>/scripts/companions.py doctor
 ```
 
-Output includes per-function CC, compatible coverage/CRAP or null, source digests and gaps. `--threshold 10` marks equality as a hotspot; `--fail-on-hotspots` explicitly enables the numerical gate. Unknown coverage does not become zero. Coverage percentages must come from actual compatible instrumentation, not an estimate; the supplied SHA256 binds each file to its measured source. Keep artifacts outside a reviewed repository. Directory walks exclude the generated/vendor directories listed in the report and do not follow symlinked subdirectories; select an intended source file explicitly when needed.
+Each function row records language, CC, coverage/CRAP or null, `kind` (`production` or `test`) and `test_reason`. Read production hotspots (`production_hotspot_count`) before test code. Test code is identified by path convention, by attributes (`#[test]`, `#[cfg(test)]` items and out-of-line `#[cfg(test)] mod x;` files, JUnit and Swift Testing `@Test`, XCTestCase `test*` methods), or Go `_test.go` files. Out-of-line Rust modules resolve only when the declaring file is selected; select the crate's `src`. `analyzers` names the parser and grammar versions that ran. An unbuilt analyzer, unsupported language, unreadable file or parse error is a reported gap with `status: incomplete`, never a clean result. `--threshold 10` marks equality as a hotspot; `--fail-on-hotspots` explicitly enables the numerical gate. Keep artifacts outside a reviewed repository. Directory walks exclude the generated/vendor directories listed in the report, do not follow symlinked subdirectories and count a file once even when a case-insensitive volume spells it two ways.
 
-The scorer measures Python only. TypeScript, Rust and Swift need an available compatible analyzer and the same evidence fields. Report unsupported scope explicitly. Do not relabel a text heuristic as compiler-backed analysis.
+Cyclomatic complexity undercounts branching hidden in combinators. Rust `Option`/`Result` chains (`and_then`, `unwrap_or`, `map_or`), Swift optional chaining and TypeScript `?.` carry decisions the count omits, so a low score is not evidence of simple logic. Read the code before calling a function simple.
 
-## Optional companion tools
+`--duplicates` adds structural candidates for the tree-sitter languages: Jaccard similarity of node-kind shingles, inclusive at 0.8 by default, reported with each side's `kind`. Identical boilerplate (`as_str` matches, test setup) scores 1.0 legitimately; confirm shared policy before merging anything.
 
-Crapper, Dryer and Mutator can supply additional measurements when available and applicable. Read the installed version's `--help`, language support and execution effects first. Coverage can install tooling or execute project commands; mutation executes tests against changed source. Use authorized scratch data and preserve an unchanged baseline. An overlay is not a security sandbox. No dependency is installed automatically by Code Audit.
+## Coverage and mutation companions
+
+`companions.py doctor` lists, per language, the coverage and mutation tools on PATH, their install line, the command to run and the converter. It never runs project code. Coverage and mutation runs execute the project's tests: run them only with authorization, from a passing baseline, writing to scratch outside the repository.
+
+| Language | Coverage, then `coverage_convert.py --format` | Mutation, then `mutation_report.py --format` |
+|---|---|---|
+| Rust | `cargo llvm-cov --lcov`, `lcov` | `cargo mutants --in-diff <diff>`, `cargo-mutants` |
+| TypeScript | c8, Jest or Vitest lcov, `lcov` | StrykerJS JSON, `stryker` |
+| Java | JaCoCo XML, `jacoco` | PIT with the mutation-testing-elements plugin, `stryker` |
+| Go | `go test -coverprofile`, `go` | no normalizer; raw counts stay unverified |
+| Swift | `swift test --enable-code-coverage` then `llvm-cov export -format=lcov`, `lcov` | no normalizer; raw counts stay unverified |
+| Python | `coverage lcov`, `lcov` | no normalizer; follow the Mutator notes below |
+
+`coverage_convert.py <root> <report> --format <f>` maps line hits to each measured function's span, removes nested named functions' lines and binds every file to its current source SHA256. A source file modified after the report is a gap. Coverage is line-based: branch-level partial coverage is not measured, so a one-line function reads 0% or 100%. Report files that match no measured source are listed, not dropped silently. Pass the output to `complexity.py --coverage`.
+
+`mutation_report.py <report> --format <f>` counts selected, executed (killed plus surviving), killed, surviving, uncovered, inconclusive (timeouts, unviable or compile failures, runtime errors) and not-run mutants separately. Only behavioral kills count. The score is null when nothing executed. cargo-mutants records its baseline and a failed or missing baseline makes the report untrusted (exit 1); Stryker-format reports record no baseline, so confirm one separately. For a change review, mutate only the diff (`cargo mutants --in-diff`, Stryker `--mutate <files>`) and list the surviving mutants by function.
+
+## Optional UB companion tools
+
+Crapper, Dryer and Mutator can supply additional measurements when available and applicable. Read the installed version's `--help`, language support and execution effects first. An overlay is not a security sandbox. No dependency is installed automatically by Code Audit.
 
 At the [pinned revisions](../../../research/ub-mode.md), Crapper tests `> threshold`, while this recipe uses `>=`; Dryer exit zero means a report was written, not that duplicates are absent. Mutator can count nonzero exits/timeouts as kills, and its cache may retain old kills after test-only changes. Validate reports, force fresh results after source/test changes, and confirm imports resolve to each mutated worker rather than the baseline. Run a passing baseline and a known behavioral mutant before trusting results. Do not derive a mutation score from unclassified execution failures.
 

@@ -105,10 +105,10 @@ class ComplexityTests(unittest.TestCase):
                 self.assertEqual(complexity.main([str(self.root), "--paths", "module.py", *flags]), expected)
 
     def test_unsupported_empty_missing_and_parse_errors_are_not_clean(self):
-        self.source("function f() {}", "module.ts")
+        self.source("fun f() {}", "module.kt")
         self.source("# no functions\n", "empty.py")
         self.source("def broken(\n", "broken.py")
-        for name in ["module.ts", "empty.py", "missing.py", "broken.py"]:
+        for name in ["module.kt", "empty.py", "missing.py", "broken.py"]:
             with self.subTest(name=name), contextlib.redirect_stdout(io.StringIO()):
                 report = self.report([name])
                 self.assertEqual(report["status"], "incomplete")
@@ -143,10 +143,10 @@ class ComplexityTests(unittest.TestCase):
         self.assertEqual(report["status"], "measured")
         self.assertEqual(report["selected_files"], ["pkg/a.py"])
         self.assertEqual(report["function_count"], 1)
-        (package / "b.ts").write_text("function f() {}\n")
+        (package / "b.kt").write_text("fun f() {}\n")
         report = self.report(["pkg"])
         self.assertEqual(report["status"], "incomplete")
-        self.assertEqual(report["gaps"][0]["path"], "pkg/b.ts")
+        self.assertEqual(report["gaps"][0]["path"], "pkg/b.kt")
         self.assertEqual(self.report(["pkg/README.md"])["status"], "incomplete")
 
     @unittest.skipUnless(shutil.which("git"), "Git is required for fsmonitor regression")

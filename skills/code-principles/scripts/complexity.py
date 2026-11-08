@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Measure named Python functions without executing project code.
+"""Measure named functions without executing project code.
+
+Python is parsed with the stdlib AST. Rust, TypeScript/TSX, Java, Go and Swift
+are parsed by the bundled tree-sitter analyzer in runtime/complexity (see its
+src/main.rs for per-language counting rules). Build it once, offline:
+  cargo build --release --offline --manifest-path <plugin>/runtime/complexity/Cargo.toml
+or point CODE_AUDIT_COMPLEXITY_BIN at a built binary. A missing analyzer is a
+reported gap for those files, never a clean result.
+
+Python counting:
 
 CC starts at 1 and adds 1 for if/conditional expressions, loops, except handlers,
 asserts, each comprehension generator/filter and each non-default match case;
@@ -12,7 +21,11 @@ Function keys are qualified names plus definition line (e.g. "Class.method:8").
 Coverage percentages must be finite numbers in [0,100]. A matching source digest
 is required. Missing compatible function coverage means coverage and CRAP null.
 CRAP = CC**2 * (1 - coverage/100)**3 + CC. Scores are review leads, not defects.
-Only Python is supported; selected other source languages remain explicit gaps.
+Each function row carries language, kind (production|test) and test_reason.
+Test code is identified by path convention (shared with scan.py) or by the
+analyzer (#[test], #[cfg(test)], @Test, XCTestCase). Other languages remain
+explicit gaps. --duplicates adds structural duplicate candidates for the
+tree-sitter languages (similarity >= 0.8 by default); they are leads only.
 Directory walks select source suffixes, exclude generated/vendor directories
 (SKIP below), and do not follow symlinked subdirectories. Explicit files override
 these filters. Git inventory disables repository-configured fsmonitor hooks.
@@ -24,12 +37,69 @@ import json
 import math
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from scan import TEST_PATH  # noqa: E402  shared test-path convention
+
 SKIP = {".git", "node_modules", "dist", "build", "vendor", "target", "__pycache__", ".venv"}
-SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".rs", ".go", ".swift", ".java", ".kt", ".rb", ".cs", ".c", ".cpp", ".h", ".hpp"}
+SOURCE_SUFFIXES = {".py", ".ts", ".mts", ".cts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".rs", ".go", ".swift", ".java", ".kt", ".rb", ".cs", ".c", ".cpp", ".h", ".hpp"}
 COVERAGE_SCHEMA = "code-audit.function-coverage.v1"
+NATIVE_SUFFIXES = {".rs", ".ts", ".mts", ".cts", ".tsx", ".java", ".go", ".swift"}
+NATIVE_MANIFEST = Path(__file__).resolve().parents[3] / "runtime" / "complexity" / "Cargo.toml"
+PYTHON_ANALYZER = {"name": "python-ast", "version": sys.version.split()[0], "method": "python-ast-decisions-v1", "languages": ["python"]}
+
+
+def native_binary():
+    """Return the built tree-sitter analyzer, or None when it is unavailable."""
+    override = os.environ.get("CODE_AUDIT_COMPLEXITY_BIN")
+    if override:
+        candidates = [Path(override)]
+    else:
+        installed = shutil.which("code-audit-complexity")
+        candidates = [NATIVE_MANIFEST.parent / "target" / "release" / "code-audit-complexity", *([Path(installed)] if installed else [])]
+    return next((c for c in candidates if c.is_file() and os.access(c, os.X_OK)), None)
+
+
+def native_build_hint():
+    return f"cargo build --release --offline --manifest-path {NATIVE_MANIFEST} (or cargo install --offline --path {NATIVE_MANIFEST.parent})"
+
+
+def classify(path, test_reason=None):
+    """Return (kind, reason): analyzer evidence first, then path convention."""
+    if test_reason:
+        return "test", test_reason
+    if TEST_PATH.search(path):
+        return "test", "test path convention"
+    return "production", None
+
+
+def run_native(root, names, duplicates, similarity, gaps):
+    """Run the analyzer on root-relative names; return its report or None."""
+    if not names:
+        return None
+    binary = native_binary()
+    if binary is None:
+        for name in names:
+            gaps.append({"path": name, "reason": f"tree-sitter analyzer not built; run: {native_build_hint()}"})
+        return None
+    command = [str(binary), "--root", str(root)]
+    if duplicates:
+        command += ["--duplicates", "--similarity", str(similarity)]
+    try:
+        result = subprocess.run([*command, "--", *names], capture_output=True, timeout=600)
+        report = json.loads(result.stdout)
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as error:
+        for name in names:
+            gaps.append({"path": name, "reason": f"tree-sitter analyzer failed: {error}"})
+        return None
+    if result.returncode != 0 or report.get("status") != "measured":
+        for name in names:
+            gaps.append({"path": name, "reason": f"tree-sitter analyzer failed: {report.get('error', result.returncode)}"})
+        return None
+    return report
 
 
 class Decisions(ast.NodeVisitor):
@@ -143,27 +213,40 @@ def select(root, paths):
     return [p for p in walk(root, gaps) if p.suffix in SOURCE_SUFFIXES], "walk-source", gaps
 
 
-def measure(root, paths=None, coverage=None, threshold=10):
+def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, similarity=0.8):
     root = Path(root).resolve()
     if not root.is_dir():
         raise ValueError(f"source root is not a directory: {root}")
     if not isinstance(threshold, int) or isinstance(threshold, bool) or threshold < 1:
         raise ValueError("threshold must be a positive integer")
+    if isinstance(similarity, bool) or not isinstance(similarity, (int, float)) or not 0 <= similarity <= 1:
+        raise ValueError("similarity must be a number in [0,1]")
     coverage = coverage_document(coverage)
     selected, selection, gaps = select(root, paths)
     rows, digests = [], {}
     selected_names = set()
+    seen_files = set()
+    native_names = []
     for path in selected:
         try:
             name = path.resolve().relative_to(root).as_posix()
         except (ValueError, OSError):
             gaps.append({"path": str(path), "reason": "outside source root"})
             continue
-        if name in selected_names:
+        try:
+            identity = (path.stat().st_dev, path.stat().st_ino)
+        except OSError:
+            identity = name
+        # Case-insensitive volumes can spell one file two ways; dedupe by file identity.
+        if name in selected_names or identity in seen_files:
             continue
+        seen_files.add(identity)
         selected_names.add(name)
+        if path.suffix in NATIVE_SUFFIXES:
+            native_names.append(name)
+            continue
         if path.suffix != ".py":
-            gaps.append({"path": name, "reason": "unsupported language; Python named functions only"})
+            gaps.append({"path": name, "reason": "unsupported language; analyzers cover Python, Rust, TypeScript, Java, Go and Swift"})
             continue
         try:
             raw = path.read_bytes()
@@ -180,24 +263,93 @@ def measure(root, paths=None, coverage=None, threshold=10):
         visitor = Functions()
         visitor.visit(tree)
         for row in visitor.rows:
-            percent = supplied["functions"].get(row["function_id"]) if compatible else None
-            row.update(path=name, coverage_percent=percent,
-                       crap=None if percent is None else round(row["cc"] ** 2 * (1 - percent / 100) ** 3 + row["cc"], 6),
-                       hotspot=row["cc"] >= threshold)
-            rows.append(row)
+            add_row(rows, row, name, "python", None, supplied if compatible else None, threshold)
+    native = run_native(root, native_names, duplicates, similarity, gaps)
+    test_modules = rust_test_module_files((native or {}).get("files", []))
+    for entry in (native or {}).get("files", []):
+        name = entry["path"]
+        if "error" in entry:
+            gaps.append({"path": name, "reason": entry["error"]})
+            continue
+        digests[name] = entry["sha256"]
+        if entry["parse_errors"]:
+            gaps.append({"path": name, "reason": "source has parse errors; affected functions may be missing or miscounted"})
+        supplied = coverage.get(name)
+        compatible = supplied is not None and supplied["sha256"] == entry["sha256"]
+        if supplied is not None and not compatible:
+            gaps.append({"path": name, "reason": "coverage source digest mismatch; CRAP unavailable"})
+        for function in entry["functions"]:
+            row = {key: function[key] for key in ("name", "line", "end_line", "function_id", "cc")}
+            reason = function["test_reason"] or test_modules.get(name)
+            add_row(rows, row, name, entry["language"], reason, supplied if compatible else None, threshold)
     if not rows:
-        gaps.append({"path": ".", "reason": "no named Python functions measured; no clean-review conclusion"})
+        gaps.append({"path": ".", "reason": "no named functions measured; no clean-review conclusion"})
+    analyzers = [PYTHON_ANALYZER] if any(r["language"] == "python" for r in rows) or not native else []
+    if native:
+        analyzers.append({**native["analyzer"], "languages": sorted({e["language"] for e in native["files"] if "language" in e})})
+    languages = {}
+    for row in rows:
+        languages[row["language"]] = languages.get(row["language"], 0) + 1
+    duplicate_report = label_duplicates(native.get("duplicates"), rows) if duplicates and native else None
     revision = git(root, "rev-parse", "HEAD")
     return {"schema": "code-audit.complexity.v1", "root": str(root),
             "revision": revision.decode().strip() if revision else None,
             "selection": selection, "selected_files": sorted(selected_names),
             "directory_walk_exclusions": sorted(SKIP), "follow_directory_symlinks": False,
             "source_sha256": digests, "threshold": threshold, "hotspot_rule": "cc >= threshold",
-            "method": "python-ast-decisions-v1; named functions; see --help for counted decisions",
+            "method": "named functions; python-ast-decisions-v1 and tree-sitter-decisions-v1; see --help for counted decisions",
+            "analyzers": analyzers, "languages": languages,
             "status": "incomplete" if gaps else "measured", "gaps": gaps,
             "function_count": len(rows), "hotspot_count": sum(r["hotspot"] for r in rows),
+            "production_function_count": sum(r["kind"] == "production" for r in rows),
+            "test_function_count": sum(r["kind"] == "test" for r in rows),
+            "production_hotspot_count": sum(r["hotspot"] and r["kind"] == "production" for r in rows),
             "coverage_unavailable_functions": sum(r["coverage_percent"] is None for r in rows),
+            **({"duplicates": duplicate_report} if duplicate_report else {}),
             "functions": sorted(rows, key=lambda r: (-r["cc"], r["path"], r["line"]))}
+
+
+def rust_test_module_files(entries):
+    """Map Rust files loaded only as test modules to the declaration that made them test code.
+
+    `#[cfg(test)] mod name;` loads name.rs or name/mod.rs, and every module declared
+    inside a test-only file is test-only too. Resolution covers selected files only.
+    """
+    declared = {e["path"]: e.get("modules", []) for e in entries if "error" not in e}
+    found, queue = {}, []
+    for path, modules in declared.items():
+        for module in modules:
+            if module["under_test"]:
+                queue.append((module["candidates"], f"module declared under #[cfg(test)] in {path}"))
+    while queue:
+        candidates, reason = queue.pop()
+        for candidate in candidates:
+            if candidate in declared and candidate not in found:
+                found[candidate] = reason
+                queue.extend((m["candidates"], f"module declared inside test-only {candidate}") for m in declared[candidate])
+    return found
+
+
+def label_duplicates(report, rows):
+    """Tag each duplicate side with production|test so test-only pairs can be read separately."""
+    if not report:
+        return report
+    kinds = {(r["path"], r["function_id"]): r["kind"] for r in rows}
+    for pair in report["pairs"]:
+        for side in ("a", "b"):
+            pair[side]["kind"] = kinds.get((pair[side]["path"], pair[side]["function_id"]))
+    report["production_pairs_reported"] = sum(p["a"]["kind"] == "production" and p["b"]["kind"] == "production" for p in report["pairs"])
+    return report
+
+
+def add_row(rows, row, path, language, test_reason, supplied, threshold):
+    """Attach path, language, test split, coverage and CRAP to one function row."""
+    percent = supplied["functions"].get(row["function_id"]) if supplied else None
+    kind, reason = classify(path, test_reason)
+    row.update(path=path, language=language, kind=kind, test_reason=reason, coverage_percent=percent,
+               crap=None if percent is None else round(row["cc"] ** 2 * (1 - percent / 100) ** 3 + row["cc"], 6),
+               hotspot=row["cc"] >= threshold)
+    rows.append(row)
 
 
 def main(argv=None):
@@ -208,9 +360,11 @@ def main(argv=None):
     parser.add_argument("--coverage", help="source-digest-bound function-coverage JSON; absent coverage remains unknown")
     parser.add_argument("--threshold", type=int, default=10, help="CC hotspot boundary, inclusive (default: 10)")
     parser.add_argument("--fail-on-hotspots", action="store_true", help="exit 1 for measured hotspots; never establishes a defect")
+    parser.add_argument("--duplicates", action="store_true", help="add structural duplicate candidates (tree-sitter languages only)")
+    parser.add_argument("--similarity", type=float, default=0.8, help="duplicate candidate similarity, inclusive (default: 0.8)")
     args = parser.parse_args(argv)
     try:
-        report = measure(args.root, args.paths, args.coverage, args.threshold)
+        report = measure(args.root, args.paths, args.coverage, args.threshold, args.duplicates, args.similarity)
     except (ValueError, OSError, json.JSONDecodeError) as error:
         print(json.dumps({"schema": "code-audit.complexity.v1", "status": "invalid", "error": str(error)}))
         return 2

@@ -1,0 +1,411 @@
+{
+ "total_mutants": 11,
+ "missed": 6,
+ "caught": 5,
+ "timeout": 0,
+ "unviable": 0,
+ "success": 0,
+ "cargo_mutants_version": "27.1.0",
+ "outcomes": [
+  {
+   "scenario": "Baseline",
+   "summary": "Success"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:1:31: replace clamp -> i32 with 0",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "clamp",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 1,
+        "column": 1
+       },
+       "end": {
+        "line": 1,
+        "column": 60
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 1,
+       "column": 31
+      },
+      "end": {
+       "line": 1,
+       "column": 58
+      }
+     },
+     "replacement": "0",
+     "genre": "FnValue"
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:1:31: replace clamp -> i32 with 1",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "clamp",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 1,
+        "column": 1
+       },
+       "end": {
+        "line": 1,
+        "column": 60
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 1,
+       "column": 31
+      },
+      "end": {
+       "line": 1,
+       "column": 58
+      }
+     },
+     "replacement": "1",
+     "genre": "FnValue"
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:1:31: replace clamp -> i32 with -1",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "clamp",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 1,
+        "column": 1
+       },
+       "end": {
+        "line": 1,
+        "column": 60
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 1,
+       "column": 31
+      },
+      "end": {
+       "line": 1,
+       "column": 58
+      }
+     },
+     "replacement": "-1",
+     "genre": "FnValue"
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:1:36: replace > with == in clamp",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "clamp",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 1,
+        "column": 1
+       },
+       "end": {
+        "line": 1,
+        "column": 60
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 1,
+       "column": 36
+      },
+      "end": {
+       "line": 1,
+       "column": 37
+      }
+     },
+     "replacement": "==",
+     "genre": "BinaryOperator"
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:1:36: replace > with < in clamp",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "clamp",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 1,
+        "column": 1
+       },
+       "end": {
+        "line": 1,
+        "column": 60
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 1,
+       "column": 36
+      },
+      "end": {
+       "line": 1,
+       "column": 37
+      }
+     },
+     "replacement": "<",
+     "genre": "BinaryOperator"
+    }
+   },
+   "summary": "CaughtMutant"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:1:36: replace > with >= in clamp",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "clamp",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 1,
+        "column": 1
+       },
+       "end": {
+        "line": 1,
+        "column": 60
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 1,
+       "column": 36
+      },
+      "end": {
+       "line": 1,
+       "column": 37
+      }
+     },
+     "replacement": ">=",
+     "genre": "BinaryOperator"
+    }
+   },
+   "summary": "MissedMutant"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:2:42: replace untested -> i32 with 0",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "untested",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 2,
+        "column": 1
+       },
+       "end": {
+        "line": 2,
+        "column": 49
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 2,
+       "column": 42
+      },
+      "end": {
+       "line": 2,
+       "column": 47
+      }
+     },
+     "replacement": "0",
+     "genre": "FnValue"
+    }
+   },
+   "summary": "MissedMutant"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:2:42: replace untested -> i32 with 1",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "untested",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 2,
+        "column": 1
+       },
+       "end": {
+        "line": 2,
+        "column": 49
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 2,
+       "column": 42
+      },
+      "end": {
+       "line": 2,
+       "column": 47
+      }
+     },
+     "replacement": "1",
+     "genre": "FnValue"
+    }
+   },
+   "summary": "MissedMutant"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:2:42: replace untested -> i32 with -1",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "untested",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 2,
+        "column": 1
+       },
+       "end": {
+        "line": 2,
+        "column": 49
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 2,
+       "column": 42
+      },
+      "end": {
+       "line": 2,
+       "column": 47
+      }
+     },
+     "replacement": "-1",
+     "genre": "FnValue"
+    }
+   },
+   "summary": "MissedMutant"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:2:44: replace * with + in untested",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "untested",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 2,
+        "column": 1
+       },
+       "end": {
+        "line": 2,
+        "column": 49
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 2,
+       "column": 44
+      },
+      "end": {
+       "line": 2,
+       "column": 45
+      }
+     },
+     "replacement": "+",
+     "genre": "BinaryOperator"
+    }
+   },
+   "summary": "MissedMutant"
+  },
+  {
+   "scenario": {
+    "Mutant": {
+     "name": "src/lib.rs:2:44: replace * with / in untested",
+     "package": "mutdemo",
+     "file": "src/lib.rs",
+     "function": {
+      "function_name": "untested",
+      "return_type": "-> i32",
+      "span": {
+       "start": {
+        "line": 2,
+        "column": 1
+       },
+       "end": {
+        "line": 2,
+        "column": 49
+       }
+      }
+     },
+     "span": {
+      "start": {
+       "line": 2,
+       "column": 44
+      },
+      "end": {
+       "line": 2,
+       "column": 45
+      }
+     },
+     "replacement": "/",
+     "genre": "BinaryOperator"
+    }
+   },
+   "summary": "MissedMutant"
+  }
+ ]
+}

@@ -1,0 +1,1 @@
+`cargo-mutants-27.1.0-outcomes.json` is real cargo-mutants 27.1.0 output from a two-function demo crate, trimmed to the `scenario` and `summary` fields the normalizer reads. Other report formats are built inside the tests.
