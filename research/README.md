@@ -14,6 +14,8 @@ Start with the challenge and load the smallest useful reference. These sources s
 | Data structures and performance | [Data structures](../skills/code-principles/references/data-structures.md), [research evidence](../skills/audit/references/research-evidence.md) | Growth/work-count evidence is distinct from measured production latency. |
 | Thirty contextual principles | [Rule index](../skills/audit/references/rule-index.md), [frozen sources](../skills/audit/references/rules.json) | Read the applicable card's premise, options, costs, sources and counterevidence; no universal compliance score. |
 
+[UB measurement and repair practices](ub-mode.md) records the pinned November 8, 2026 source review, selective adoption and companion-tool limitations. Numerical hotspots complement causal review.
+
 ## Add research
 
 Record the problem, source title/URL and retrieval date, supported claim, applicable environment/version, limits and counterevidence. Distinguish source fact, inference, hypothesis and observed outcome. Keep private code and incidents out of shared research. Add checks for consequential defects and meaningful inefficiencies rather than checklist growth.

@@ -32,7 +32,9 @@ async function recoverDeadWriter(lock: string): Promise<void> {
   try {
     const owner = await readOwner(lock);
     if (processAlive(owner.pid)) return;
-    const guard = path.join(lock, 'recovery');
+    const guard = path.join(lock, `recovery-${encodeURIComponent(owner.nonce)}`);
+    // A delayed recoverer may publish into a later lock directory. Its marker
+    // must be scoped to the generation it read so it cannot poison that owner.
     // Link data publishes the recovery PID and exact lock generation atomically.
     try { await fs.symlink(JSON.stringify({ pid: process.pid, host: localHost, owner: owner.nonce }), guard); }
     catch (error) {
@@ -61,6 +63,7 @@ async function acquire(root: string): Promise<() => Promise<void>> {
   const candidate = await fs.mkdtemp(path.join(root, '.corpus-writer-'));
   try {
     await fs.writeFile(path.join(candidate, 'owner.json'), JSON.stringify({ pid: process.pid, host: localHost, nonce: path.basename(candidate) }));
+    // Never evict a live PID: hung owners and PID reuse remain liveness limits.
     for (;;) {
       try { await fs.rename(candidate, lock); break; }
       catch (error) {
@@ -98,7 +101,13 @@ export async function withCorpusWrite<T>(config: MemoryConfig | undefined, actio
 export async function writeJsonAtomic(filename: string, value: unknown, pretty = false): Promise<void> {
   const temporary = `${filename}.${process.pid}.${randomBytes(8).toString('hex')}.tmp`;
   try {
-    await fs.writeFile(temporary, JSON.stringify(value, null, pretty ? 2 : undefined), { flag: 'wx', mode: 0o600 });
+    let existingMode: number | undefined;
+    try { existingMode = (await fs.stat(filename)).mode & 0o7777; }
+    catch (error) { if (codeOf(error) !== 'ENOENT') throw error; }
+    await fs.writeFile(temporary, JSON.stringify(value, null, pretty ? 2 : undefined), { flag: 'wx', mode: existingMode });
+    // Existing permissions survive replacement even when the writer's umask
+    // would otherwise remove shared-reader permissions from the temporary file.
+    if (existingMode !== undefined) await fs.chmod(temporary, existingMode);
     await fs.rename(temporary, filename);
   } finally {
     await fs.unlink(temporary).catch(error => { if (codeOf(error) !== 'ENOENT') throw error; });

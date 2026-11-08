@@ -96,7 +96,9 @@ const worker=`const l=require(${{JSON.stringify(modulePath)}});l.withCorpusWrite
 const dead=await execFile(process.execPath,['-e',worker]);
 await store('INC_RECOVERED');
 const deadAgain=await execFile(process.execPath,['-e',worker]);
-const recovery=path.join(memoryPath,'.corpus-write-lock','recovery');
+const lock=path.join(await fs.realpath(memoryPath),'.corpus-write-lock');
+const owner=JSON.parse(await fs.readFile(path.join(lock,'owner.json'),'utf8'));
+const recovery=path.join(lock,'recovery-'+encodeURIComponent(owner.nonce));
 await fs.symlink(JSON.stringify({{host:require('os').hostname(),pid:Number(deadAgain.stdout)}}),recovery);
 let message;try{{await store('INC_BLOCKED')}}catch(e){{message=e.message}}
 process.stdout.write(JSON.stringify({{total:(await s.loadIndex(config)).stats.total_incidents,message,retained:!!(await fs.lstat(recovery))}}));
@@ -104,6 +106,68 @@ process.stdout.write(JSON.stringify({{total:(await s.loadIndex(config)).stats.to
         self.assertEqual(result['total'],1)
         self.assertIn('Interrupted or unknown corpus writer recovery',result['message'])
         self.assertTrue(result['retained'])
+
+    def test_delayed_old_generation_recoverer_does_not_poison_next_owner(self):
+        result = self.probe(f"""
+const modulePath={json.dumps(str(DIST / 'corpus-write.js'))};
+const worker=`const l=require(${{JSON.stringify(modulePath)}});l.withCorpusWrite(${{JSON.stringify(config)}},async()=>{{process.stdout.write(String(process.pid));process.exit(0)}})`;
+const dead=await execFile(process.execPath,['-e',worker]);
+const lock=path.join(await fs.realpath(memoryPath),'.corpus-write-lock');
+const oldOwner=JSON.parse(await fs.readFile(path.join(lock,'owner.json'),'utf8'));
+const symlink=fs.symlink;let injected=false;
+fs.symlink=async function(target,destination,...args){{
+  if(!injected&&String(destination).startsWith(lock+path.sep+'recovery')){{
+    injected=true;
+    // Recoverer C has read G1 and is paused just before marker publication.
+    // Recoverer B removes G1; the next owner acquires G2 and then exits.
+    const oldLock=lock+'.previous';await fs.rename(lock,oldLock);await fs.rm(oldLock,{{recursive:true}});
+    await fs.mkdir(lock);await fs.writeFile(path.join(lock,'owner.json'),JSON.stringify({{...oldOwner,nonce:'next-generation'}}));
+  }}
+  return symlink.call(this,target,destination,...args);
+}};
+try{{await store('INC_AFTER_STALE_RECOVERY')}}finally{{fs.symlink=symlink}}
+const leftovers=(await fs.readdir(memoryPath)).filter(name=>name.startsWith('.corpus-'));
+process.stdout.write(JSON.stringify({{injected,total:(await s.loadIndex(config)).stats.total_incidents,leftovers}}));
+""")
+        self.assertTrue(result['injected'])
+        self.assertEqual(result['total'],1)
+        self.assertEqual(result['leftovers'],[])
+
+    def test_atomic_publication_preserves_existing_modes_and_new_file_umask(self):
+        result = self.probe("""
+const filename=path.join(memoryPath,'permissions.json');
+await fs.writeFile(filename,'{}');await fs.chmod(filename,0o640);
+const priorUmask=process.umask(0o077);
+let replacementMode,newMode;
+try{
+  await locks.writeJsonAtomic(filename,{updated:true});
+  replacementMode=(await fs.stat(filename)).mode&0o777;
+  const created=path.join(memoryPath,'new-permissions.json');
+  process.umask(0o027);await locks.writeJsonAtomic(created,{created:true});
+  newMode=(await fs.stat(created)).mode&0o777;
+}finally{process.umask(priorUmask)}
+process.stdout.write(JSON.stringify({replacementMode,newMode,body:JSON.parse(await fs.readFile(filename,'utf8'))}));
+""")
+        self.assertEqual(result['replacementMode'],0o640)
+        self.assertEqual(result['newMode'],0o640)
+        self.assertEqual(result['body'],{'updated':True})
+
+    def test_private_replacement_is_never_published_to_a_broader_temp_mode(self):
+        result = self.probe("""
+const filename=path.join(memoryPath,'private.json');
+await fs.writeFile(filename,'{}');await fs.chmod(filename,0o600);
+const priorUmask=process.umask(0o022), writeFile=fs.writeFile;
+let temporaryMode;
+fs.writeFile=async function(file,...args){
+  const value=await writeFile.call(this,file,...args);
+  if(String(file).startsWith(filename+'.')&&String(file).endsWith('.tmp'))temporaryMode=(await fs.stat(file)).mode&0o777;
+  return value;
+};
+try{await locks.writeJsonAtomic(filename,{private:true})}finally{fs.writeFile=writeFile;process.umask(priorUmask)}
+process.stdout.write(JSON.stringify({temporaryMode,finalMode:(await fs.stat(filename)).mode&0o777}));
+""")
+        self.assertEqual(result['temporaryMode'],0o600)
+        self.assertEqual(result['finalMode'],0o600)
 
     def test_concurrent_mcp_store_acknowledgements_match_persisted_indexes(self):
         with tempfile.TemporaryDirectory() as folder:

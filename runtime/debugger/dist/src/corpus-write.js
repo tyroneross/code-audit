@@ -39,7 +39,9 @@ async function recoverDeadWriter(lock) {
         const owner = await readOwner(lock);
         if (processAlive(owner.pid))
             return;
-        const guard = path_1.default.join(lock, 'recovery');
+        const guard = path_1.default.join(lock, `recovery-${encodeURIComponent(owner.nonce)}`);
+        // A delayed recoverer may publish into a later lock directory. Its marker
+        // must be scoped to the generation it read so it cannot poison that owner.
         // Link data publishes the recovery PID and exact lock generation atomically.
         try {
             await promises_1.default.symlink(JSON.stringify({ pid: process.pid, host: localHost, owner: owner.nonce }), guard);
@@ -79,6 +81,7 @@ async function acquire(root) {
     const candidate = await promises_1.default.mkdtemp(path_1.default.join(root, '.corpus-writer-'));
     try {
         await promises_1.default.writeFile(path_1.default.join(candidate, 'owner.json'), JSON.stringify({ pid: process.pid, host: localHost, nonce: path_1.default.basename(candidate) }));
+        // Never evict a live PID: hung owners and PID reuse remain liveness limits.
         for (;;) {
             try {
                 await promises_1.default.rename(candidate, lock);
@@ -125,7 +128,19 @@ async function withCorpusWrite(config, action) {
 async function writeJsonAtomic(filename, value, pretty = false) {
     const temporary = `${filename}.${process.pid}.${(0, crypto_1.randomBytes)(8).toString('hex')}.tmp`;
     try {
-        await promises_1.default.writeFile(temporary, JSON.stringify(value, null, pretty ? 2 : undefined), { flag: 'wx', mode: 0o600 });
+        let existingMode;
+        try {
+            existingMode = (await promises_1.default.stat(filename)).mode & 0o7777;
+        }
+        catch (error) {
+            if (codeOf(error) !== 'ENOENT')
+                throw error;
+        }
+        await promises_1.default.writeFile(temporary, JSON.stringify(value, null, pretty ? 2 : undefined), { flag: 'wx', mode: existingMode });
+        // Existing permissions survive replacement even when the writer's umask
+        // would otherwise remove shared-reader permissions from the temporary file.
+        if (existingMode !== undefined)
+            await promises_1.default.chmod(temporary, existingMode);
         await promises_1.default.rename(temporary, filename);
     }
     finally {

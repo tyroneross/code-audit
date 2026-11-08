@@ -29,6 +29,8 @@ Shared guidance covers simplicity, systems engineering, usability, human factors
 
 Reviews track finding identity and disposition, inspect changed code and affected contracts, and separate severity from introduced/pre-existing origin. Incident lessons retain applicability, failed approaches and evidence limits. Start with the [review workflow](skills/code-principles/references/review-feedback.md), [incident learning](skills/code-principles/references/incident-learning.md) and [evaluation evidence](evals/review/README.md) when those challenges apply.
 
+Requested scoring uses [complexity and test-strength measurements](skills/code-principles/references/measurement.md): per-function CC, CRAP when compatible coverage exists, duplication candidates and bounded mutation evidence. The bundled Python AST scorer requires no dependencies and does not execute the target; other languages need a compatible analyzer. Missing coverage remains unknown. [UB source notes](research/ub-mode.md) explain the adopted practices and limits.
+
 ## Load locally
 
 Python 3.10+ runs audit tools; Node.js 18+ runs memory. Compiled debugger code is included, so ordinary MCP use needs no dependency installation. No automatic mining hook is enabled.

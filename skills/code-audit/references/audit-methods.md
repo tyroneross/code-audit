@@ -47,6 +47,8 @@ Each recipe prints `file:line` plus the question the reviewer must answer at tha
 
 **R6:<slug> — class sweep.** Written mid-audit from a confirmed finding (section 4): the smallest regex or AST query matching the finding's site shape, run repo-wide. Name it `R6:<slug>`, e.g. `R6:two-write-append`, and keep the script beside the audit output.
 
+**R7 — numerical measurements.** When scoring is requested or complexity is material, follow [measurement guidance](../../code-principles/references/measurement.md). Use the bundled Python AST scorer or an applicable existing analyzer. Report CC, compatible coverage/CRAP, unsupported scope and missing coverage. Add duplication/mutation evidence when applicable and authorized. Rank hotspots for causal inspection; no score alone confirms a defect. Compare entry points and extracted helpers after repairs.
+
 ## 4. Adapt during the audit
 
 The starting route is a plan. After each recipe or lane returns, apply the first matching row and record what you did.
