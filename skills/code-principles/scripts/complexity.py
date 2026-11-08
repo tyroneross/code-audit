@@ -25,7 +25,11 @@ Each function row carries language, kind (production|test) and test_reason.
 Test code is identified by path convention (shared with scan.py) or by the
 analyzer (#[test], #[cfg(test)], @Test, XCTestCase). Other languages remain
 explicit gaps. --duplicates adds structural duplicate candidates for the
-tree-sitter languages (similarity >= 0.8 by default); they are leads only.
+tree-sitter languages (similarity >= 0.8 by default); they are leads only, and
+Python functions are not compared (stated as a gap in the duplicates section).
+In the tree-sitter languages, decision points outside every function (top-level
+statements, initializers) are a reported gap, never silently dropped; Python
+module-level code is not measured.
 Directory walks select source suffixes, exclude generated/vendor directories
 (SKIP below), and do not follow symlinked subdirectories. Explicit files override
 these filters. Git inventory disables repository-configured fsmonitor hooks.
@@ -274,6 +278,9 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
         digests[name] = entry["sha256"]
         if entry["parse_errors"]:
             gaps.append({"path": name, "reason": "source has parse errors; affected functions may be missing or miscounted"})
+        if entry.get("unowned_decisions", 0) > 0:
+            gaps.append({"path": name, "reason": f"{entry['unowned_decisions']} decision points outside any measured function "
+                                                 "(top-level statements or initializers) are not attributed to a row"})
         supplied = coverage.get(name)
         compatible = supplied is not None and supplied["sha256"] == entry["sha256"]
         if supplied is not None and not compatible:
@@ -339,6 +346,9 @@ def label_duplicates(report, rows):
         for side in ("a", "b"):
             pair[side]["kind"] = kinds.get((pair[side]["path"], pair[side]["function_id"]))
     report["production_pairs_reported"] = sum(p["a"]["kind"] == "production" and p["b"]["kind"] == "production" for p in report["pairs"])
+    python_rows = sum(r["language"] == "python" for r in rows)
+    report["gaps"] = [{"language": "python", "functions_not_compared": python_rows,
+                       "reason": "duplicate detection covers the tree-sitter languages only; Python functions are not compared"}]
     return report
 
 

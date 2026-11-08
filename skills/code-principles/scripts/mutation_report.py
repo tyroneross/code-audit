@@ -10,9 +10,13 @@ Inputs (produced by the project's own tooling; this script runs none of it):
 Counts follow measurement.md: selected, executed, behaviorally killed,
 surviving, uncovered and inconclusive stay separate. Timeouts, build or compile
 failures and runtime errors are inconclusive, never kills. The score
-killed / (killed + surviving) is null when nothing was executed. cargo-mutants
-records its baseline; a failed or missing baseline makes the whole report
-untrustworthy. Stryker reports carry no baseline, which is recorded as unknown.
+killed / (killed + surviving) is null when nothing was executed; it leaves out
+mutants no test reached, so score_including_uncovered
+killed / (killed + surviving + uncovered) is reported beside it with a warning
+whenever any mutant was uncovered. cargo-mutants records its baseline; a failed
+or missing baseline makes the whole report untrustworthy (trusted false).
+Stryker reports carry no baseline: an otherwise valid one has trusted null and
+baseline unknown, which is a warning, not a failure.
 """
 import argparse
 import json
@@ -24,6 +28,7 @@ CARGO = {"CaughtMutant": "killed", "MissedMutant": "surviving", "Unviable": "inc
 STRYKER = {"Killed": "killed", "Survived": "surviving", "NoCoverage": "uncovered", "Timeout": "inconclusive",
            "CompileError": "inconclusive", "RuntimeError": "inconclusive", "Ignored": "not_run", "Pending": "not_run"}
 FORMATS = ("cargo-mutants", "stryker")
+BASELINE_UNKNOWN = "unknown (not recorded in this report format)"
 
 
 def empty():
@@ -43,6 +48,8 @@ def tally(rows):
     executed = counts["killed"] + counts["surviving"]
     counts["executed"] = executed
     counts["score"] = round(counts["killed"] / executed, 4) if executed else None
+    reached = executed + counts["uncovered"]
+    counts["score_including_uncovered"] = round(counts["killed"] / reached, 4) if reached else None
     return counts, by_file, surviving
 
 
@@ -80,7 +87,7 @@ def stryker(document):
             line = (mutant.get("location") or {}).get("start", {}).get("line")
             rows.append((path, STRYKER[status], {"line": line, "description": mutant.get("description") or mutant.get("mutatorName")}))
     framework = document.get("framework") or {}
-    return rows, "unknown (not recorded in this report format)", unknown, {"tool": framework.get("name", "mutation-testing-elements"), "version": framework.get("version"), "schemaVersion": document.get("schemaVersion")}
+    return rows, BASELINE_UNKNOWN, unknown, {"tool": framework.get("name", "mutation-testing-elements"), "version": framework.get("version"), "schemaVersion": document.get("schemaVersion")}
 
 
 def normalize(path, fmt):
@@ -90,11 +97,16 @@ def normalize(path, fmt):
     warnings = []
     if baseline != "passed":
         warnings.append(f"baseline {baseline}; kills are not evidence of assertion strength until a passing baseline is confirmed")
+    if counts["uncovered"]:
+        warnings.append(f"{counts['uncovered']} mutants were not reached by any test; score leaves them out, "
+                        f"score_including_uncovered is {counts['score_including_uncovered']}")
     if unknown:
         warnings.append(f"{len(unknown)} outcomes had unrecognized statuses and were left out: {sorted(set(map(str, unknown)))}")
     if not counts["executed"]:
         warnings.append("no mutant executed to a behavioral result; mutation evidence is unavailable, not perfect")
-    trusted = baseline == "passed" and bool(counts["executed"]) and not unknown
+    valid = bool(counts["executed"]) and not unknown
+    # True: passing baseline. None: valid report whose format records no baseline. False: failed or missing baseline, or no evidence.
+    trusted = (baseline == "passed" and valid) or (None if baseline == BASELINE_UNKNOWN and valid else False)
     return {"schema": "code-audit.mutation.v1", "input": str(Path(path).resolve()), "source": source,
             "baseline": baseline, "trusted": trusted, "counts": counts, "by_file": by_file,
             "surviving_or_uncovered": surviving[:500], "warnings": warnings}
@@ -102,7 +114,7 @@ def normalize(path, fmt):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     epilog="Exit: 0 normalized and trusted; 1 normalized but untrusted (baseline/execution); 2 invalid input.")
+                                     epilog="Exit: 0 normalized and trusted, or trusted null (no baseline recorded; confirm one separately); 1 normalized but untrusted (failed or missing baseline, nothing executed, unknown statuses); 2 invalid input.")
     parser.add_argument("report", help="mutation report JSON")
     parser.add_argument("--format", required=True, choices=FORMATS)
     args = parser.parse_args(argv)
@@ -112,7 +124,7 @@ def main(argv=None):
         print(json.dumps({"schema": "code-audit.mutation.v1", "status": "invalid", "error": str(error)}))
         return 2
     print(json.dumps(result, indent=2))
-    return 0 if result["trusted"] else 1
+    return 1 if result["trusted"] is False else 0
 
 
 if __name__ == "__main__":

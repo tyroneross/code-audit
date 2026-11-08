@@ -2,8 +2,10 @@
 """Show which measurement companions are available, per language, and how to use them.
 
 `doctor` checks only whether each tool is on PATH (or, for cargo subcommands,
-whether the cargo-<name> binary exists). It never runs project code, tests or
-installers. Coverage and mutation runs execute the project's tests; run them
+whether the cargo-<name> binary exists). A tool that must be a project
+dependency (StrykerJS) is available only when its package resolves from
+node_modules at or above --project; npx alone would download it, so it does not
+count. It never runs project code, tests, installers or network fetches. Coverage and mutation runs execute the project's tests; run them
 only with authorization, on a passing baseline, and keep outputs outside the
 reviewed repository. Converters: coverage_convert.py and mutation_report.py.
 """
@@ -31,7 +33,8 @@ COMPANIONS = {
         "coverage": {"tool": "c8 or the project's Jest/Vitest coverage", "check": ["npx"],
                      "install": "project devDependency (npm i -D c8); npx runs it without a global install",
                      "run": "npx c8 --reporter=lcov --report-dir <scratch> <test command>", "convert": "coverage_convert.py <root> <scratch>/lcov.info --format lcov"},
-        "mutation": {"tool": "StrykerJS", "check": ["npx"], "install": "npm i -D @stryker-mutator/core plus the project's test-runner plugin",
+        "mutation": {"tool": "StrykerJS", "check": ["npx"], "package": "@stryker-mutator/core",
+                     "install": "npm i -D @stryker-mutator/core plus the project's test-runner plugin",
                      "run": "npx stryker run --reporters json --mutate <changed files>",
                      "convert": "mutation_report.py reports/mutation/mutation.json --format stryker"},
     },
@@ -86,7 +89,27 @@ def available(names):
     return all(java_runtime() if n == "java" else shutil.which(n) for n in names)
 
 
-def doctor():
+def package_resolves(project, package):
+    """Node-style lookup of node_modules/<package>/package.json from project upwards; no network."""
+    if project is None:
+        return False
+    start = Path(project).resolve()
+    return any((folder / "node_modules" / package / "package.json").is_file() for folder in [start, *start.parents])
+
+
+def availability(spec, project):
+    """True/False for PATH tools; a project-dependency tool also needs its package to resolve from project."""
+    if not available(spec["check"]):
+        return {"available": False}
+    if "package" not in spec:
+        return {"available": True}
+    if package_resolves(project, spec["package"]):
+        return {"available": True, "resolved_from": str(Path(project).resolve())}
+    return {"available": False, "requires_project_dependency": spec["package"],
+            "note": "pass --project <dir> where the package is installed; npx would otherwise fetch it from the network"}
+
+
+def doctor(project=None):
     binary = complexity.native_binary()
     report = {"schema": "code-audit.companions.v1",
               "complexity_analyzer": {"available": binary is not None, "path": str(binary) if binary else None,
@@ -94,7 +117,7 @@ def doctor():
                                       "languages": ["python", "rust", "typescript", "java", "go", "swift"]},
               "languages": {}}
     for language, kinds in COMPANIONS.items():
-        report["languages"][language] = {kind: {**spec, "available": available(spec["check"])} for kind, spec in kinds.items()}
+        report["languages"][language] = {kind: {**spec, **availability(spec, project)} for kind, spec in kinds.items()}
     return report
 
 
@@ -102,8 +125,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("command", choices=["doctor"], help="report companion availability")
     parser.add_argument("--language", choices=sorted(COMPANIONS), help="limit to one language")
+    parser.add_argument("--project", help="project directory used to resolve project-dependency tools such as StrykerJS")
     args = parser.parse_args(argv)
-    report = doctor()
+    report = doctor(args.project)
     if args.language:
         report["languages"] = {args.language: report["languages"][args.language]}
     print(json.dumps(report, indent=2))

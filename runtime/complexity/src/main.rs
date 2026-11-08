@@ -8,24 +8,38 @@
 //!
 //! Counting rules (each adds 1 to a function that starts at 1):
 //! - Rust: `if`/`if let`, `while`/`while let`, `for`, `let ... else`, every
-//!   match arm except a bare `_` arm without a guard, each `&&`/`||`.
+//!   match arm except the default arm (a bare `_` or a single lowercase
+//!   binding such as `other =>`, without a guard), each `&&`/`||`, including
+//!   the `&&` joining a let chain (`if let Some(v) = o && v > 3`).
 //!   `loop` (no condition) and `?` are not counted.
 //! - TypeScript: `if`, `for`, `for in/of`, `while`, `do`, `?:`, `catch`, each
 //!   non-default `case`, each `&&`/`||`/`??`. Optional chaining is not counted.
 //! - Java: `if`, `for`, enhanced `for`, `while`, `do`, `?:`, `catch`, each
-//!   non-default switch label, pattern guards, each `&&`/`||`.
+//!   switch label except `default` and `case null, default`, pattern guards,
+//!   each `&&`/`||`. A multi-value label (`case 1, 2 ->`) counts once.
 //! - Go: `if`, `for`, each non-default `case` in expression, type and select
 //!   switches, each `&&`/`||`.
 //! - Swift: `if`, `guard`, `for`, `while`, `repeat`, `?:`, `catch`, each
-//!   non-default `case`, each `&&`/`||`/`??`, and each extra comma-separated
-//!   condition in `if`/`guard`/`while`.
+//!   non-default `case` plus 1 for its `where` guard, each `&&`/`||`/`??`. An
+//!   `if`/`guard`/`while` counts once per comma-separated clause, so
+//!   `if let x, let y, x > y` adds 3 and `if case .some(let v) = x` adds 1.
 //!
 //! Named functions are measured separately and do not add to an enclosing
-//! function. Anonymous closures, lambdas, arrow functions and function
-//! literals add their decisions to the enclosing named function, because in
+//! function. Swift computed properties are rows named after the property
+//! (`V.body`), or one row per accessor (`V.label.get`, `.set`, `.modify`,
+//! `.willSet`, `.didSet`). Anonymous closures, lambdas, arrow functions and
+//! function literals add their decisions to the enclosing function, because in
 //! these languages they routinely carry control flow inline. An arrow
 //! function or function expression bound to a variable or class field is
-//! treated as a named function.
+//! treated as a named function. An anonymous function with no enclosing
+//! function (a top-level callback, `export default () => {}`, a Go
+//! package-level `func` literal, a Java field lambda, `static {}` or instance
+//! initializer, a Rust closure in a `static`) gets its own row named
+//! `<anonymous@LINE>`, qualified by scope. TypeScript callbacks passed to
+//! `describe`/`it`/`test` and their hooks always get their own row and are
+//! test code. Decisions that still have no function (top-level statements,
+//! field or constant initializers) are counted per file as
+//! `unowned_decisions`; `complexity.py` reports them as a gap.
 
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
@@ -34,8 +48,12 @@ use tree_sitter::{Node, Parser};
 
 const LOCKFILE: &str = include_str!("../Cargo.lock");
 const SHINGLE: usize = 5;
-const MINHASHES: usize = 32;
-const BANDS: usize = 8;
+/// Upper bound on MinHash functions; banding is derived from the threshold.
+const MAX_MINHASHES: usize = 128;
+/// Target probability that a pair exactly at the threshold becomes a candidate.
+const TARGET_RECALL: f64 = 0.98;
+/// TypeScript test-framework calls whose callbacks are test code (Jest, Vitest, Mocha).
+const TEST_CALLEES: [&str; 7] = ["describe", "it", "test", "beforeEach", "afterEach", "beforeAll", "afterAll"];
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Lang {
@@ -138,6 +156,11 @@ struct Walker<'a> {
     mod_path: Vec<String>,
     /// Out-of-line `mod name;` declarations: (candidate files, declared under test).
     modules: Vec<(Vec<String>, bool)>,
+    /// Rust: the file is a crate root (`lib.rs`, `main.rs`, `src/bin/*.rs`, ...),
+    /// so its out-of-line modules live beside it.
+    crate_root: bool,
+    /// Decision points outside every measured function.
+    unowned: u32,
 }
 
 fn text<'a>(node: Node, src: &'a [u8]) -> &'a str {
@@ -181,8 +204,108 @@ fn rust_attr_marks_test(path: &str) -> bool {
         || path.ends_with("::test_case")
 }
 
+/// A `cfg` predicate: `test`, `unix`, `feature = "x"`, `all(..)`, `any(..)`, `not(..)`.
+enum Cfg {
+    Atom(bool),
+    All(Vec<Cfg>),
+    Any(Vec<Cfg>),
+    Not(Box<Cfg>),
+}
+
+/// Split cfg arguments into identifiers, string literals and punctuation.
+fn cfg_tokens(src: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut chars = src.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c.is_whitespace() {
+            continue;
+        }
+        if c == '"' {
+            // String literals are opaque values; their contents never name `test`.
+            let mut escaped = false;
+            for d in chars.by_ref() {
+                if !escaped && d == '"' {
+                    break;
+                }
+                escaped = !escaped && d == '\\';
+            }
+            out.push("\"\"".into());
+        } else if c.is_alphanumeric() || c == '_' || c == ':' {
+            let mut word = c.to_string();
+            while let Some(&d) = chars.peek() {
+                if !(d.is_alphanumeric() || d == '_' || d == ':') {
+                    break;
+                }
+                word.push(d);
+                chars.next();
+            }
+            out.push(word);
+        } else {
+            out.push(c.to_string());
+        }
+    }
+    out
+}
+
+fn cfg_parse(tokens: &[String], pos: &mut usize) -> Option<Cfg> {
+    let head = tokens.get(*pos)?.clone();
+    *pos += 1;
+    match tokens.get(*pos).map(String::as_str) {
+        Some("=") => {
+            *pos += 2;
+            Some(Cfg::Atom(false))
+        }
+        Some("(") => {
+            *pos += 1;
+            let mut items = Vec::new();
+            while tokens.get(*pos).map(String::as_str) != Some(")") {
+                items.push(cfg_parse(tokens, pos)?);
+                if tokens.get(*pos).map(String::as_str) == Some(",") {
+                    *pos += 1;
+                }
+            }
+            *pos += 1;
+            match head.as_str() {
+                "all" => Some(Cfg::All(items)),
+                "any" => Some(Cfg::Any(items)),
+                "not" if items.len() == 1 => Some(Cfg::Not(Box::new(items.pop()?))),
+                _ => None,
+            }
+        }
+        _ => Some(Cfg::Atom(head == "test")),
+    }
+}
+
+/// (can be true, can be false) when `test` is false and every other atom is free.
+fn cfg_outcomes(cfg: &Cfg) -> (bool, bool) {
+    match cfg {
+        Cfg::Atom(true) => (false, true),
+        Cfg::Atom(false) => (true, true),
+        Cfg::All(xs) => (xs.iter().all(|x| cfg_outcomes(x).0), xs.iter().any(|x| cfg_outcomes(x).1)),
+        Cfg::Any(xs) => (xs.iter().any(|x| cfg_outcomes(x).0), xs.iter().all(|x| cfg_outcomes(x).1)),
+        Cfg::Not(x) => {
+            let (t, f) = cfg_outcomes(x);
+            (f, t)
+        }
+    }
+}
+
+/// True only when the `cfg(..)` predicate cannot hold without `test`, so the item
+/// is compiled for tests alone: `test`, `all(test, unix)`, but not `any(test, x)`,
+/// `not(any(test, miri))` or `feature = "test-util"`.
 fn rust_attr_is_cfg_test(path: &str, args: &str) -> bool {
-    path == "cfg" && word_present(args, "test") && !args.replace(' ', "").contains("not(test")
+    if path != "cfg" {
+        return false;
+    }
+    let tokens = cfg_tokens(args);
+    if tokens.first().map(String::as_str) != Some("(") {
+        return false;
+    }
+    let mut pos = 1;
+    match cfg_parse(&tokens, &mut pos) {
+        Some(cfg) if tokens.get(pos).map(String::as_str) == Some(")") => !cfg_outcomes(&cfg).0,
+        _ => false,
+    }
 }
 
 /// Attributes in tree-sitter-rust are preceding siblings of the item.
@@ -201,8 +324,8 @@ fn rust_preceding_attrs<'t>(node: Node<'t>, src: &[u8]) -> Vec<(String, String)>
 }
 
 impl<'a> Walker<'a> {
-    fn new(lang: Lang, src: &'a [u8]) -> Self {
-        Walker { lang, src, rows: Vec::new(), scope: Vec::new(), mod_path: Vec::new(), modules: Vec::new() }
+    fn new(lang: Lang, src: &'a [u8], crate_root: bool) -> Self {
+        Walker { lang, src, rows: Vec::new(), scope: Vec::new(), mod_path: Vec::new(), modules: Vec::new(), crate_root, unowned: 0 }
     }
 
     /// Returns (display name, name node) when `node` starts a named function.
@@ -237,8 +360,70 @@ impl<'a> Walker<'a> {
             (Lang::Swift, "init_declaration") => Some(("init".into(), node)),
             (Lang::Swift, "deinit_declaration") => Some(("deinit".into(), node)),
             (Lang::Swift, "subscript_declaration") => Some(("subscript".into(), node)),
+            (Lang::Swift, "computed_property") => {
+                let mut cursor = node.walk();
+                let has_accessors = node
+                    .children(&mut cursor)
+                    .any(|c| matches!(c.kind(), "computed_getter" | "computed_setter" | "computed_modify"));
+                let n = swift_property_name(node.parent()?)?;
+                (!has_accessors).then(|| (text(n, src).to_string(), n))
+            }
+            (Lang::Swift, "computed_getter" | "computed_setter" | "computed_modify" | "willset_clause" | "didset_clause") => {
+                let n = swift_property_name(node.parent()?.parent()?)?;
+                let accessor = match node.kind() {
+                    "computed_getter" => "get",
+                    "computed_setter" => "set",
+                    "computed_modify" => "modify",
+                    "willset_clause" => "willSet",
+                    _ => "didSet",
+                };
+                Some((format!("{}.{accessor}", text(n, src)), node))
+            }
             _ => None,
         }
+    }
+
+    /// Anonymous function-like nodes that become their own row when no function encloses them.
+    fn anonymous_function(&self, node: Node) -> bool {
+        matches!(
+            (self.lang, node.kind()),
+            (Lang::TypeScript | Lang::Tsx, "arrow_function" | "function_expression" | "generator_function")
+                | (Lang::Go, "func_literal")
+                | (Lang::Java, "lambda_expression" | "static_initializer")
+                | (Lang::Rust, "closure_expression")
+                | (Lang::Swift, "lambda_literal")
+        ) || (self.lang == Lang::Java && node.kind() == "block" && node.parent().is_some_and(|p| p.kind() == "class_body"))
+    }
+
+    /// TypeScript callback passed directly to `describe`/`it`/`test` or a hook,
+    /// including `.only`, `.skip` and `.each(...)` forms.
+    fn ts_test_callback(&self, node: Node) -> bool {
+        if !matches!(self.lang, Lang::TypeScript | Lang::Tsx) || !self.anonymous_function(node) {
+            return false;
+        }
+        let Some(call) = node.parent().filter(|p| p.kind() == "arguments").and_then(|a| a.parent()) else { return false };
+        let callee = field_text(call, "function", self.src).unwrap_or("");
+        let head = callee.split(['.', '(', '`']).next().unwrap_or("").trim();
+        TEST_CALLEES.contains(&head)
+    }
+
+    /// Row for a function-like node: named functions always, anonymous ones only
+    /// when nothing encloses them or when they are test-framework callbacks.
+    fn function_row(&self, node: Node<'a>, current: Option<usize>) -> Option<(String, Node<'a>)> {
+        if let Some(named) = self.named_function(node) {
+            return Some(named);
+        }
+        if !self.anonymous_function(node) || (current.is_some() && !self.ts_test_callback(node)) {
+            return None;
+        }
+        let pos = node.start_position();
+        let mut name = format!("<anonymous@{}>", pos.row + 1);
+        let qualified = |n: &str| self.scope.iter().map(String::as_str).chain(std::iter::once(n)).collect::<Vec<_>>().join(".");
+        let taken = qualified(&name);
+        if self.rows.iter().any(|r| r.name == taken) {
+            name = format!("<anonymous@{}:{}>", pos.row + 1, pos.column + 1);
+        }
+        Some((name, node))
     }
 
     /// Names that qualify functions declared inside this node.
@@ -265,11 +450,21 @@ impl<'a> Walker<'a> {
             (Lang::Rust, "if_expression" | "while_expression" | "for_expression") => 1,
             (Lang::Rust, "let_declaration") => node.child_by_field_name("alternative").is_some() as u32,
             (Lang::Rust, "match_arm") => {
+                // `_` and a lone lowercase binding (`other =>`) without a guard are the default arm.
                 let pattern = node.child_by_field_name("pattern");
-                let bare = pattern.is_some_and(|p| {
-                    p.child_by_field_name("condition").is_none() && text(p, src).trim() == "_"
+                let default = pattern.is_some_and(|p| {
+                    let raw = text(p, src).trim();
+                    let binding = p.named_child_count() == 1
+                        && p.named_child(0).is_some_and(|c| c.kind() == "identifier")
+                        && raw.starts_with(|c: char| c.is_lowercase() || c == '_');
+                    p.child_by_field_name("condition").is_none() && (raw == "_" || binding)
                 });
-                (!bare) as u32
+                (!default) as u32
+            }
+            (Lang::Rust, "let_chain") => {
+                let mut cursor = node.walk();
+                let joins = node.children(&mut cursor).filter(|c| matches!(c.kind(), "&&" | "||")).count();
+                joins as u32
             }
             (Lang::Rust | Lang::Java | Lang::Go, "binary_expression") => matches!(op(), "&&" | "||") as u32,
             (Lang::TypeScript | Lang::Tsx, "binary_expression") => matches!(op(), "&&" | "||" | "??") as u32,
@@ -277,24 +472,28 @@ impl<'a> Walker<'a> {
                 | "do_statement" | "ternary_expression" | "catch_clause" | "switch_case") => 1,
             (Lang::Java, "if_statement" | "for_statement" | "enhanced_for_statement" | "while_statement" | "do_statement"
                 | "ternary_expression" | "catch_clause" | "guard") => 1,
-            (Lang::Java, "switch_label") => (!text(node, src).trim_start().starts_with("default")) as u32,
+            (Lang::Java, "switch_label") => {
+                // `default` and `case null, default` are the default arm; `case 1, 2` counts once.
+                let mut cursor = node.walk();
+                let default = text(node, src).trim_start().starts_with("default")
+                    || node.children(&mut cursor).any(|c| text(c, src) == "default");
+                (!default) as u32
+            }
             (Lang::Go, "if_statement" | "for_statement" | "expression_case" | "type_case" | "communication_case") => 1,
             (Lang::Swift, "if_statement" | "guard_statement" | "while_statement") => {
-                // `let x = y` is recorded as three condition fields: the binding pattern, an
-                // anonymous `=` token and the value. Count named nodes, then drop the bindings.
+                // The grammar flattens every clause into `condition` fields; the clauses are
+                // separated by direct anonymous `,` children (the body's commas sit deeper).
                 let mut cursor = node.walk();
-                let (fields, bindings) = node
-                    .children_by_field_name("condition", &mut cursor)
-                    .filter(|c| c.is_named())
-                    .fold((0u32, 0u32), |(f, b), c| (f + 1, b + (c.kind() == "value_binding_pattern") as u32));
-                fields.saturating_sub(bindings).max(1)
+                let commas = node.children(&mut cursor).filter(|c| !c.is_named() && c.kind() == ",").count();
+                1 + commas as u32
             }
             (Lang::Swift, "for_statement" | "repeat_while_statement" | "ternary_expression" | "catch_block"
                 | "conjunction_expression" | "disjunction_expression" | "nil_coalescing_expression") => 1,
             (Lang::Swift, "switch_entry") => {
                 let mut cursor = node.walk();
-                let is_default = node.children(&mut cursor).any(|c| c.kind() == "default_keyword");
-                (!is_default) as u32
+                let kinds: Vec<&str> = node.children(&mut cursor).map(|c| c.kind()).collect();
+                let case = !kinds.contains(&"default_keyword") as u32;
+                case + kinds.contains(&"where_keyword") as u32
             }
             _ => 0,
         }
@@ -304,7 +503,13 @@ impl<'a> Walker<'a> {
         let src = self.src;
         match self.lang {
             Lang::Rust => {
-                for (path, args) in rust_preceding_attrs(node, src) {
+                // A closure row takes its attributes from the enclosing item (`#[cfg(test)] static`).
+                let mut item = node;
+                while node.kind() == "closure_expression" && !item.kind().ends_with("_item") {
+                    let Some(parent) = item.parent() else { break };
+                    item = parent;
+                }
+                for (path, args) in rust_preceding_attrs(item, src) {
                     if rust_attr_marks_test(&path) {
                         return Some(format!("#[{path}] attribute"));
                     }
@@ -327,6 +532,9 @@ impl<'a> Walker<'a> {
                         }
                     }
                 }
+            }
+            Lang::TypeScript | Lang::Tsx if self.ts_test_callback(node) => {
+                return Some("describe/it/test callback".into());
             }
             Lang::Swift => {
                 let mut cursor = node.walk();
@@ -384,12 +592,16 @@ impl<'a> Walker<'a> {
         let explicit = attrs.iter().find(|(p, _)| p.starts_with("path")).and_then(|(p, _)| {
             p.split_once('=').map(|(_, v)| v.trim().trim_matches('"').to_string())
         });
-        let mut base = if matches!(stem, "lib" | "main" | "mod") { dir.to_path_buf() } else { dir.join(stem) };
+        // Crate roots and mod.rs files own their directory; other files own `dir/stem/`.
+        let mut base = if self.crate_root || stem == "mod" { dir.to_path_buf() } else { dir.join(stem) };
         for m in &self.mod_path {
             base = base.join(m);
         }
         let candidates = match explicit {
-            Some(rel) => vec![dir.join(rel)],
+            // `#[path]` is relative to the file's directory, or inside an inline `mod`
+            // to that module's directory.
+            Some(rel) if self.mod_path.is_empty() => vec![dir.join(rel)],
+            Some(rel) => vec![base.join(rel)],
             None => vec![base.join(format!("{name}.rs")), base.join(name).join("mod.rs")],
         };
         let normalized = candidates.iter().map(|c| c.to_string_lossy().replace('\\', "/")).collect();
@@ -402,7 +614,7 @@ impl<'a> Walker<'a> {
         if is_inline_mod {
             self.mod_path.push(field_text(node, "name", self.src).unwrap_or("").to_string());
         }
-        let (current, test_ctx, pushed) = if let Some((short, name_node)) = self.named_function(node) {
+        let (current, test_ctx, pushed) = if let Some((short, name_node)) = self.function_row(node, current) {
             let qualified = self.scope.iter().cloned().chain(std::iter::once(short.clone())).collect::<Vec<_>>().join(".");
             let file_ctx = self.scope_test_context(node).or(test_ctx.clone());
             let reason = self.test_reason(node, &short, file_ctx.as_deref());
@@ -424,14 +636,16 @@ impl<'a> Walker<'a> {
             self.scope.push(scope);
             (current, ctx, true)
         } else {
+            let add = self.decision(node);
             if let Some(i) = current {
-                let add = self.decision(node);
                 let row = &mut self.rows[i];
                 row.cc += add;
                 if node.is_named() {
                     row.nodes += 1;
                     row.kinds.push(node.kind_id());
                 }
+            } else {
+                self.unowned += add;
             }
             (current, test_ctx, false)
         };
@@ -449,19 +663,41 @@ impl<'a> Walker<'a> {
     }
 }
 
+/// Base type of a Go receiver: `(s *Stack[T])` -> `Stack`, `(x *pkg.T)` -> `T`.
 fn go_receiver_type(receiver: Node, src: &[u8]) -> String {
-    let mut stack = vec![receiver];
-    let mut last = String::new();
-    while let Some(n) = stack.pop() {
-        if n.kind() == "type_identifier" {
-            last = text(n, src).to_string();
-        }
-        let mut cursor = n.walk();
-        let mut kids: Vec<Node> = n.children(&mut cursor).collect();
-        kids.reverse();
-        stack.extend(kids);
+    let mut cursor = receiver.walk();
+    let param = receiver.named_children(&mut cursor).find(|c| c.kind() == "parameter_declaration");
+    let mut ty = param.and_then(|p| p.child_by_field_name("type"));
+    while let Some(t) = ty {
+        ty = match t.kind() {
+            "type_identifier" => return text(t, src).to_string(),
+            "pointer_type" | "parenthesized_type" => t.named_child(0),
+            "generic_type" => t.child_by_field_name("type"),
+            "qualified_type" => t.child_by_field_name("name"),
+            _ => None,
+        };
     }
-    last
+    String::new()
+}
+
+/// Name node of the Swift property that owns a computed body or accessor.
+fn swift_property_name(node: Node) -> Option<Node> {
+    let prop = if node.kind() == "willset_didset_block" { node.parent()? } else { node };
+    (prop.kind() == "property_declaration").then(|| prop.child_by_field_name("name")).flatten()
+}
+
+/// Rust files whose out-of-line modules live in their own directory.
+fn rust_crate_root(root: &Path, rel: &str) -> bool {
+    let path = Path::new(rel);
+    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+    let dir = path.parent().unwrap_or(Path::new(""));
+    let dir_name = dir.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    let package = dir.parent().unwrap_or(Path::new(""));
+    let package_name = package.file_name().and_then(|s| s.to_str()).unwrap_or("");
+    matches!(stem, "lib" | "main")
+        || (dir_name == "bin" && package_name == "src")
+        || (matches!(dir_name, "tests" | "examples" | "benches") && root.join(package).join("Cargo.toml").is_file())
+        || (stem == "build" && root.join(dir).join("Cargo.toml").is_file())
 }
 
 fn rust_file_is_test(root: Node, src: &[u8]) -> bool {
@@ -517,18 +753,43 @@ fn jaccard(a: &[u64], b: &[u64]) -> f64 {
     if union == 0 { 0.0 } else { both as f64 / union as f64 }
 }
 
-/// MinHash/LSH candidate generation, then exact Jaccard on node-kind shingles.
-fn duplicate_pairs(cands: &[Candidate], threshold: f64, max_pairs: usize) -> (Vec<serde_json::Value>, usize) {
-    let rows = MINHASHES / BANDS;
+/// Probability that a pair with Jaccard similarity `s` shares at least one band.
+fn lsh_recall(s: f64, rows: usize, bands: usize) -> f64 {
+    1.0 - (1.0 - s.powi(rows as i32)).powi(bands as i32)
+}
+
+/// (rows per band, bands) with the most rows per band (fewest false candidates)
+/// that still finds a pair exactly at `threshold` with TARGET_RECALL, using at most
+/// MAX_MINHASHES hashes. None means no banding reaches the target: compare all pairs.
+fn lsh_params(threshold: f64) -> Option<(usize, usize)> {
+    (1..=16usize).rev().find_map(|rows| {
+        let p = threshold.powi(rows as i32);
+        if p <= 0.0 {
+            return None;
+        }
+        let bands = if p >= 1.0 { 1 } else { ((1.0 - TARGET_RECALL).ln() / (1.0 - p).ln()).ceil() as usize };
+        (rows * bands <= MAX_MINHASHES).then_some((rows, bands))
+    })
+}
+
+/// MinHash/LSH candidate generation (or all pairs), then exact Jaccard on node-kind shingles.
+fn duplicate_pairs(cands: &[Candidate], threshold: f64, max_pairs: usize, banding: Option<(usize, usize)>) -> (Vec<serde_json::Value>, usize) {
     let mut buckets: HashMap<(usize, u64), Vec<usize>> = HashMap::new();
-    for (idx, c) in cands.iter().enumerate() {
-        let sig: Vec<u64> = (0..MINHASHES as u64)
-            .map(|seed| c.shingles.iter().map(|s| mix(*s, seed + 1)).min().unwrap_or(u64::MAX))
-            .collect();
-        for band in 0..BANDS {
-            let slice = &sig[band * rows..(band + 1) * rows];
-            let key = slice.iter().fold(0u64, |acc, v| mix(acc ^ v, band as u64 + 101));
-            buckets.entry((band, key)).or_default().push(idx);
+    match banding {
+        Some((rows, bands)) => {
+            for (idx, c) in cands.iter().enumerate() {
+                let sig: Vec<u64> = (0..(rows * bands) as u64)
+                    .map(|seed| c.shingles.iter().map(|s| mix(*s, seed + 1)).min().unwrap_or(u64::MAX))
+                    .collect();
+                for band in 0..bands {
+                    let slice = &sig[band * rows..(band + 1) * rows];
+                    let key = slice.iter().fold(0u64, |acc, v| mix(acc ^ v, band as u64 + 101));
+                    buckets.entry((band, key)).or_default().push(idx);
+                }
+            }
+        }
+        None => {
+            buckets.insert((0, 0), (0..cands.len()).collect());
         }
     }
     let mut seen = HashSet::new();
@@ -671,7 +932,7 @@ fn main() {
             continue;
         };
         let root = tree.root_node();
-        let mut walker = Walker::new(lang, &raw);
+        let mut walker = Walker::new(lang, &raw, lang == Lang::Rust && rust_crate_root(&opts.root, rel));
         let file_ctx = (lang == Lang::Rust && rust_file_is_test(root, &raw)).then(|| "file has #![cfg(test)]".to_string());
         walker.walk(root, None, file_ctx, rel);
         let mut functions = Vec::new();
@@ -700,6 +961,7 @@ fn main() {
             "sha256": format!("{:x}", Sha256::digest(&raw)),
             "parse_errors": root.has_error(),
             "functions": functions,
+            "unowned_decisions": walker.unowned,
             "modules": walker.modules.iter().map(|(files, test)| serde_json::json!({"candidates": files, "under_test": test})).collect::<Vec<_>>(),
         }));
     }
@@ -710,13 +972,23 @@ fn main() {
         "files": files,
     });
     if opts.duplicates {
-        let (pairs, total) = duplicate_pairs(&candidates, opts.similarity, opts.max_pairs);
+        let banding = lsh_params(opts.similarity);
+        let (pairs, total) = duplicate_pairs(&candidates, opts.similarity, opts.max_pairs, banding);
+        let (search, recall) = match banding {
+            Some((rows, bands)) => (
+                format!("MinHash LSH, {bands} bands x {rows} rows derived from the threshold"),
+                lsh_recall(opts.similarity, rows, bands),
+            ),
+            None => ("all pairs".to_string(), 1.0),
+        };
         report["duplicates"] = serde_json::json!({
-            "method": format!("Jaccard similarity of {SHINGLE}-node-kind shingles; MinHash {MINHASHES}x{BANDS}-band candidate search, exact verification"),
+            "method": format!("Jaccard similarity of {SHINGLE}-node-kind shingles; {search}; exact verification of candidates"),
             "similarity_threshold": opts.similarity,
             "min_nodes": opts.min_nodes,
             "functions_compared": candidates.len(),
-            "pairs_at_or_above_threshold": total,
+            "candidate_pairs_found": total,
+            "estimated_recall_at_threshold": (recall * 1e4).floor() / 1e4,
+            "recall_note": "Probability that a pair exactly at the threshold is found; more similar pairs are found more reliably.",
             "pairs_reported": pairs.len(),
             "pairs": pairs,
             "note": "Structural candidates only. Confirm the fragments implement one policy that should change together before sharing them.",

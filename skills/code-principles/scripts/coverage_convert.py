@@ -14,7 +14,15 @@ lines in the report get no value, so complexity.py keeps their CRAP unknown.
 
 The output binds every file to the SHA256 of its source at conversion time, so
 complexity.py drops coverage for a file edited afterwards. A source file modified
-after the coverage report was written is reported as a gap and left out.
+after the coverage report was written is reported as a gap and left out. That
+check uses file modification times only: a report re-exported later from old
+profile data (for example llvm-cov export run again on stale .profdata) looks
+fresh, so regenerate coverage from a current test run.
+
+Report paths are matched to measured files exactly, by the Go module path in
+go.mod for Go profiles, or by a shared path suffix. A suffix that is only the
+file name, when other measured files share that name, is ambiguous and stays
+unmatched.
 """
 import argparse
 from collections import defaultdict
@@ -75,7 +83,24 @@ def parse_jacoco(text):
     return files
 
 
-def resolve(report_name, root, measured_paths):
+def go_modules(root, measured_paths):
+    """Map each Go module path to its root-relative directory, from go.mod files at or above measured .go files."""
+    modules = {}
+    directories = {Path(p).parent for p in measured_paths if p.endswith(".go")}
+    for directory in directories:
+        for folder in [directory, *directory.parents]:
+            gomod = root / folder / "go.mod"
+            if gomod.is_file():
+                for line in gomod.read_text(encoding="utf-8", errors="replace").splitlines():
+                    words = line.split("//")[0].split()
+                    if len(words) == 2 and words[0] == "module":
+                        modules[words[1].strip('"')] = folder.as_posix()
+                        break
+                break
+    return modules
+
+
+def resolve(report_name, root, measured_paths, modules=None):
     """Map a report's file name to one measured root-relative path, or None."""
     candidate = Path(report_name)
     if candidate.is_absolute():
@@ -86,15 +111,29 @@ def resolve(report_name, root, measured_paths):
         return rel if rel in measured_paths else None
     if report_name in measured_paths:
         return report_name
+    owners = [m for m in (modules or {}) if report_name.startswith(m + "/")]
+    if owners:
+        # Go import path: strip the longest module path; go.mod is authoritative.
+        module = max(owners, key=len)
+        rel = (Path(modules[module]) / report_name[len(module) + 1:]).as_posix()
+        rel = rel[2:] if rel.startswith("./") else rel
+        return rel if rel in measured_paths else None
     matches = [p for p in measured_paths if p.endswith("/" + report_name) or report_name.endswith("/" + p)]
-    return matches[0] if len(matches) == 1 else None
+    if len(matches) != 1:
+        return None
+    match = matches[0]
+    shared_name_only = "/" not in report_name or "/" not in match
+    same_name = [p for p in measured_paths if Path(p).name == Path(match).name]
+    return None if shared_name_only and len(same_name) > 1 else match
 
 
 def function_percentages(rows, hits):
     """Line coverage per function, excluding lines of named functions nested inside it."""
     result = {}
     for row in rows:
-        nested = [r for r in rows if r is not row and row["line"] <= r["line"] and r["end_line"] <= row["end_line"]]
+        # Strictly contained rows only: a row with the same span is a sibling, not a child.
+        nested = [r for r in rows if r is not row and row["line"] <= r["line"] and r["end_line"] <= row["end_line"]
+                  and (r["line"], r["end_line"]) != (row["line"], row["end_line"])]
         lines = [n for n in range(row["line"], row["end_line"] + 1)
                  if n in hits and not any(r["line"] <= n <= r["end_line"] for r in nested)]
         if lines:
@@ -114,8 +153,9 @@ def convert(root, report_path, fmt, paths=None):
         by_path[row["path"]].append(row)
     report_mtime = report_path.stat().st_mtime
     files, gaps, unmatched = {}, list(measured["gaps"]), []
+    modules = go_modules(root, set(by_path)) if fmt == "go" else {}
     for name, hits in parsed.items():
-        rel = resolve(name, root, set(by_path))
+        rel = resolve(name, root, set(by_path), modules)
         if rel is None:
             unmatched.append(name)
             continue

@@ -74,6 +74,31 @@ class CoverageConversionTests(Workspace):
         self.assertEqual(files["src/lib.rs"]["functions"], {"clamp:1": 100.0, "untested:2": 0.0})
 
 
+    def test_go_import_paths_resolve_through_go_mod_and_bare_names_stay_ambiguous(self):
+        self.write("go.mod", "module example.com\n\ngo 1.22\n")
+        measured = {"main.go", "services/api/main.go", "api/handler.go"}
+        modules = coverage_convert.go_modules(self.root, measured)
+        self.assertEqual(modules, {"example.com": "."})
+        self.assertIsNone(coverage_convert.resolve("example.com/api/main.go", self.root, measured, modules))
+        self.assertEqual(coverage_convert.resolve("example.com/api/handler.go", self.root, measured, modules), "api/handler.go")
+        self.assertEqual(coverage_convert.resolve("example.com/main.go", self.root, measured, modules), "main.go")
+        # Without go.mod, a match on the file name alone is ambiguous when names repeat.
+        self.assertIsNone(coverage_convert.resolve("example.com/api/main.go", self.root, measured))
+        self.assertEqual(coverage_convert.resolve("example.com/m/pkg/a.go", self.root, {"pkg/a.go"}), "pkg/a.go")
+
+    def test_nested_go_modules_use_the_nearest_go_mod(self):
+        self.write("services/api/go.mod", "module example.com/api // service\n")
+        modules = coverage_convert.go_modules(self.root, {"services/api/main.go"})
+        self.assertEqual(modules, {"example.com/api": "services/api"})
+        self.assertEqual(coverage_convert.resolve("example.com/api/main.go", self.root, {"services/api/main.go"}, modules), "services/api/main.go")
+
+    def test_rows_with_the_same_span_are_not_nested_in_each_other(self):
+        rows = [{"function_id": "a:1", "line": 1, "end_line": 1}, {"function_id": "b:1", "line": 1, "end_line": 1},
+                {"function_id": "outer:3", "line": 3, "end_line": 6}, {"function_id": "inner:4", "line": 4, "end_line": 5}]
+        result = coverage_convert.function_percentages(rows, {1: 1, 3: 1, 4: 0, 5: 0, 6: 0})
+        self.assertEqual(result, {"a:1": 100.0, "b:1": 100.0, "outer:3": 50.0, "inner:4": 0.0})
+
+
 class MutationTests(Workspace):
     def test_real_cargo_mutants_output(self):
         result = mutation_report.normalize(REPORTS / "cargo-mutants-27.1.0-outcomes.json", "cargo-mutants")
@@ -110,6 +135,27 @@ class MutationTests(Workspace):
         self.assertEqual(mutation_report.main([str(bad), "--format", "stryker"]), 2)
 
 
+    def stryker_report(self, statuses):
+        mutants = [{"id": str(i), "status": s, "location": {"start": {"line": 1}}} for i, s in enumerate(statuses)]
+        return self.write("s.json", json.dumps({"schemaVersion": "2", "files": {"a.ts": {"language": "ts", "source": "", "mutants": mutants}}}))
+
+    def test_uncovered_mutants_warn_and_get_a_second_score(self):
+        result = mutation_report.normalize(self.stryker_report(["Killed"] + ["NoCoverage"] * 48), "stryker")
+        self.assertEqual(result["counts"]["score"], 1.0)
+        self.assertEqual(result["counts"]["score_including_uncovered"], round(1 / 49, 4))
+        self.assertTrue(any("48 mutants were not reached" in w for w in result["warnings"]))
+
+    def test_stryker_without_baseline_is_trusted_null_not_a_bad_report(self):
+        report = self.stryker_report(["Killed", "Survived"])
+        result = mutation_report.normalize(report, "stryker")
+        self.assertIsNone(result["trusted"])
+        self.assertTrue(result["baseline"].startswith("unknown"))
+        self.assertEqual(mutation_report.main([str(report), "--format", "stryker"]), 0)
+        nothing = self.stryker_report(["Timeout"])
+        self.assertIs(mutation_report.normalize(nothing, "stryker")["trusted"], False)
+        self.assertEqual(mutation_report.main([str(nothing), "--format", "stryker"]), 1)
+
+
 class CompanionTests(unittest.TestCase):
     def test_doctor_covers_every_language_without_running_tools(self):
         with mock.patch("subprocess.run") as run:
@@ -121,6 +167,20 @@ class CompanionTests(unittest.TestCase):
                 self.assertIn("available", spec, (language, kind))
                 if spec["convert"] is None:
                     self.assertIn("gap", spec)
+
+    def test_stryker_needs_the_project_dependency_not_just_npx(self):
+        with tempfile.TemporaryDirectory() as folder, mock.patch.object(companions, "available", return_value=True):
+            mutation = companions.doctor()["languages"]["typescript"]["mutation"]
+            self.assertIs(mutation["available"], False)
+            self.assertEqual(mutation["requires_project_dependency"], "@stryker-mutator/core")
+            project = Path(folder) / "app" / "packages" / "web"
+            project.mkdir(parents=True)
+            self.assertIs(companions.doctor(str(project))["languages"]["typescript"]["mutation"]["available"], False)
+            core = Path(folder) / "app" / "node_modules" / "@stryker-mutator" / "core"
+            core.mkdir(parents=True)
+            (core / "package.json").write_text("{}")
+            self.assertIs(companions.doctor(str(project))["languages"]["typescript"]["mutation"]["available"], True)
+
 
     def test_macos_java_placeholder_is_not_a_runtime(self):
         with mock.patch.dict(os.environ, {"JAVA_HOME": ""}), mock.patch.object(companions.sys, "platform", "darwin"), \
