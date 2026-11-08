@@ -143,22 +143,22 @@
       "path": "runtime/debugger/dist/src/audit-miner.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "329292838a7e117f9db7cf48ddbd6e7079dc374badaf6f293baa88e5f4d3112a",
-      "current_sha256": "329292838a7e117f9db7cf48ddbd6e7079dc374badaf6f293baa88e5f4d3112a",
-      "modified_from_import": false
+      "current_sha256": "f2a244e05e5a4ca4cf83e334003b39626fa04da02ed1528d3c44ce61baaf1c82",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/audit-miner.js",
       "source": "coding-debugger",
       "source_sha256": "24a235d326ee65f7a99b0d53bf079d4c50c0427fea36081eb04e2a8a4aa3780c",
-      "current_sha256": "24a235d326ee65f7a99b0d53bf079d4c50c0427fea36081eb04e2a8a4aa3780c",
-      "modified_from_import": false
+      "current_sha256": "3caf91d8e214dfbf566b2034db63bf3f37676a8f293bc6b90d8cff4710d2a0fb",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/audit-miner.js.map",
       "source": "coding-debugger",
       "source_sha256": "748af81653e6ca65a7dd100660b00a81b8536d5373c94fcafe6be8f2acdb0e1d",
-      "current_sha256": "748af81653e6ca65a7dd100660b00a81b8536d5373c94fcafe6be8f2acdb0e1d",
-      "modified_from_import": false
+      "current_sha256": "cfdff71e2c9fd4832a03f1906c9f2c68caa43b5187e65fb232bf6a8081989fdf",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/batch-operations.d.ts",
@@ -171,22 +171,22 @@
       "path": "runtime/debugger/dist/src/batch-operations.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "4cf0c7e3ea7756c4364fc7fdae3769418ddf9a32aa58e6947ff6962682b76d39",
-      "current_sha256": "4cf0c7e3ea7756c4364fc7fdae3769418ddf9a32aa58e6947ff6962682b76d39",
-      "modified_from_import": false
+      "current_sha256": "5078544430e9dcc8eb3ccd28c96136529fbf2de8c7783bf8920549ac281ec7d9",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/batch-operations.js",
       "source": "coding-debugger",
       "source_sha256": "2ec2bf95913f5df140f03e36b2d98852650336ab26a0f4ec1ce0f676ab37a9ab",
-      "current_sha256": "2ec2bf95913f5df140f03e36b2d98852650336ab26a0f4ec1ce0f676ab37a9ab",
-      "modified_from_import": false
+      "current_sha256": "18e4dd9841c2f8c03fdd206144669f8381875c72a05f54916a370ad7be36c742",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/batch-operations.js.map",
       "source": "coding-debugger",
       "source_sha256": "6aaae12421795b25177bc533db5bccf02ef0543a830a0bd495bee08a0b82773b",
-      "current_sha256": "6aaae12421795b25177bc533db5bccf02ef0543a830a0bd495bee08a0b82773b",
-      "modified_from_import": false
+      "current_sha256": "86f087705c86fa5c3d4ae7aafd77f33798714f78a2637dfe6a3eab9481885c61",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/config.d.ts",
@@ -458,14 +458,14 @@
       "path": "runtime/debugger/dist/src/mcp/tools.js",
       "source": "coding-debugger",
       "source_sha256": "73411cbde215cec2dad12d6fc5aec8f2ad159e7efdab48ed25d014c798dc0c6a",
-      "current_sha256": "a50306468797f01d56e23ac4ad6ec53cdb33c34e73cd048a6dc5c100ba7503f7",
+      "current_sha256": "fd6b6d1d0916f900dc0f17c733abdb23bc20a415fb48da510cf90ff318a7d70e",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/mcp/tools.js.map",
       "source": "coding-debugger",
       "source_sha256": "fb37bf662e7a4f27fd1ca105a7397a7e5677eb88307a76f4e8c50c50354a47be",
-      "current_sha256": "4c2c528116f90eff4bcbc16f62a969e0cdfc9e5d5ce59919cea3b7ff30fa07f4",
+      "current_sha256": "2242f8a481d517a1170e2d9eb0075e3372299fed5561a140fcb0014189cbbce8",
       "modified_from_import": true
     },
     {
@@ -591,21 +591,21 @@
       "path": "runtime/debugger/dist/src/retrieval.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "aed670aee69a7f7783f573550eeb1bcc801138779ea5c8feb0f1e180ac79a2f4",
-      "current_sha256": "601c973c77b1950ac3073cbe2b5e2ebe2060264ed3f4be9a15f49c35a51a48ae",
+      "current_sha256": "a6a360ad4cb5f584835be3c4817018148f029b435c0c47411546d6deed91ff84",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/retrieval.js",
       "source": "coding-debugger",
       "source_sha256": "aa585361bcd54c6639a9a4135584724ed64f3d9f6ae5612b4ec86b2a341bab07",
-      "current_sha256": "f9480c07efd00c28d6430675b30c1ad65a0fd929f104691c3207971e39d4c687",
+      "current_sha256": "58ffcaab868938ddd84a64021ea611a5d94118b816735d44d3e33ac9fde0a026",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/retrieval.js.map",
       "source": "coding-debugger",
       "source_sha256": "9208378389d6fcd25bd05752d6a452f81bd925b106762b23fb550b1ef06f4fe5",
-      "current_sha256": "4d57454175fe3a49f4fd40a53af6cbba44edfc09a9c000ef65cc6c4e968a3755",
+      "current_sha256": "d24800c5c5857243a984d234c49625d5b689dad491c181df7247f0ffd308e07a",
       "modified_from_import": true
     },
     {
@@ -787,21 +787,21 @@
       "path": "runtime/debugger/dist/src/storage.d.ts.map",
       "source": "coding-debugger",
       "source_sha256": "ee54c36bd7d6e6a7cb57254c6bb3602b66d48a7ba9297d0ec750abb195f28e0c",
-      "current_sha256": "75e09bbf530b5d0ec311f5faadb26103da336a30cd05820f3cba580f8bd0ea96",
+      "current_sha256": "51b9e7eee9555b17a1966ca99a8b5560b1c647e8d5a5c48f680133d0367b5d93",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js",
       "source": "coding-debugger",
       "source_sha256": "94838e47489d26c41db05eefb7daf863f3af9559ce35b2d5c849ce7944d80361",
-      "current_sha256": "07633e9ccc6ffdd87fb5be2980ead52ab6b52914435befd96c4b57a040c05bd7",
+      "current_sha256": "282e626d8a8c4bf360abf2a2b2db1870df3d304837c4b3ac73bd622f2bde8d48",
       "modified_from_import": true
     },
     {
       "path": "runtime/debugger/dist/src/storage.js.map",
       "source": "coding-debugger",
       "source_sha256": "81f7bba12869371e93f1d59a4e7851ce9e6cb2a169e0170e52487ece2a0448ca",
-      "current_sha256": "7b4f790c498d60f5c2274e78008cebe0befa52c258c0f85d6f7a0f2d595b5cc2",
+      "current_sha256": "1f0cb594ed94a445671f280bebc8e4614fd92a9d47b75a0f7513075befa19d6f",
       "modified_from_import": true
     },
     {
@@ -1130,15 +1130,15 @@
       "path": "runtime/debugger/src/audit-miner.ts",
       "source": "coding-debugger",
       "source_sha256": "1468785f1eebc8794e8eae56f9c98a8e10704ce8707dff510f43c5f106a6af78",
-      "current_sha256": "1468785f1eebc8794e8eae56f9c98a8e10704ce8707dff510f43c5f106a6af78",
-      "modified_from_import": false
+      "current_sha256": "2f50b7576a4b3bf30b16954e44ea2d52e957b1905746b958a316b93f0e10fa52",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/src/batch-operations.ts",
       "source": "coding-debugger",
       "source_sha256": "30c79f0921a26ee5eaca5841285f4817c0d79ee89569d17ea01faca5e27179f0",
-      "current_sha256": "30c79f0921a26ee5eaca5841285f4817c0d79ee89569d17ea01faca5e27179f0",
-      "modified_from_import": false
+      "current_sha256": "2fccff7005acf9707daa1cb6ce77700189fa3f348a7233652ef5d367c2f9de24",
+      "modified_from_import": true
     },
     {
       "path": "runtime/debugger/src/config.ts",
@@ -1207,7 +1207,7 @@
       "path": "runtime/debugger/src/mcp/tools.ts",
       "source": "coding-debugger",
       "source_sha256": "cc37487da687dda595da713239d18c6580e95e112fe035b79014603d3429e4f3",
-      "current_sha256": "b7e57f0860c44f1a080e626e3207517597bb722e24acfbf2321301dfc3897f9a",
+      "current_sha256": "c94458158fc2f79aa296c644339d139f50406feaae06a2e14a65e97568940873",
       "modified_from_import": true
     },
     {
@@ -1242,7 +1242,7 @@
       "path": "runtime/debugger/src/retrieval.ts",
       "source": "coding-debugger",
       "source_sha256": "d731035669bdceb372e2f28c74e6ade9490ac82b130ce7bf84d8b2883e29bf2d",
-      "current_sha256": "032444f28f6b64c881951168a7db088eedbd2e1d1fa70861d726fada10d5c4c3",
+      "current_sha256": "6c8b7adf325391c5ab836549ccd944b183508395c8241ef04afd6b3623feaf00",
       "modified_from_import": true
     },
     {
@@ -1291,7 +1291,7 @@
       "path": "runtime/debugger/src/storage.ts",
       "source": "coding-debugger",
       "source_sha256": "a384fde223a93df9ae02596cd74f50e7e041f191b6c201c089194224ea59d3dc",
-      "current_sha256": "e0574ee4581bbf9b6f6e766ef9ed1260708420ab7c21ff17f703123a430084aa",
+      "current_sha256": "0a2bcdab7a356f781e0b4ec5c93bbc5784b911cf8fc481bfa21f7ccc0b30949a",
       "modified_from_import": true
     },
     {
@@ -1739,7 +1739,7 @@
       "path": "skills/code-principles/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "87875a3b628a63ceedbe0bed23df00a7a020134b1d0962e506ee9ed651cdfb05",
+      "current_sha256": "99f338bd016027a9cef41b4138f25a1ec7881bed5b75bd5a66361cdf03ef34b3",
       "modified_from_import": true
     },
     {

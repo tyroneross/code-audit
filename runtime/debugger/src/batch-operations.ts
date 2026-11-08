@@ -15,10 +15,13 @@ import {
   loadAllIncidents,
   storeIncident,
   generateIncidentId,
-  validateIncident
+  validateIncident,
+  rebuildIndex,
+  rebuildKeywordIndex
 } from './storage';
 import { extractPatterns } from './pattern-extractor';
 import { getMemoryPaths } from './config';
+import { withCorpusWrite } from './corpus-write';
 import { calculateQualityScore } from './quality';
 
 /**
@@ -384,12 +387,11 @@ async function completeIncidentInteractive(incident: Incident): Promise<Incident
  * Delete an incident file
  */
 async function deleteIncident(incident_id: string, config?: MemoryConfig): Promise<void> {
-  const paths = getMemoryPaths(config);
-  const filepath = path.join(paths.incidents, `${incident_id}.json`);
-
-  try {
-    await fs.unlink(filepath);
-  } catch (error) {
-    console.error(`Failed to delete ${incident_id}:`, error);
-  }
+  return withCorpusWrite(config, async () => {
+    const filepath = path.join(getMemoryPaths(config).incidents, `${incident_id}.json`);
+    try { await fs.unlink(filepath); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+    await rebuildIndex(config);
+    await rebuildKeywordIndex(config);
+  });
 }

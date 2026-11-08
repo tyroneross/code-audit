@@ -22,7 +22,7 @@ import {
 } from '../storage';
 import { checkMemoryWithVerdict } from '../retrieval';
 import { readProjectLogs } from '../log-reader';
-import type { Incident, VerdictOutcome, MemoryConfig } from '../types';
+import type { Incident, Pattern, VerdictOutcome, MemoryConfig } from '../types';
 import type { LogSource, LogSeverity } from '../log-reader';
 import { traced } from '../logger';
 import { getConfig, getMemoryPaths } from '../config';
@@ -499,6 +499,20 @@ async function handleDetail(
     const pattern = await loadPattern(id, config);
     if (!pattern) return errorResponse(`Pattern not found: ${id}`);
 
+    return textResponse(formatPatternDetail(pattern));
+  }
+
+  if (isValidIncidentId(id)) {
+    const incident = await loadIncident(id, config);
+    if (!incident) return errorResponse(`Incident not found: ${id}`);
+
+    return textResponse(formatIncidentDetail(incident));
+  }
+
+  return errorResponse(`Invalid ID format. Expected INC_* or PTN_*, got: ${id}`);
+}
+
+function formatPatternDetail(pattern: Pattern): string {
     const lines = [
       `Pattern: ${pattern.pattern_id}`,
       `Name: ${pattern.name}`,
@@ -514,13 +528,10 @@ async function handleDetail(
       lines.push(`\nCaveats:\n${pattern.caveats.map((c) => `- ${c}`).join('\n')}`);
     }
 
-    return textResponse(lines.join('\n'));
-  }
+    return lines.join('\n');
+}
 
-  if (isValidIncidentId(id)) {
-    const incident = await loadIncident(id, config);
-    if (!incident) return errorResponse(`Incident not found: ${id}`);
-
+function formatIncidentDetail(incident: Incident): string {
     const lines = [
       `Incident: ${incident.incident_id}`,
       `Date: ${new Date(incident.timestamp).toISOString()}`,
@@ -556,10 +567,7 @@ async function handleDetail(
     const quality = incident.completeness?.quality_score ?? incident.quality_score ?? 0;
     lines.push(`Quality: ${(quality * 100).toFixed(0)}%`);
 
-    return textResponse(lines.join('\n'));
-  }
-
-  return errorResponse(`Invalid ID format. Expected INC_* or PTN_*, got: ${id}`);
+    return lines.join('\n');
 }
 
 async function handleStatus(config: MemoryConfig): Promise<{

@@ -1,0 +1,705 @@
+{
+  "provenance": {
+    "revision": "56b6ad5efb16e003c8a3d27debbc9eb0b7f1459d",
+    "description": "Captured unchanged runtime outputs before refactoring; synthetic records only; search snapshots omit repeated incident bodies, checked against the common input records"
+  },
+  "normal": [
+    {
+      "input": null,
+      "filename": "INC_FROM_FILE.json",
+      "expected": null
+    },
+    {
+      "input": [],
+      "filename": "INC_FROM_FILE.json",
+      "expected": []
+    },
+    {
+      "input": 4,
+      "filename": "INC_FROM_FILE.json",
+      "expected": 4
+    },
+    {
+      "input": {},
+      "filename": "INC_FROM_FILE.json",
+      "expected": {
+        "incident_id": "INC_FROM_FILE",
+        "legacy": {
+          "incident_id_source": "filename"
+        }
+      }
+    },
+    {
+      "input": {
+        "timestamp": "bad",
+        "symptom": {}
+      },
+      "filename": "INC_FROM_FILE.json",
+      "expected": {
+        "timestamp": "bad",
+        "symptom": {},
+        "incident_id": "INC_FROM_FILE",
+        "legacy": {
+          "incident_id_source": "filename"
+        }
+      }
+    },
+    {
+      "input": {
+        "timestamp": "2026-01-01T00:00:00Z",
+        "symptom": {
+          "description": "legacy symptom",
+          "severity": "high"
+        },
+        "verification": {
+          "status": "old-status"
+        },
+        "fix": {
+          "notes": {
+            "summary": "note"
+          },
+          "changes": [
+            "src/a.ts",
+            "restart service",
+            {
+              "summary": "repair",
+              "command": "check"
+            },
+            {
+              "file": "b.ts",
+              "summary": "keep"
+            }
+          ]
+        },
+        "legacy": {
+          "existing": "keep"
+        }
+      },
+      "filename": "INC_FROM_FILE.json",
+      "expected": {
+        "timestamp": 1767225600000,
+        "symptom": "legacy symptom",
+        "verification": {
+          "status": "unverified"
+        },
+        "fix": {
+          "notes": [
+            "restart service",
+            "repair \u2014 command: check"
+          ],
+          "changes": [
+            {
+              "file": "src/a.ts"
+            },
+            {
+              "file": "b.ts",
+              "summary": "keep"
+            }
+          ]
+        },
+        "legacy": {
+          "existing": "keep",
+          "incident_id_source": "filename",
+          "symptom": {
+            "description": "legacy symptom",
+            "severity": "high"
+          },
+          "verification_status": "old-status",
+          "fix_notes": {
+            "summary": "note"
+          },
+          "fix_changes": [
+            "src/a.ts",
+            "restart service",
+            {
+              "summary": "repair",
+              "command": "check"
+            },
+            {
+              "file": "b.ts",
+              "summary": "keep"
+            }
+          ]
+        },
+        "incident_id": "INC_FROM_FILE"
+      }
+    },
+    {
+      "input": {
+        "incident_id": "INCIDENT_1700000000_OLD",
+        "fix": {
+          "changes": [
+            "src/a.ts",
+            99
+          ]
+        }
+      },
+      "filename": "INC_FROM_FILE.json",
+      "expected": {
+        "incident_id": "INCIDENT_1700000000_OLD",
+        "fix": {
+          "changes": [
+            "src/a.ts",
+            99
+          ]
+        },
+        "timestamp": 1700000000000,
+        "legacy": {
+          "timestamp_source": "incident_id"
+        }
+      }
+    },
+    {
+      "input": {
+        "fix": {
+          "notes": "text note",
+          "changes": []
+        }
+      },
+      "filename": "INC_FROM_FILE.json",
+      "expected": {
+        "fix": {
+          "notes": [
+            "text note"
+          ],
+          "changes": []
+        },
+        "incident_id": "INC_FROM_FILE",
+        "legacy": {
+          "incident_id_source": "filename",
+          "fix_notes": "text note"
+        }
+      }
+    },
+    {
+      "input": {
+        "timestamp": 0,
+        "fix": {
+          "changes": [
+            {
+              "file": "a.ts"
+            }
+          ]
+        }
+      },
+      "filename": "INC_FROM_FILE.json",
+      "expected": {
+        "timestamp": 0,
+        "fix": {
+          "changes": [
+            {
+              "file": "a.ts"
+            }
+          ]
+        },
+        "incident_id": "INC_FROM_FILE",
+        "legacy": {
+          "incident_id_source": "filename"
+        }
+      }
+    }
+  ],
+  "categories": [
+    {
+      "text": "",
+      "expected": "unknown"
+    },
+    {
+      "text": "react database api",
+      "expected": "react-hooks"
+    },
+    {
+      "text": "API timeout",
+      "expected": "api"
+    },
+    {
+      "text": "auth database",
+      "expected": "database"
+    },
+    {
+      "text": "search cache",
+      "expected": "search"
+    },
+    {
+      "text": "config import",
+      "expected": "config"
+    },
+    {
+      "text": "permission session",
+      "expected": "authentication"
+    },
+    {
+      "text": "unknown vocabulary",
+      "expected": "unknown"
+    },
+    {
+      "text": "ReAcT",
+      "expected": "react-hooks"
+    },
+    {
+      "text": "migration",
+      "expected": "database"
+    },
+    {
+      "text": "rerank",
+      "expected": "search"
+    },
+    {
+      "text": "memoization",
+      "expected": "caching"
+    },
+    {
+      "text": "throw",
+      "expected": "error-handling"
+    },
+    {
+      "text": "invalid",
+      "expected": "validation"
+    },
+    {
+      "text": "environment",
+      "expected": "config"
+    },
+    {
+      "text": "package",
+      "expected": "dependency"
+    }
+  ],
+  "incidents": [
+    {
+      "incident_id": "INC_EXACT",
+      "timestamp": 1000,
+      "symptom": "alpha failure",
+      "tags": [
+        "blue"
+      ],
+      "files_changed": [],
+      "root_cause": {
+        "category": "api",
+        "description": "Different cause"
+      },
+      "fix": {
+        "approach": "fixture",
+        "changes": []
+      }
+    },
+    {
+      "incident_id": "INC_TAG",
+      "timestamp": 1000,
+      "symptom": "different message",
+      "tags": [
+        "ALPHA",
+        "alpha"
+      ],
+      "files_changed": [],
+      "root_cause": {
+        "category": "db",
+        "description": "Different cause"
+      },
+      "fix": {
+        "approach": "fixture",
+        "changes": []
+      }
+    },
+    {
+      "incident_id": "INC_FUZZY",
+      "timestamp": 1000,
+      "symptom": "alpah failur",
+      "tags": [],
+      "files_changed": [],
+      "root_cause": {
+        "category": "api",
+        "description": "Different cause"
+      },
+      "fix": {
+        "approach": "fixture",
+        "changes": []
+      }
+    },
+    {
+      "incident_id": "INC_CATEGORY",
+      "timestamp": 1000,
+      "symptom": "unrelated",
+      "tags": [],
+      "files_changed": [],
+      "root_cause": {
+        "category": "api",
+        "description": "Different cause"
+      },
+      "fix": {
+        "approach": "fixture",
+        "changes": []
+      }
+    },
+    {
+      "incident_id": "INC_OTHER",
+      "timestamp": 1000,
+      "symptom": "nothing",
+      "tags": [],
+      "files_changed": [],
+      "root_cause": {
+        "category": "misc",
+        "description": "Different cause"
+      },
+      "fix": {
+        "approach": "fixture",
+        "changes": []
+      }
+    }
+  ],
+  "search": [
+    {
+      "query": "alpha",
+      "options": {},
+      "expected": [
+        {
+          "incident_id": "INC_EXACT",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "alpha failure"
+          ]
+        },
+        {
+          "incident_id": "INC_TAG",
+          "score": 0.9,
+          "matchType": "tag",
+          "highlights": [
+            "ALPHA",
+            "alpha"
+          ]
+        },
+        {
+          "incident_id": "INC_FUZZY",
+          "score": 0.8172222222222223,
+          "matchType": "fuzzy",
+          "highlights": [
+            "alpah failur"
+          ]
+        },
+        {
+          "incident_id": "INC_CATEGORY",
+          "score": 0.6,
+          "matchType": "category",
+          "highlights": [
+            "api"
+          ]
+        }
+      ]
+    },
+    {
+      "query": "alpha failure",
+      "options": {},
+      "expected": [
+        {
+          "incident_id": "INC_EXACT",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "alpha failure"
+          ]
+        },
+        {
+          "incident_id": "INC_FUZZY",
+          "score": 0.9626068376068376,
+          "matchType": "fuzzy",
+          "highlights": [
+            "alpah failur"
+          ]
+        },
+        {
+          "incident_id": "INC_TAG",
+          "score": 0.9,
+          "matchType": "tag",
+          "highlights": [
+            "ALPHA",
+            "alpha"
+          ]
+        },
+        {
+          "incident_id": "INC_CATEGORY",
+          "score": 0.6,
+          "matchType": "category",
+          "highlights": [
+            "api"
+          ]
+        }
+      ]
+    },
+    {
+      "query": "alpah failur",
+      "options": {},
+      "expected": [
+        {
+          "incident_id": "INC_FUZZY",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "alpah failur"
+          ]
+        },
+        {
+          "incident_id": "INC_EXACT",
+          "score": 0.9626068376068376,
+          "matchType": "fuzzy",
+          "highlights": [
+            "alpha failure"
+          ]
+        },
+        {
+          "incident_id": "INC_CATEGORY",
+          "score": 0.6,
+          "matchType": "category",
+          "highlights": [
+            "api"
+          ]
+        }
+      ]
+    },
+    {
+      "query": "alpha",
+      "options": {
+        "threshold": 0.95
+      },
+      "expected": [
+        {
+          "incident_id": "INC_EXACT",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "alpha failure"
+          ]
+        }
+      ]
+    },
+    {
+      "query": "alpha",
+      "options": {
+        "maxResults": 0
+      },
+      "expected": []
+    },
+    {
+      "query": "alpha",
+      "options": {
+        "maxResults": 2
+      },
+      "expected": [
+        {
+          "incident_id": "INC_EXACT",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "alpha failure"
+          ]
+        },
+        {
+          "incident_id": "INC_TAG",
+          "score": 0.9,
+          "matchType": "tag",
+          "highlights": [
+            "ALPHA",
+            "alpha"
+          ]
+        }
+      ]
+    },
+    {
+      "query": "",
+      "options": {},
+      "expected": [
+        {
+          "incident_id": "INC_CATEGORY",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "unrelated"
+          ]
+        },
+        {
+          "incident_id": "INC_EXACT",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "alpha failure"
+          ]
+        },
+        {
+          "incident_id": "INC_FUZZY",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "alpah failur"
+          ]
+        },
+        {
+          "incident_id": "INC_OTHER",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "nothing"
+          ]
+        },
+        {
+          "incident_id": "INC_TAG",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "different message"
+          ]
+        }
+      ]
+    },
+    {
+      "query": "zzz",
+      "options": {},
+      "expected": []
+    },
+    {
+      "query": "alpha",
+      "options": {
+        "threshold": 0,
+        "maxResults": -1
+      },
+      "expected": [
+        {
+          "incident_id": "INC_EXACT",
+          "score": 1,
+          "matchType": "exact",
+          "highlights": [
+            "alpha failure"
+          ]
+        },
+        {
+          "incident_id": "INC_TAG",
+          "score": 0.9,
+          "matchType": "tag",
+          "highlights": [
+            "ALPHA",
+            "alpha"
+          ]
+        },
+        {
+          "incident_id": "INC_FUZZY",
+          "score": 0.8172222222222223,
+          "matchType": "fuzzy",
+          "highlights": [
+            "alpah failur"
+          ]
+        }
+      ]
+    }
+  ],
+  "pattern": {
+    "pattern_id": "PTN_EXAMPLE",
+    "name": "Fixture",
+    "description": "Fixture description",
+    "success_rate": 0.8,
+    "tags": [
+      "a"
+    ],
+    "detection_signature": [
+      "sig"
+    ],
+    "solution_template": "solution",
+    "usage_history": {
+      "total_uses": 3
+    },
+    "caveats": [
+      "limit"
+    ]
+  },
+  "detailed": {
+    "incident_id": "INC_EXACT",
+    "timestamp": 1000,
+    "symptom": "alpha failure",
+    "tags": [
+      "blue"
+    ],
+    "files_changed": [],
+    "root_cause": {
+      "category": "api",
+      "description": "Different cause",
+      "file": "a.ts"
+    },
+    "fix": {
+      "approach": "change",
+      "changes": [
+        {
+          "file": "a.ts",
+          "summary": "changed",
+          "lines_changed": 0
+        }
+      ],
+      "notes": [
+        "kept note"
+      ]
+    },
+    "verification": {
+      "status": "partial"
+    },
+    "completeness": {
+      "quality_score": 0.75
+    }
+  },
+  "details": [
+    {
+      "id": "PTN_EXAMPLE",
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Pattern: PTN_EXAMPLE\nName: Fixture\nDescription: Fixture description\nSuccess rate: 80%\nUses: 3\nTags: a\n\nDetection signatures: sig\n\nSolution:\nsolution\n\nCaveats:\n- limit"
+          }
+        ]
+      }
+    },
+    {
+      "id": "INC_EXACT",
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Incident: INC_EXACT\nDate: 1970-01-01T00:00:01.000Z\nSymptom: alpha failure\n\nRoot cause: Different cause\nCategory: api\nDiagnosis confidence: historical metadata, not independently calibrated\nVerification: partial (historical record)\nFile: a.ts\n\nFix: change\nChanges:\n- a.ts: changed (0 lines)\nNotes:\n- kept note\nTags: blue\nFiles changed: \nQuality: 75%"
+          }
+        ]
+      }
+    },
+    {
+      "id": "INC_MISSING",
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Incident not found: INC_MISSING"
+          }
+        ],
+        "isError": true
+      }
+    },
+    {
+      "id": "bad",
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Invalid ID format. Expected INC_* or PTN_*, got: bad"
+          }
+        ],
+        "isError": true
+      }
+    },
+    {
+      "id": "",
+      "expected": {
+        "content": [
+          {
+            "type": "text",
+            "text": "id is required"
+          }
+        ],
+        "isError": true
+      }
+    }
+  ]
+}

@@ -449,57 +449,63 @@ async function handleDetail(args, config) {
         const pattern = await (0, storage_1.loadPattern)(id, config);
         if (!pattern)
             return errorResponse(`Pattern not found: ${id}`);
-        const lines = [
-            `Pattern: ${pattern.pattern_id}`,
-            `Name: ${pattern.name}`,
-            `Description: ${pattern.description}`,
-            `Success rate: ${(pattern.success_rate * 100).toFixed(0)}%`,
-            `Uses: ${pattern.usage_history?.total_uses || 0}`,
-            `Tags: ${(pattern.tags || []).join(', ')}`,
-            `\nDetection signatures: ${pattern.detection_signature.join(', ')}`,
-            `\nSolution:\n${pattern.solution_template}`,
-        ];
-        if (pattern.caveats?.length) {
-            lines.push(`\nCaveats:\n${pattern.caveats.map((c) => `- ${c}`).join('\n')}`);
-        }
-        return textResponse(lines.join('\n'));
+        return textResponse(formatPatternDetail(pattern));
     }
     if ((0, storage_1.isValidIncidentId)(id)) {
         const incident = await (0, storage_1.loadIncident)(id, config);
         if (!incident)
             return errorResponse(`Incident not found: ${id}`);
-        const lines = [
-            `Incident: ${incident.incident_id}`,
-            `Date: ${new Date(incident.timestamp).toISOString()}`,
-            `Symptom: ${incident.symptom}`,
-            `\nRoot cause: ${incident.root_cause?.description || 'unknown'}`,
-            `Category: ${incident.root_cause?.category || 'unknown'}`,
-            `Diagnosis confidence: historical metadata, not independently calibrated`,
-            `Verification: ${incident.verification?.status || 'unverified'} (historical record)`,
-        ];
-        if (incident.root_cause?.file) {
-            lines.push(`File: ${incident.root_cause.file}`);
-        }
-        lines.push(`\nFix: ${incident.fix?.approach || 'unknown'}`);
-        if (incident.fix?.changes?.length) {
-            lines.push('Changes:');
-            for (const c of incident.fix.changes) {
-                const detail = c.summary || c.change_type;
-                lines.push(`- ${c.file}${detail ? `: ${detail}` : ''}${Number.isFinite(c.lines_changed) ? ` (${c.lines_changed} lines)` : ''}`);
-            }
-        }
-        if (Array.isArray(incident.fix?.notes) && incident.fix.notes.length) {
-            lines.push('Notes:');
-            for (const note of incident.fix.notes)
-                lines.push(`- ${note}`);
-        }
-        lines.push(`Tags: ${(incident.tags || []).join(', ')}`);
-        lines.push(`Files changed: ${(incident.files_changed || []).join(', ')}`);
-        const quality = incident.completeness?.quality_score ?? incident.quality_score ?? 0;
-        lines.push(`Quality: ${(quality * 100).toFixed(0)}%`);
-        return textResponse(lines.join('\n'));
+        return textResponse(formatIncidentDetail(incident));
     }
     return errorResponse(`Invalid ID format. Expected INC_* or PTN_*, got: ${id}`);
+}
+function formatPatternDetail(pattern) {
+    const lines = [
+        `Pattern: ${pattern.pattern_id}`,
+        `Name: ${pattern.name}`,
+        `Description: ${pattern.description}`,
+        `Success rate: ${(pattern.success_rate * 100).toFixed(0)}%`,
+        `Uses: ${pattern.usage_history?.total_uses || 0}`,
+        `Tags: ${(pattern.tags || []).join(', ')}`,
+        `\nDetection signatures: ${pattern.detection_signature.join(', ')}`,
+        `\nSolution:\n${pattern.solution_template}`,
+    ];
+    if (pattern.caveats?.length) {
+        lines.push(`\nCaveats:\n${pattern.caveats.map((c) => `- ${c}`).join('\n')}`);
+    }
+    return lines.join('\n');
+}
+function formatIncidentDetail(incident) {
+    const lines = [
+        `Incident: ${incident.incident_id}`,
+        `Date: ${new Date(incident.timestamp).toISOString()}`,
+        `Symptom: ${incident.symptom}`,
+        `\nRoot cause: ${incident.root_cause?.description || 'unknown'}`,
+        `Category: ${incident.root_cause?.category || 'unknown'}`,
+        `Diagnosis confidence: historical metadata, not independently calibrated`,
+        `Verification: ${incident.verification?.status || 'unverified'} (historical record)`,
+    ];
+    if (incident.root_cause?.file) {
+        lines.push(`File: ${incident.root_cause.file}`);
+    }
+    lines.push(`\nFix: ${incident.fix?.approach || 'unknown'}`);
+    if (incident.fix?.changes?.length) {
+        lines.push('Changes:');
+        for (const c of incident.fix.changes) {
+            const detail = c.summary || c.change_type;
+            lines.push(`- ${c.file}${detail ? `: ${detail}` : ''}${Number.isFinite(c.lines_changed) ? ` (${c.lines_changed} lines)` : ''}`);
+        }
+    }
+    if (Array.isArray(incident.fix?.notes) && incident.fix.notes.length) {
+        lines.push('Notes:');
+        for (const note of incident.fix.notes)
+            lines.push(`- ${note}`);
+    }
+    lines.push(`Tags: ${(incident.tags || []).join(', ')}`);
+    lines.push(`Files changed: ${(incident.files_changed || []).join(', ')}`);
+    const quality = incident.completeness?.quality_score ?? incident.quality_score ?? 0;
+    lines.push(`Quality: ${(quality * 100).toFixed(0)}%`);
+    return lines.join('\n');
 }
 async function handleStatus(config) {
     const index = await (0, storage_1.loadIndex)(config);

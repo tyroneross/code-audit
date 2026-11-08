@@ -95,6 +95,7 @@ const crypto_1 = require("crypto");
 const config_1 = require("./config");
 const quality_1 = require("./quality");
 const logger_1 = require("./logger");
+const corpus_write_1 = require("./corpus-write");
 /**
  * Store an incident in memory
  */
@@ -133,36 +134,38 @@ async function storeIncident(incident, options = {}) {
                 throw new Error(`Invalid incident: ${validation.errors.join(', ')}`);
             }
         }
-        // Get paths from config
-        const paths = (0, config_1.getMemoryPaths)(options.config);
-        const INCIDENTS_DIR = paths.incidents;
-        // Ensure directory exists
-        await promises_1.default.mkdir(INCIDENTS_DIR, { recursive: true });
-        // Generate filename
-        const filename = `${finalIncident.incident_id}.json`;
-        const filepath = path_1.default.join(INCIDENTS_DIR, filename);
-        const replacing = await promises_1.default.stat(filepath).then(() => true, (error) => { if (error.code === 'ENOENT')
-            return false; throw error; });
-        // Write to file
-        await promises_1.default.writeFile(filepath, JSON.stringify(finalIncident, null, 2), 'utf-8');
-        const qualityEmoji = (finalIncident.completeness.quality_score >= 0.75) ? '🌟' :
-            (finalIncident.completeness.quality_score >= 0.5) ? '✅' : '⚠️';
-        console.log(`${qualityEmoji} Incident stored: ${finalIncident.incident_id} (quality: ${(finalIncident.completeness.quality_score * 100).toFixed(0)}%)`);
-        // Append to JSONL log for fast full-text search
-        await appendToIncidentLog(finalIncident, options.config);
-        if (replacing) {
-            // Replacement must remove old keyword/category/tag contributions and preserve unique counts.
-            await rebuildIndex(options.config);
-            await rebuildKeywordIndex(options.config);
-        }
-        else {
-            await updateIndexIncremental(finalIncident, options.config);
-            await updateKeywordIndex(finalIncident, options.config);
-        }
-        return {
-            incident_id: finalIncident.incident_id,
-            file_path: filepath
-        };
+        return (0, corpus_write_1.withCorpusWrite)(options.config, async () => {
+            // Get paths from config
+            const paths = (0, config_1.getMemoryPaths)(options.config);
+            const INCIDENTS_DIR = paths.incidents;
+            // Ensure directory exists
+            await promises_1.default.mkdir(INCIDENTS_DIR, { recursive: true });
+            // Generate filename
+            const filename = `${finalIncident.incident_id}.json`;
+            const filepath = path_1.default.join(INCIDENTS_DIR, filename);
+            const replacing = await promises_1.default.stat(filepath).then(() => true, (error) => { if (error.code === 'ENOENT')
+                return false; throw error; });
+            // Write to file
+            await (0, corpus_write_1.writeJsonAtomic)(filepath, finalIncident, true);
+            const qualityEmoji = (finalIncident.completeness.quality_score >= 0.75) ? '🌟' :
+                (finalIncident.completeness.quality_score >= 0.5) ? '✅' : '⚠️';
+            console.log(`${qualityEmoji} Incident stored: ${finalIncident.incident_id} (quality: ${(finalIncident.completeness.quality_score * 100).toFixed(0)}%)`);
+            // Append to JSONL log for fast full-text search
+            await appendToIncidentLog(finalIncident, options.config);
+            if (replacing) {
+                // Replacement must remove old keyword/category/tag contributions and preserve unique counts.
+                await rebuildIndex(options.config);
+                await rebuildKeywordIndex(options.config);
+            }
+            else {
+                await updateIndexIncremental(finalIncident, options.config);
+                await updateKeywordIndex(finalIncident, options.config);
+            }
+            return {
+                incident_id: finalIncident.incident_id,
+                file_path: filepath
+            };
+        });
     });
 }
 /**
@@ -272,6 +275,14 @@ function normalizeLegacyIncident(value, sourceFile) {
     if (record === null || typeof record !== 'object' || Array.isArray(record))
         return value;
     const legacy = {};
+    normalizeIncidentIdentity(record, legacy, sourceFile);
+    normalizeIncidentDescription(record, legacy);
+    normalizeIncidentFix(record.fix, legacy);
+    if (Object.keys(legacy).length)
+        record.legacy = { ...(record.legacy && typeof record.legacy === 'object' ? record.legacy : {}), ...legacy };
+    return value;
+}
+function normalizeIncidentIdentity(record, legacy, sourceFile) {
     if (record.incident_id === undefined && sourceFile) {
         const stem = path_1.default.basename(sourceFile).replace(/\.json$/, '');
         if (isValidIncidentId(stem)) {
@@ -291,6 +302,8 @@ function normalizeLegacyIncident(value, sourceFile) {
             legacy.timestamp_source = 'incident_id';
         }
     }
+}
+function normalizeIncidentDescription(record, legacy) {
     if (record.symptom !== null && typeof record.symptom === 'object' && !Array.isArray(record.symptom)) {
         const text = legacySymptomText(record.symptom);
         if (text) {
@@ -304,40 +317,41 @@ function normalizeLegacyIncident(value, sourceFile) {
         legacy.verification_status = verification.status;
         verification.status = 'unverified';
     }
-    const fix = record.fix;
-    if (fix !== null && typeof fix === 'object' && !Array.isArray(fix) && fix.notes !== undefined && !Array.isArray(fix.notes)) {
+}
+function normalizeIncidentFix(fix, legacy) {
+    if (fix === null || typeof fix !== 'object')
+        return;
+    if (!Array.isArray(fix) && fix.notes !== undefined && !Array.isArray(fix.notes)) {
         legacy.fix_notes = fix.notes;
         fix.notes = textParts(fix.notes);
     }
-    if (fix !== null && typeof fix === 'object' && Array.isArray(fix.changes) && !fix.changes.every((c) => c && typeof c === 'object' && typeof c.file === 'string')) {
-        const changes = [], notes = [];
-        let mapped = true;
-        for (const entry of fix.changes) {
-            const text = textValue(entry);
-            if (entry && typeof entry === 'object' && typeof entry.file === 'string')
-                changes.push(entry);
-            else if (text && isPathLike(text))
-                changes.push({ file: text });
-            else if (text)
-                notes.push(text);
-            else if (entry && typeof entry === 'object' && (textValue(entry.summary) || textValue(entry.command))) {
-                notes.push([textValue(entry.summary), textValue(entry.command) && `command: ${textValue(entry.command)}`].filter(Boolean).join(' — '));
-            }
-            else {
-                mapped = false;
-                break;
-            } // unrecognized entry: leave changes as-is so validation reports it
+    if (!Array.isArray(fix.changes) || fix.changes.every((c) => c && typeof c === 'object' && typeof c.file === 'string'))
+        return;
+    const mapped = mapLegacyChanges(fix.changes);
+    if (!mapped)
+        return; // Preserve unknown entries so validation still reports them.
+    legacy.fix_changes = fix.changes;
+    fix.changes = mapped.changes;
+    if (mapped.notes.length)
+        fix.notes = [...(Array.isArray(fix.notes) ? fix.notes : []), ...mapped.notes];
+}
+function mapLegacyChanges(entries) {
+    const changes = [], notes = [];
+    for (const entry of entries) {
+        const text = textValue(entry);
+        if (entry && typeof entry === 'object' && typeof entry.file === 'string')
+            changes.push(entry);
+        else if (text && isPathLike(text))
+            changes.push({ file: text });
+        else if (text)
+            notes.push(text);
+        else if (entry && typeof entry === 'object' && (textValue(entry.summary) || textValue(entry.command))) {
+            notes.push([textValue(entry.summary), textValue(entry.command) && `command: ${textValue(entry.command)}`].filter(Boolean).join(' — '));
         }
-        if (mapped) {
-            legacy.fix_changes = fix.changes;
-            fix.changes = changes;
-            if (notes.length)
-                fix.notes = [...(Array.isArray(fix.notes) ? fix.notes : []), ...notes];
-        }
+        else
+            return undefined;
     }
-    if (Object.keys(legacy).length)
-        record.legacy = { ...(record.legacy && typeof record.legacy === 'object' ? record.legacy : {}), ...legacy };
-    return value;
+    return { changes, notes };
 }
 /** Why a record from `file` is not loaded as an incident, or null when it loads. */
 function incidentSkipReason(value, file) {
@@ -422,11 +436,14 @@ async function storePattern(pattern, config) {
         throw new Error('Invalid pattern ID format');
     if (!validPatternRecord(pattern))
         throw new Error('Invalid pattern record');
+    return (0, corpus_write_1.withCorpusWrite)(config, () => storePatternUnlocked(pattern, config));
+}
+async function storePatternUnlocked(pattern, config) {
     const paths = (0, config_1.getMemoryPaths)(config);
     await promises_1.default.mkdir(paths.patterns, { recursive: true });
     const filename = `${pattern.pattern_id}.json`;
     const filepath = path_1.default.join(paths.patterns, filename);
-    await promises_1.default.writeFile(filepath, JSON.stringify(pattern, null, 2), 'utf-8');
+    await (0, corpus_write_1.writeJsonAtomic)(filepath, pattern, true);
     console.log(`✅ Pattern stored: ${pattern.pattern_id}`);
     return filepath;
 }
@@ -795,6 +812,9 @@ async function searchIncidentLog(query, config, coverage = emptyCorpusCoverage()
  * Build or rebuild the memory index from all incidents
  */
 async function rebuildIndex(config) {
+    return (0, corpus_write_1.withCorpusWrite)(config, () => rebuildIndexUnlocked(config));
+}
+async function rebuildIndexUnlocked(config) {
     return (0, logger_1.traced)('storage:rebuildIndex', undefined, async () => {
         const incidents = await loadAllIncidents(config);
         const paths = (0, config_1.getMemoryPaths)(config);
@@ -822,50 +842,8 @@ async function rebuildIndex(config) {
             index.stats.total_patterns = patternFiles.filter(f => f.endsWith('.json')).length;
         }
         catch { /* patterns dir may not exist */ }
-        // Build indexes
-        for (const incident of incidents) {
-            const id = incident.incident_id;
-            const cat = incident.root_cause?.category || 'unknown';
-            const qs = incident.completeness?.quality_score || 0;
-            // Category index
-            if (!index.by_category[cat])
-                index.by_category[cat] = [];
-            index.by_category[cat].push(id);
-            index.stats.categories[cat] = (index.stats.categories[cat] || 0) + 1;
-            // Tag index
-            for (const tag of (incident.tags || [])) {
-                if (!index.by_tag[tag])
-                    index.by_tag[tag] = [];
-                index.by_tag[tag].push(id);
-                index.stats.tags[tag] = (index.stats.tags[tag] || 0) + 1;
-            }
-            // File index
-            for (const file of (incident.files_changed || [])) {
-                if (!index.by_file[file])
-                    index.by_file[file] = [];
-                index.by_file[file].push(id);
-            }
-            // Quality distribution
-            if (qs >= 0.75) {
-                index.by_quality.excellent.push(id);
-                index.stats.quality_distribution.excellent++;
-            }
-            else if (qs >= 0.5) {
-                index.by_quality.good.push(id);
-                index.stats.quality_distribution.good++;
-            }
-            else {
-                index.by_quality.fair.push(id);
-                index.stats.quality_distribution.fair++;
-            }
-            // Timestamps
-            if (incident.timestamp < index.stats.oldest_timestamp) {
-                index.stats.oldest_timestamp = incident.timestamp;
-            }
-            if (incident.timestamp > index.stats.newest_timestamp) {
-                index.stats.newest_timestamp = incident.timestamp;
-            }
-        }
+        for (const incident of incidents)
+            addIncidentToIndex(index, incident);
         // Fix infinity if no incidents
         if (index.stats.oldest_timestamp === Infinity)
             index.stats.oldest_timestamp = 0;
@@ -877,7 +855,7 @@ async function rebuildIndex(config) {
         // Write index
         const indexPath = path_1.default.join(paths.root, 'index.json');
         await promises_1.default.mkdir(paths.root, { recursive: true });
-        await promises_1.default.writeFile(indexPath, JSON.stringify(index, null, 2), 'utf-8');
+        await (0, corpus_write_1.writeJsonAtomic)(indexPath, index, true);
         return index;
     });
 }
@@ -976,6 +954,11 @@ async function buildMemorySummary(config) {
  * Archive incidents older than maxAge days, keeping at most maxActive incidents
  */
 async function archiveOldIncidents(options = {}, config) {
+    if (options.dryRun)
+        return archiveOldIncidentsUnlocked(options, config);
+    return (0, corpus_write_1.withCorpusWrite)(config, () => archiveOldIncidentsUnlocked(options, config));
+}
+async function archiveOldIncidentsUnlocked(options = {}, config) {
     const { maxActive = 200, maxAgeDays = 180, dryRun = false } = options;
     const paths = (0, config_1.getMemoryPaths)(config);
     const archivePath = path_1.default.join(paths.root, 'archive');
@@ -1093,6 +1076,9 @@ function extractIndexKeywords(incident) {
  * Update keyword index with a new incident (incremental, no full rebuild)
  */
 async function updateKeywordIndex(incident, config) {
+    return (0, corpus_write_1.withCorpusWrite)(config, () => updateKeywordIndexUnlocked(incident, config));
+}
+async function updateKeywordIndexUnlocked(incident, config) {
     const index = await loadKeywordIndex(config) || {
         version: 1,
         last_updated: Date.now(),
@@ -1115,7 +1101,7 @@ async function updateKeywordIndex(incident, config) {
     const paths = (0, config_1.getMemoryPaths)(config);
     const indexPath = path_1.default.join(paths.root, 'keyword-index.json');
     await promises_1.default.mkdir(paths.root, { recursive: true });
-    await promises_1.default.writeFile(indexPath, JSON.stringify(index), 'utf-8');
+    await (0, corpus_write_1.writeJsonAtomic)(indexPath, index);
 }
 /**
  * Load keyword index from disk
@@ -1156,6 +1142,9 @@ function findCandidatesByKeyword(queryWords, index, maxCandidates = 20) {
  * Rebuild keyword index from scratch
  */
 async function rebuildKeywordIndex(config) {
+    return (0, corpus_write_1.withCorpusWrite)(config, () => rebuildKeywordIndexUnlocked(config));
+}
+async function rebuildKeywordIndexUnlocked(config) {
     const incidents = await loadAllIncidents(config);
     const index = {
         version: 1,
@@ -1179,7 +1168,7 @@ async function rebuildKeywordIndex(config) {
     const paths = (0, config_1.getMemoryPaths)(config);
     const indexPath = path_1.default.join(paths.root, 'keyword-index.json');
     await promises_1.default.mkdir(paths.root, { recursive: true });
-    await promises_1.default.writeFile(indexPath, JSON.stringify(index), 'utf-8');
+    await (0, corpus_write_1.writeJsonAtomic)(indexPath, index);
     return index;
 }
 // ============================================================================
@@ -1189,6 +1178,9 @@ async function rebuildKeywordIndex(config) {
  * Update index incrementally with a new incident (avoids full loadAllIncidents)
  */
 async function updateIndexIncremental(incident, config) {
+    return (0, corpus_write_1.withCorpusWrite)(config, () => updateIndexIncrementalUnlocked(incident, config));
+}
+async function updateIndexIncrementalUnlocked(incident, config) {
     const paths = (0, config_1.getMemoryPaths)(config);
     const indexPath = path_1.default.join(paths.root, 'index.json');
     const index = await loadIndex(config);
@@ -1196,56 +1188,39 @@ async function updateIndexIncremental(incident, config) {
         await rebuildIndex(config);
         return;
     }
-    const id = incident.incident_id;
-    const cat = incident.root_cause?.category || 'unknown';
-    const qs = incident.completeness?.quality_score || 0;
-    // Stats
     index.stats.total_incidents++;
-    index.stats.categories[cat] = (index.stats.categories[cat] || 0) + 1;
-    for (const tag of (incident.tags || [])) {
-        index.stats.tags[tag] = (index.stats.tags[tag] || 0) + 1;
-    }
-    if (incident.timestamp < index.stats.oldest_timestamp || index.stats.oldest_timestamp === 0) {
+    if (index.stats.oldest_timestamp === 0)
         index.stats.oldest_timestamp = incident.timestamp;
-    }
-    if (incident.timestamp > index.stats.newest_timestamp) {
-        index.stats.newest_timestamp = incident.timestamp;
-    }
-    // Category index
-    if (!index.by_category[cat])
-        index.by_category[cat] = [];
-    index.by_category[cat].push(id);
-    // Tag index
-    for (const tag of (incident.tags || [])) {
-        if (!index.by_tag[tag])
-            index.by_tag[tag] = [];
-        index.by_tag[tag].push(id);
-    }
-    // File index
-    for (const file of (incident.files_changed || [])) {
-        if (!index.by_file[file])
-            index.by_file[file] = [];
-        index.by_file[file].push(id);
-    }
-    // Quality
-    if (qs >= 0.75) {
-        index.by_quality.excellent.push(id);
-        index.stats.quality_distribution.excellent++;
-    }
-    else if (qs >= 0.5) {
-        index.by_quality.good.push(id);
-        index.stats.quality_distribution.good++;
-    }
-    else {
-        index.by_quality.fair.push(id);
-        index.stats.quality_distribution.fair++;
-    }
+    addIncidentToIndex(index, incident);
+    const id = incident.incident_id;
     // Recent
     index.recent.unshift(id);
     if (index.recent.length > 20)
         index.recent = index.recent.slice(0, 20);
     index.last_updated = Date.now();
-    await promises_1.default.writeFile(indexPath, JSON.stringify(index, null, 2), 'utf-8');
+    await (0, corpus_write_1.writeJsonAtomic)(indexPath, index, true);
+}
+/** One policy for both full and incremental derived indexes. */
+function addIncidentToIndex(index, incident) {
+    var _a, _b, _c;
+    const id = incident.incident_id;
+    const category = incident.root_cause?.category || 'unknown';
+    ((_a = index.by_category)[category] || (_a[category] = [])).push(id);
+    index.stats.categories[category] = (index.stats.categories[category] || 0) + 1;
+    for (const tag of incident.tags || []) {
+        ((_b = index.by_tag)[tag] || (_b[tag] = [])).push(id);
+        index.stats.tags[tag] = (index.stats.tags[tag] || 0) + 1;
+    }
+    for (const file of incident.files_changed || [])
+        ((_c = index.by_file)[file] || (_c[file] = [])).push(id);
+    const quality = incident.completeness?.quality_score || 0;
+    const tier = quality >= 0.75 ? 'excellent' : quality >= 0.5 ? 'good' : 'fair';
+    index.by_quality[tier].push(id);
+    index.stats.quality_distribution[tier]++;
+    if (incident.timestamp < index.stats.oldest_timestamp)
+        index.stats.oldest_timestamp = incident.timestamp;
+    if (incident.timestamp > index.stats.newest_timestamp)
+        index.stats.newest_timestamp = incident.timestamp;
 }
 // ============================================================================
 // OUTCOME TRACKING - Did the suggested fix actually work?

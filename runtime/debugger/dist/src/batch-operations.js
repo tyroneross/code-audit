@@ -20,6 +20,7 @@ const path_1 = __importDefault(require("path"));
 const storage_1 = require("./storage");
 const pattern_extractor_1 = require("./pattern-extractor");
 const config_1 = require("./config");
+const corpus_write_1 = require("./corpus-write");
 const quality_1 = require("./quality");
 /**
  * Review and complete incomplete incidents interactively
@@ -325,13 +326,17 @@ async function completeIncidentInteractive(incident) {
  * Delete an incident file
  */
 async function deleteIncident(incident_id, config) {
-    const paths = (0, config_1.getMemoryPaths)(config);
-    const filepath = path_1.default.join(paths.incidents, `${incident_id}.json`);
-    try {
-        await promises_1.default.unlink(filepath);
-    }
-    catch (error) {
-        console.error(`Failed to delete ${incident_id}:`, error);
-    }
+    return (0, corpus_write_1.withCorpusWrite)(config, async () => {
+        const filepath = path_1.default.join((0, config_1.getMemoryPaths)(config).incidents, `${incident_id}.json`);
+        try {
+            await promises_1.default.unlink(filepath);
+        }
+        catch (error) {
+            if (error.code !== 'ENOENT')
+                throw error;
+        }
+        await (0, storage_1.rebuildIndex)(config);
+        await (0, storage_1.rebuildKeywordIndex)(config);
+    });
 }
 //# sourceMappingURL=batch-operations.js.map

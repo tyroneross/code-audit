@@ -344,66 +344,25 @@ function convertFindingToIncident(finding: AuditFinding): Incident {
 /**
  * Infer category from text with improved detection
  */
+const CATEGORY_KEYWORDS: ReadonlyArray<readonly [string, readonly string[]]> = [
+  ['react-hooks', ['react', 'hook', 'render', 'component']],
+  ['database', ['database', 'prisma', 'schema', 'migration', 'query', 'sql']],
+  ['api', ['api', 'endpoint', 'route', 'request']],
+  ['performance', ['performance', 'slow', 'latency', 'timeout', 'bottleneck']],
+  ['search', ['search', 'vector', 'rerank']],
+  ['caching', ['cache', 'redis', 'memoiz']],
+  ['error-handling', ['error', 'exception', 'try-catch', 'throw']],
+  ['validation', ['validation', 'invalid', 'format']],
+  ['config', ['config', 'setting', 'env', 'environment']],
+  ['dependency', ['dependency', 'import', 'module', 'package']],
+  ['authentication', ['auth', 'permission', 'login', 'session']],
+];
+
 function inferCategory(symptom: string, root_cause?: string): string {
   const text = `${symptom} ${root_cause || ''}`.toLowerCase();
-
-  // React issues (check first - specific)
-  if (text.includes('react') || text.includes('hook') || text.includes('render') || text.includes('component')) {
-    return 'react-hooks';
+  for (const [category, keywords] of CATEGORY_KEYWORDS) {
+    if (keywords.some(keyword => text.includes(keyword))) return category;
   }
-
-  // Database issues
-  if (text.includes('database') || text.includes('prisma') || text.includes('schema') ||
-      text.includes('migration') || text.includes('query') || text.includes('sql')) {
-    return 'database';
-  }
-
-  // API issues
-  if (text.includes('api') || text.includes('endpoint') || text.includes('route') || text.includes('request')) {
-    return 'api';
-  }
-
-  // Performance issues
-  if (text.includes('performance') || text.includes('slow') || text.includes('latency') ||
-      text.includes('timeout') || text.includes('bottleneck')) {
-    return 'performance';
-  }
-
-  // Search issues
-  if (text.includes('search') || text.includes('vector') || text.includes('rerank')) {
-    return 'search';
-  }
-
-  // Cache issues
-  if (text.includes('cache') || text.includes('redis') || text.includes('memoiz')) {
-    return 'caching';
-  }
-
-  // Error handling
-  if (text.includes('error') || text.includes('exception') || text.includes('try-catch') || text.includes('throw')) {
-    return 'error-handling';
-  }
-
-  // Validation
-  if (text.includes('validation') || text.includes('invalid') || text.includes('format')) {
-    return 'validation';
-  }
-
-  // Configuration
-  if (text.includes('config') || text.includes('setting') || text.includes('env') || text.includes('environment')) {
-    return 'config';
-  }
-
-  // Dependencies
-  if (text.includes('dependency') || text.includes('import') || text.includes('module') || text.includes('package')) {
-    return 'dependency';
-  }
-
-  // Authentication/Authorization
-  if (text.includes('auth') || text.includes('permission') || text.includes('login') || text.includes('session')) {
-    return 'authentication';
-  }
-
   return 'unknown';
 }
 
