@@ -83,10 +83,19 @@ def names(output):
     return [name for name in output.decode("utf-8", "surrogateescape").split("\0") if name]
 
 
-def kind(path):
-    """'file', 'link', 'missing' or 'other' without opening the path, so a FIFO or device is never read."""
+def kind(root, path):
+    """'file', 'link', 'missing' or 'other' for root-relative path, without opening it, so a FIFO or device is never read.
+
+    A path whose directory resolves outside root (a tracked directory replaced by a link to somewhere else) is
+    'other': nothing outside the source root is ever hashed or read.
+    """
+    real_root = os.path.realpath(str(root))
+    full = os.path.join(real_root, path)
+    parent = os.path.realpath(os.path.dirname(full))
+    if parent != real_root and not parent.startswith(real_root + os.sep):
+        return "other"
     try:
-        mode = os.lstat(path).st_mode
+        mode = os.lstat(full).st_mode
     except OSError:
         return "missing"
     return "file" if stat.S_ISREG(mode) else "link" if stat.S_ISLNK(mode) else "other"
@@ -116,7 +125,7 @@ def changed_paths(root, base):
     untracked = names(untracked)
     states, to_hash = {}, []
     for path in sorted(set(at_base) | tracked | set(untracked)):
-        found = kind(os.path.join(str(root), path))
+        found = kind(root, path)
         if found == "missing":
             if path in at_base:
                 states[path] = "deleted"

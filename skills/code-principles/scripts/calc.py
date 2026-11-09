@@ -3,6 +3,10 @@
 
   calc.py EXPRESSION [EXPRESSION ...] [--check "LEFT == RIGHT" ...] [--tolerance 1e-9]
 
+The same calculator is built into the analyzer binary and starts several times faster: when
+runtime/complexity is built, run `code-audit-complexity calc ...` with the same arguments. This script needs no
+build and is the fallback. calc_vectors.json is run against both, so they give the same answers.
+
   calc.py "99 + 124 + 89 + 10" "round(100 * 21 / 47, 1)"
   calc.py --check "10**2 * (1 - 0.5)**3 + 10 == 22.5"
 
@@ -30,7 +34,8 @@ BINARY = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, 
 UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
 COMPARE = {ast.Eq: operator.eq, ast.NotEq: operator.ne, ast.Lt: operator.lt, ast.LtE: operator.le, ast.Gt: operator.gt, ast.GtE: operator.ge}
 # Standard-library arithmetic only: fractions for exact values, math and statistics for the rest.
-FUNCTIONS = {"abs": abs, "round": lambda *arguments: rounded(*arguments), "min": min, "max": max, "sum": lambda *values: total(*values), "sqrt": math.sqrt,
+FUNCTIONS = {"abs": abs, "round": lambda *arguments: rounded(*arguments), "min": lambda *values: extreme(min, values),
+             "max": lambda *values: extreme(max, values), "sum": lambda *values: total(*values), "sqrt": math.sqrt,
              "floor": math.floor, "ceil": math.ceil, "log": math.log, "log2": math.log2, "log10": math.log10,
              "mean": lambda *values: mean(*values), "median": lambda *values: statistics.median(values),
              "stdev": lambda *values: statistics.stdev(values), "pstdev": lambda *values: statistics.pstdev(values)}
@@ -39,8 +44,8 @@ FUNCTIONS = {"abs": abs, "round": lambda *arguments: rounded(*arguments), "min":
 # so every permitted result can be written and read back as JSON.
 MAX_BITS = 4096
 MAX_ROUND_DIGITS = 60
-# Input budget: review arithmetic is a line or two. With at most this many nodes, evaluation depth and the number
-# of operations are bounded, and each operation is bounded by MAX_BITS.
+# Input budget: review arithmetic is a line or two. With at most this many numbers and operations, evaluation depth
+# and work are bounded, and each operation is bounded by MAX_BITS.
 MAX_CHARS = 2000
 MAX_NODES = 256
 TOLERANCE = 1e-9
@@ -88,10 +93,19 @@ def mean(*values):
     return bounded(total(*values) / len(values))
 
 
-def rounded(value, digits=Fraction(0)):
+def rounded(value, digits=None):
+    """round(x) is a whole number, exact for a float too; round(x, n) keeps the kind of x."""
+    if digits is None:
+        return round(value)
     if not isinstance(digits, Fraction) or digits.denominator != 1 or abs(digits) > MAX_ROUND_DIGITS:
         raise ValueError(f"round takes a whole number of digits between -{MAX_ROUND_DIGITS} and {MAX_ROUND_DIGITS}")
     return round(value, int(digits))
+
+
+def extreme(pick, values):
+    if not values:
+        raise ValueError("needs at least one value")
+    return pick(values)
 
 
 def number(node):
@@ -124,7 +138,8 @@ def parse(expression):
         raise ValueError(f"not an arithmetic expression: {error.msg}") from None
     except (ValueError, RecursionError, MemoryError) as error:  # an integer literal too long to read, or nesting too deep
         raise ValueError(f"not an arithmetic expression: {error}") from None
-    if sum(1 for _ in ast.walk(tree)) > MAX_NODES:
+    # A part is one number or one operation; the analyzer binary's calc counts the same way.
+    if sum(isinstance(node, (ast.Constant, ast.BinOp, ast.UnaryOp, ast.Call, ast.Compare)) for node in ast.walk(tree)) > MAX_NODES:
         raise ValueError(f"expression has more than {MAX_NODES} parts")
     return tree
 

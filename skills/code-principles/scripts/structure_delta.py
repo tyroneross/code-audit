@@ -79,11 +79,10 @@ def line_counts(before, after):
 
 def working_bytes(root, path):
     """The working file's bytes; None unless it is a regular file, so links, FIFOs and devices are never opened."""
-    full = Path(root) / path
-    if gitsafe.kind(full) != "file":
+    if gitsafe.kind(root, path) != "file":
         return None
     try:
-        return full.read_bytes()
+        return (Path(root) / path).read_bytes()
     except OSError:
         return None
 
@@ -250,7 +249,7 @@ def measure_both(root, contents, structure, threshold):
                 target.write_bytes(before)
                 at_base.append(path)
         report = measure_side(scratch, at_base, structure, threshold)
-    return len(sources), report, measure_side(root, [p for p in sources if gitsafe.kind(root / p) == "file"], structure, threshold)
+    return len(sources), report, measure_side(root, [p for p in sources if gitsafe.kind(root, p) == "file"], structure, threshold)
 
 
 def delta(root, base=None, max_changed_lines=MAX_CHANGED_LINES, threshold=complexity.CC_THRESHOLD, structure=None):

@@ -80,6 +80,8 @@
 //! A file with a line longer than 2000 bytes is treated as minified or
 //! generated: its leads are withheld and counted in `patterns_withheld`.
 
+mod calc;
+
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
 use std::path::{Component, Path, PathBuf};
@@ -1312,6 +1314,10 @@ fn parse_args() -> Result<Options, String> {
 }
 
 fn main() {
+    let arguments: Vec<String> = std::env::args().skip(1).collect();
+    if arguments.first().map(String::as_str) == Some("calc") {
+        std::process::exit(calc::run(&arguments[1..]));
+    }
     let versions = locked_versions();
     let analyzer = serde_json::json!({
         "name": "code-audit-complexity",

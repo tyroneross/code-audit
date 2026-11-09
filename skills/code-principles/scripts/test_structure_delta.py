@@ -235,6 +235,22 @@ class StructureDeltaTests(unittest.TestCase):
         self.assertEqual(report["status"], "incomplete")
         self.assertEqual([(g["side"], g["path"]) for g in report["gaps"]], [("working tree", "zero.py")])
 
+    def test_directory_replaced_by_a_link_outside_the_root_is_not_read(self):
+        import os
+        outside = self.root.parent / (self.root.name + "-outside")
+        self.addCleanup(lambda: shutil.rmtree(outside, ignore_errors=True))
+        outside.mkdir()
+        (outside / "mod.py").write_text("def secret(a, b, c, d, e, f, g):\n    return a\n")
+        self.write("pkg/mod.py", "def inside():\n    return 1\n")
+        self.commit("pkg")
+        shutil.rmtree(self.root / "pkg")
+        os.symlink(outside, self.root / "pkg")
+        _, report = self.flags()
+        # The link itself is listed as an untracked link; the tracked file beneath it is unreadable, not read through it.
+        self.assertEqual(report["binary_or_unreadable_files"], ["pkg", "pkg/mod.py"])
+        self.assertEqual((report["status"], [(g["side"], g["path"]) for g in report["gaps"]]), ("incomplete", [("working tree", "pkg/mod.py")]))
+        self.assertNotIn("secret", json.dumps(report))
+
     def test_link_at_the_base_is_not_read_as_source(self):
         import os
         os.symlink("pass", self.root / "alias.py")

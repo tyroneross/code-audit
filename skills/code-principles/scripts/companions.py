@@ -123,6 +123,8 @@ def doctor(project=None):
               "complexity_analyzer": {"available": binary is not None, "path": str(binary) if binary else None,
                                       "build": complexity.native_build_hint(),
                                       "languages": ["python", "rust", "typescript", "javascript", "java", "go", "swift"]},
+              "calculator": {"fast": f"{binary} calc" if binary else None, "fallback": "python3 calc.py",
+                             "note": "same arguments and report; build the analyzer for the fast form"},
               "languages": {}}
     for language, kinds in COMPANIONS.items():
         report["languages"][language] = {kind: {**spec, **availability(spec, project)} for kind, spec in kinds.items()}

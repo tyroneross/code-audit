@@ -25,7 +25,7 @@ if unused code, stale experiments or constant flags: read ../code-principles/ref
 if literals with a source of truth, environment-specific values, or extra layers/services: read ../code-principles/references/frozen-values-and-path-length.md; compare each version, path, id, name table and copied list with its source in every supplied file
 run recon, follow the starting route in references/audit-methods.md, adapt per its rules and end with its coverage matrix
 probe before concluding: when execution is authorized, run the cheapest discriminating check outside the repo; label each finding probed or read
-compute, do not estimate: every number you report (totals, percentages, ratios, deltas) comes from a tool's output or ../code-principles/scripts/calc.py; check arithmetic in reviewed code by evaluating it on concrete inputs, never by reasoning alone
+compute, do not estimate: every number you report (totals, percentages, ratios, deltas) comes from a tool's output or the calculator (the analyzer binary's calc when built, else ../code-principles/scripts/calc.py); check arithmetic in reviewed code by evaluating it on concrete inputs, never by reasoning alone
 compare a local patch with the simplest adequate shared correction and the shortest correct path
 if repair authorized: fix the confirmed cause and preserve valid behavior
 verify changed behavior and affected guarantees

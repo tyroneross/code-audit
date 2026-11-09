@@ -39,7 +39,7 @@ Numbers in reports are computed by `calc.py`, not by a model. The engine was cho
 
 | Engine | Start to result | Peak memory | Exact for `1/3 + 1/6` and `2^64 + 1` | Needs |
 |---|---|---|---|---|
-| Rust binary (the bundled analyzer's startup, as a proxy) | 6.4 ms | 2.2 MB | yes with `num-rational` and `num-bigint` | a build step |
+| Rust binary (the analyzer's startup, measured before the calculator existed) | 6.4 ms | 2.2 MB | yes with `num-rational` and `num-bigint` | a build step |
 | `bc` | 15.0 ms | 2.5 MB | no for the fraction (`.4999...`), yes for the integer | nothing on macOS and Linux |
 | Node 22 | 28.2 ms | 41.6 MB | no rationals; integers only with BigInt | Node |
 | Python 3.14 `fractions` one-liner | 33.4 ms | 15.4 MB | yes | nothing |
@@ -47,7 +47,9 @@ Numbers in reports are computed by `calc.py`, not by a model. The engine was cho
 | R 4.6.1 `Rscript` | 147.7 ms | 69.5 MB | no: `2^64 + 1` printed one too low, and integers overflow at 2^31 | R; exact needs the `gmp` package |
 | Python with SymPy | 261.4 ms | 58.1 MB | yes | SymPy |
 
-Decision: one implementation, in the Python standard library. It is exact, installs nothing, runs on every host the plugin supports, and accepts only arithmetic, so an expression copied from a reviewed repository cannot run code. R starts 2.9 times slower and uses 3.4 times the memory, and base R is not exact for large integers; it is the better tool for statistics over samples and is named for that. A Rust evaluator would start 8.1 times faster with 9.3 times less memory, but a second calculator can disagree with the first and 52 ms is small beside one model turn; it is recorded as a decision for when calculations run in bulk.
+First decision: the Python standard library, because it is exact, installs nothing, runs on every host the plugin supports, and accepts only arithmetic, so an expression copied from a reviewed repository cannot run code. R starts 2.9 times slower and uses 3.4 times the memory, and base R is not exact for large integers; it is the better tool for statistics over samples and is named for that.
+
+Second decision, taken by the owner on 2026-11-09: also build the calculator into the analyzer binary in Rust, on exact big rationals. Measured after the build (median of 15 runs, same four expressions): the binary answers in 8.7 ms with 2.4 MB, the script in 64.6 ms with 21.6 MB, so 7.4 times faster with 9.0 times less memory. The script stays as the form that needs no build. Two implementations can disagree, so `calc_vectors.json` holds hand-worked answers that both must give and a seeded test requires agreement on 600 random expressions; writing that test exposed two defects in the script (`min` and `max` of one value, and `round` of a float without digits), which is the reason the vectors are hand-worked and not copied from either side.
 
 An owner-supplied Swift package for time intervals (spans that cannot overlap, so a total cannot double-count) was also assessed. It is not a calculator and needs a Swift toolchain, so it is not bundled. Its rule is adopted in checklist item E10: half-open intervals, and the union of overlapping intervals, never the sum of their lengths.
 
