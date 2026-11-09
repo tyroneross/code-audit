@@ -60,19 +60,37 @@ class CalcTests(unittest.TestCase):
             calc.check("1 < 2 < 3")
 
     def test_size_budget_refuses_before_computing(self):
-        for expression in ("((2**4096)**4096)**4096", "9 ** 9 ** 9", "2 ** 16385", "(2**8000) * (2**8000) * (2**8000)", "round(1/3, 10**100)", "round(1/3, 1/2)"):
+        for expression in ("((2**4096)**4096)**4096", "9 ** 9 ** 9", "2 ** 4097", "(2**2000) * (2**2000) * (2**2000)", "round(1/3, 10**100)", "round(1/3, 1/2)"):
             with self.subTest(expression=expression), self.assertRaises(ValueError):
                 calc.evaluate(expression)
-        self.assertEqual(calc.evaluate("2 ** 8000").bit_length(), 8001)
+        self.assertEqual(calc.evaluate("2 ** 2000").bit_length(), 2001)
 
     def test_rounding_and_large_exact_values_do_not_crash(self):
         self.assertEqual(calc.evaluate("round(1.25, 1)"), 1.2)
         self.assertEqual(calc.evaluate("round(2/3, 3)"), Fraction(667, 1000))
         self.assertEqual(calc.evaluate("round(5/2)"), 2)
-        code, report = self.run_main("10**4096 / 3", "--check", "10**4096 / 3 > 1")
+        code, report = self.run_main("10**400 / 3", "--check", "10**400 / 3 > 1")
         self.assertEqual((code, report["results"][0]["value"]["decimal"], report["checks"][0]["passed"]), (0, None, True))
         self.assertTrue(report["results"][0]["value"]["exact"].endswith("/3"))
         self.assertEqual(self.run_main("--check", "10.0**300 * 10.0**300 == 1")[0], 2)
+
+    def test_floor_division_stays_exact_and_inside_the_budget(self):
+        self.assertEqual(calc.evaluate("((10**20 + 1) // 1) / (1 // 1) - 10**20"), 1)
+        self.assertEqual(calc.evaluate("7 // 2 / 2"), Fraction(3, 2))
+        self.assertEqual(calc.evaluate("floor(7 / 2) / 2 + ceil(7 / 2) / 3"), Fraction(17, 6))
+        for expression in ("(2 // 1) ** (10 ** 100)", "floor(2) ** (10 ** 100)", "1" + "0" * 6000, "1" + "0" * 1300, "max(2, 1) ** (10 ** 100)"):
+            with self.subTest(expression=expression[:30]), self.assertRaises(ValueError):
+                calc.evaluate(expression)
+
+    def test_largest_permitted_exact_results_can_be_printed_and_read_back(self):
+        import subprocess, sys
+        argv = [sys.executable, calc.__file__, "(2**2000) * (2**2000)", "(2**2000) * (2**2000) / 3", "1" + "0" * 1200, "2**4095"]
+        done = subprocess.run(argv, capture_output=True, text=True, timeout=30)
+        report = json.loads(done.stdout)  # a fresh interpreter with the default digit limit reads every permitted result
+        self.assertEqual((done.returncode, report["results"][0]["value"]), (0, 2 ** 4000))
+        self.assertTrue(report["results"][1]["value"]["exact"].endswith("/3"))
+        self.assertEqual((report["results"][2]["value"], report["results"][3]["value"]), (10 ** 1200, 2 ** 4095))
+        self.assertLess(len(str(2 ** calc.MAX_BITS)), 4300)
 
     def test_statistics_come_from_the_standard_library(self):
         self.assertEqual(calc.evaluate("mean(1, 2, 4)"), Fraction(7, 3))

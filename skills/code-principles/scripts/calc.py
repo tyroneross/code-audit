@@ -9,8 +9,8 @@
 Expressions use numbers, + - * / // % **, parentheses, comparisons and the functions listed by --help.
 Nothing else is accepted: no names, attributes, calls to other functions, strings or imports, so an expression
 copied from a repository under review cannot run code. Integers and fractions stay exact (1/3 + 1/6 is 1/2);
-a float in the expression or sqrt/log makes the result a float. An exact intermediate result larger than 16384
-bits is refused before it is computed. round follows Python: a tie goes to the even digit, and a float is rounded
+a float in the expression or sqrt/log makes the result a float. An exact value larger than 4096 bits (about
+1,230 digits) is refused before it is computed. round follows Python: a tie goes to the even digit, and a float is rounded
 as the binary value it holds. mean and median of exact values are exact; stdev and pstdev return floats. --check passes when both sides are equal, or
 within --tolerance when either side is a float.
 
@@ -34,7 +34,10 @@ FUNCTIONS = {"abs": abs, "round": lambda *arguments: rounded(*arguments), "min":
              "floor": math.floor, "ceil": math.ceil, "log": math.log, "log2": math.log2, "log10": math.log10,
              "mean": lambda *values: statistics.mean(values), "median": lambda *values: statistics.median(values),
              "stdev": lambda *values: statistics.stdev(values), "pstdev": lambda *values: statistics.pstdev(values)}
-MAX_BITS = 16384  # size budget for every exact intermediate result, so 9**9**9 or a nested power cannot exhaust memory
+# Size budget for every exact value, so 9**9**9 or a nested power cannot exhaust memory. 4096 bits is about 1,230
+# digits: far beyond any review arithmetic, and below the 4,300 digits at which Python refuses to print an integer,
+# so every permitted result can be written and read back as JSON.
+MAX_BITS = 4096
 MAX_ROUND_DIGITS = 60
 TOLERANCE = 1e-9
 
@@ -45,17 +48,23 @@ def bits(value):
 
 
 def bounded(value):
+    """Every exact value as a Fraction within the size budget. Floor division, floor and ceil return int, which
+    would otherwise skip the budget and turn a later division into a float."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        value = Fraction(value)
     if bits(value) > MAX_BITS:
         raise ValueError(f"exact result is larger than {MAX_BITS} bits; use a float (write 2.0 for 2) or a smaller expression")
     return value
+
 
 
 def power(left, right):
     if isinstance(left, Fraction) and isinstance(right, Fraction):
         if right.denominator != 1:
             left, right = float(left), float(right)  # a fractional power is not exact
-        elif bits(left) * abs(right.numerator) > MAX_BITS:  # checked before computing: the result would have about this many bits
-            raise ValueError(f"exact power could exceed {MAX_BITS} bits; use a float base (write 2.0 for 2) or a smaller exponent")
+        # Checked before computing: the result has about exponent x log2(base) bits.
+        elif abs(right.numerator) * math.log2(max(abs(left.numerator), left.denominator)) + 1 > MAX_BITS:
+            raise ValueError(f"exact power would exceed {MAX_BITS} bits; use a float base (write 2.0 for 2) or a smaller exponent")
     return operator.pow(left, right)
 
 
@@ -68,7 +77,7 @@ def rounded(value, digits=Fraction(0)):
 def number(node):
     """Value of one expression node; integers become exact fractions so division does not lose precision."""
     if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
-        return Fraction(node.value) if isinstance(node.value, int) else node.value
+        return bounded(node.value)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow):
         return bounded(power(number(node.left), number(node.right)))
     if isinstance(node, ast.BinOp) and type(node.op) in BINARY:
@@ -81,7 +90,7 @@ def number(node):
             result = FUNCTIONS[node.func.id](*(number(argument) for argument in node.args))
         except (TypeError, statistics.StatisticsError) as error:
             raise ValueError(f"{node.func.id}: {error}") from None
-        return bounded(Fraction(result) if isinstance(result, int) else result)
+        return bounded(result)
     raise ValueError(f"only numbers, arithmetic operators and {sorted(FUNCTIONS)} are accepted")
 
 
@@ -90,6 +99,8 @@ def parse(expression):
         return ast.parse(expression.strip(), mode="eval").body
     except SyntaxError as error:
         raise ValueError(f"not an arithmetic expression: {error.msg}") from None
+    except (ValueError, RecursionError, MemoryError) as error:  # an integer literal too long to read, or nesting too deep
+        raise ValueError(f"not an arithmetic expression: {error}") from None
 
 
 def evaluate(expression):
