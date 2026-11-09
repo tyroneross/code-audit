@@ -86,7 +86,9 @@ def approximate(value):
     if isinstance(value, float):
         return value
     result = float(value)  # OverflowError when it is too large, reported as outside float range
-    if value != 0 and abs(result) < sys.float_info.min:
+    # Below the normal range a float keeps fewer digits; it is still the value itself when the value is one of
+    # those floats (a tiny float minus zero, say).
+    if value != 0 and abs(result) < sys.float_info.min and Fraction(result) != value:
         raise ValueError("an exact value is too small for a float; keep the arithmetic exact or rescale")
     return result
 
@@ -138,8 +140,9 @@ def power(left, right):
         # float nearest this exponent is a different number.
         raise ValueError("a negative base needs an exponent that a float holds exactly; this exact exponent is not one")
     result = operator.pow(base, exponent)
-    if isinstance(result, float) and base != 0 and abs(result) < sys.float_info.min:
-        # A power of a non-zero base is never zero: this one is too small for a float.
+    if isinstance(result, float) and base != 0 and abs(result) < sys.float_info.min and (isinstance(left, Fraction) or other_side(right, exponent) is not None):
+        # A power of a non-zero base is never zero: this one is too small for a float. (A float base with an
+        # exponent that is itself a float, such as 2.0 ** -2000, is ordinary float arithmetic and underflows.)
         raise ValueError("this power is too small for a float; keep the arithmetic exact or rescale")
     if isinstance(result, float):
         for moved in ((other_side(left, base), exponent), (base, other_side(right, exponent))):
@@ -213,10 +216,8 @@ def root_of_ratio(n, d):
         root = math.isqrt(n // d)
         return root | (root * root * d != n)
     q = (n.bit_length() - d.bit_length() - 109) // 2
-    result = float(rounded_to_odd(n, d << 2 * q) << q) if q >= 0 else rounded_to_odd(n << -2 * q, d) / (1 << -q)
-    if abs(result) < sys.float_info.min:  # the same strict rule as approximate()
-        raise ValueError("an exact value is too small for a float; keep the arithmetic exact or rescale")
-    return result
+    top, bottom = (rounded_to_odd(n, d << 2 * q) << q, 1) if q >= 0 else (rounded_to_odd(n << -2 * q, d), 1 << -q)
+    return approximate(Fraction(top, bottom))  # the single final rounding, by the same strict rule as everything else
 
 
 def deviation(sample, values):

@@ -402,6 +402,23 @@ fn report(free: &[String], method: &str, solutions: &[String], note: Option<&str
     object(&fields)
 }
 
+/// The first operation in the expression that jumps and is applied to something holding `name`.
+fn stepping(node: &Node, name: &str) -> Option<&'static str> {
+    let holds = |part: &Node| super::poly::mentions(part, name);
+    match node {
+        Node::Number(_) | Node::Name(_) => None,
+        Node::Negate(inner) => stepping(inner, name),
+        Node::Binary(op @ ("//" | "%"), left, right) if holds(left) || holds(right) => Some(op),
+        Node::Binary(_, left, right) => stepping(left, name).or_else(|| stepping(right, name)),
+        Node::Call(function, arguments) => match function.as_str() {
+            "floor" if arguments.iter().any(|argument| holds(argument)) => Some("floor"),
+            "ceil" if arguments.iter().any(|argument| holds(argument)) => Some("ceil"),
+            "round" if arguments.iter().any(|argument| holds(argument)) => Some("round"),
+            _ => arguments.iter().find_map(|argument| stepping(argument, name)),
+        },
+    }
+}
+
 /// One equation in one name: the difference of its two sides is zero.
 fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names: Names) -> Outcome<String> {
     let free = [name.to_string()];
@@ -427,6 +444,12 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
         return Ok(report(&free, &method, &solutions, note));
     }
     let (low, high) = between.ok_or(format!("this equation is not a polynomial in {name}: give --between LOW HIGH, two values where its sides differ in opposite directions"))?;
+    // A search between two points finds where a continuous expression passes through zero.
+    // floor, ceil, round, // and % jump by construction, and a sign change across one of their
+    // jumps is not a root, so an equation that applies them to the unknown is not searched.
+    if let Some(operation) = stepping(difference, name) {
+        return Err(format!("{operation} of {name} jumps, and a search between two points needs an expression without jumps; solve the pieces between its jumps separately"));
+    }
     let (low, high) = (as_float(&low)?, as_float(&high)?);
     if low >= high {
         return Err("the --between bounds are closer together than floats can tell apart; this equation is solved in floats".into());
@@ -499,10 +522,15 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
     let jump = (f(across) - f(below)).abs() / floats;
     let nearby = pace(below, false).into_iter().chain(pace(across, true)).fold(None, |most: Option<f64>, rate| Some(most.map_or(rate, |most| most.max(rate))));
     let narrowed = low_side(f(below)) && !low_side(f(across)) && f(across) != 0.0;
-    if let (true, Some(nearby), true) = (failure.borrow_mut().take().is_none() && narrowed, nearby, jump.is_finite()) {
-        if jump > JUMP * nearby {
-            return Err(format!("left minus right jumps across zero at {name} = {across:?} without passing through it: a discontinuity, not a root"));
-        }
+    // An expression with no value at one of the floats right at the sign change (0/0 where a
+    // sign function flips, say) does not pass through zero there.
+    if let Some(error) = failure.borrow_mut().take() {
+        return Err(format!("left minus right has no value {error}, right beside where its sign changes, so it does not pass through zero there"));
+    }
+    // No movement at all within eight floats on either side, and then a change of sign across
+    // one float: that is a jump too (measured against a pace of zero).
+    if narrowed && jump.is_finite() && jump > JUMP * nearby.unwrap_or(0.0) {
+        return Err(format!("left minus right jumps across zero at {name} = {across:?} without passing through it: a discontinuity, not a root"));
     }
     let spacing = if root == 0.0 { 1e-300 } else { root.abs().next_up() - root.abs() };
     let widest = 1e-6 * root.abs().max(high - low);

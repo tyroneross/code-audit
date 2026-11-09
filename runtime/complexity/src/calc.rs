@@ -85,6 +85,9 @@ fn nearest(value: &BigRational) -> Outcome<f64> {
     }
     match to_float(value)? {
         float if float.is_normal() => Ok(float),
+        // Below the normal range a float keeps fewer digits; it is still the value itself when
+        // the value is one of those floats (a tiny float minus zero, say).
+        float if float != 0.0 && BigRational::from_float(float).as_ref() == Some(value) => Ok(float),
         _ => Err(format!("an exact value is too small for a float (about 2**{}); keep the arithmetic exact or rescale", value.numer().bits() as i64 - value.denom().bits() as i64)),
     }
 }
@@ -258,8 +261,10 @@ fn power(base: Value, exponent: Value) -> Outcome<Value> {
     if result.is_infinite() && b.is_finite() && e.is_finite() {
         return Err(if b == 0.0 { "division by zero".into() } else { "result is outside float range".to_string() });
     }
-    if !result.is_normal() && b != 0.0 && (matches!(base, Value::Exact(_)) || matches!(exponent, Value::Exact(_))) {
-        // A power of a non-zero base is never zero: this one is too small for a float.
+    if !result.is_normal() && b != 0.0 && (matches!(base, Value::Exact(_)) || other_side(&exponent, e).is_some()) {
+        // A power of a non-zero base is never zero: this one is too small for a float. (A float
+        // base with an exponent that is itself a float, such as x**3 at a float x, is ordinary
+        // float arithmetic and underflows to zero as floats do.)
         return Err("this power is too small for a float (below about 2e-308); keep the arithmetic exact or rescale".into());
     }
     if let Some(nearby) = other_side(&base, b) {

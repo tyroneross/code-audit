@@ -189,6 +189,21 @@ class SolveTests(unittest.TestCase):
         for equation in ("(x - 1)**3*10**45 + floor(x) - 1/2 == 0", "(x - 1)**5*10**77 + floor(x) - 1/2 == 0", "(x - 1)**3*10**44 + (x - 1)*10**12 + floor(x) - 1/2 == 0"):
             code, report = calc("--solve", equation, "--between", "0", "2")
             self.assertEqual((code, report["status"]), (2, "invalid"), (equation, report))
+        # Flat for eight floats on both sides and then a change of sign across one float: a jump with nothing to
+        # compare it with. (x - 1)**11 * 10**145 is below one float step of 1/2 that close to 1; the step function is
+        # written without floor so that only the float-level test can refuse it.
+        for high in ("2", "3", "7/2"):  # whether or not the search itself lands on 1, where the expression is 0/0
+            code, report = calc("--solve", "(x - 1)**11*10**145 + (x - 1)/sqrt((x - 1)**2)/2 == 0", "--between", "0", high)
+            self.assertEqual((code, report["status"]), (2, "invalid"), (high, report))
+        # The same step with a value at 1 (so nothing fails to evaluate): flat for eight floats, then the sign flips.
+        code, report = calc("--solve", "(x - 1)**11*10**145 + (x - 1 + 1/10**300)/sqrt((x - 1 + 1/10**300)**2)/2 == 0", "--between", "0", "3")
+        self.assertEqual((code, report["status"]), (2, "invalid"), report)
+        # Operations that jump by construction are not searched at all, whatever surrounds them.
+        for equation in ("floor(x) + x == 3/2", "x - x % 1 == 1/2", "x // 1 + x == 5/2", "ceil(x)*x == 2", "round(x) - x/3 == 1", "sin(floor(x)) + x == 1"):
+            code, report = calc("--solve", equation, "--between", "0", "3")
+            self.assertEqual((code, report["status"]), (2, "invalid"), (equation, report))
+            self.assertIn("jumps", report["error"])
+        self.assertEqual(calc("--solve", "cos(x) == floor(5/2)/3", "--between", "0", "1")[0], 0)  # floor of a constant is a constant
         # The width of the bracket must not matter: this has no root (below -1/2 before 1, at least 1/2 from 1 on).
         for low, high in (("0", "2"), ("-10**14", "10**14"), ("-10**300", "10**300")):
             code, report = calc("--solve", "x - 1 + floor(x) - 1/2 == 0", "--between", low, high)
