@@ -92,6 +92,29 @@ class CalcTests(unittest.TestCase):
         self.assertEqual((report["results"][2]["value"], report["results"][3]["value"]), (10 ** 1200, 2 ** 4095))
         self.assertLess(len(str(2 ** calc.MAX_BITS)), 4300)
 
+    def test_no_input_escapes_as_an_uncaught_error_or_unbounded_work(self):
+        big = "sum(" + ", ".join(f"1/(10**1000 + {2 * i + 1})" for i in range(40)) + ")"
+        cases = ["((-1) ** (1/2)) // 1", "(-8) ** (1/3) + 1", "-" * 350 + "1", "1 + " * 300 + "1",
+                 "9" * 2500, big, "mean(" + big[4:], "median()", "log(0)", "log(-1)", "sqrt(-1)", "0.0 ** -1"]
+        for expression in cases:
+            with self.subTest(expression=expression[:40]):
+                with self.assertRaises(ValueError):
+                    calc.evaluate(expression)
+                self.assertEqual(self.run_main(expression)[0], 2)
+        for comparison in ("-" * 350 + "1 == 1", "((-1) ** (1/2)) == 1", "1 == " + "9" * 2500):
+            with self.subTest(comparison=comparison[:40]):
+                with self.assertRaises(ValueError):
+                    calc.check(comparison)
+                self.assertEqual(self.run_main("--check", comparison)[0], 2)
+        self.assertEqual(calc.evaluate("sum(1/3, 1/6, 1/2)"), 1)
+        self.assertEqual(calc.evaluate("-" * 100 + "1"), 1)
+        self.assertEqual(calc.evaluate("(" * 120 + "1" + ")" * 120), 1)
+
+    def test_expression_may_begin_with_a_minus_sign(self):
+        code, report = self.run_main("-5 + 3", "--check", "-1 == -1", "--check", "-2 < -1")
+        self.assertEqual((code, report["results"][0]["value"]), (0, -2))
+        self.assertEqual([c["passed"] for c in report["checks"]], [True, True])
+
     def test_statistics_come_from_the_standard_library(self):
         self.assertEqual(calc.evaluate("mean(1, 2, 4)"), Fraction(7, 3))
         self.assertEqual(calc.evaluate("median(5, 1, 3, 2)"), Fraction(5, 2))

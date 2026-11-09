@@ -10,7 +10,7 @@ Expressions use numbers, + - * / // % **, parentheses, comparisons and the funct
 Nothing else is accepted: no names, attributes, calls to other functions, strings or imports, so an expression
 copied from a repository under review cannot run code. Integers and fractions stay exact (1/3 + 1/6 is 1/2);
 a float in the expression or sqrt/log makes the result a float. An exact value larger than 4096 bits (about
-1,230 digits) is refused before it is computed. round follows Python: a tie goes to the even digit, and a float is rounded
+1,230 digits) is refused before it is computed, and an expression is at most 2000 characters and 256 parts. round follows Python: a tie goes to the even digit, and a float is rounded
 as the binary value it holds. mean and median of exact values are exact; stdev and pstdev return floats. --check passes when both sides are equal, or
 within --tolerance when either side is a float.
 
@@ -30,15 +30,19 @@ BINARY = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, 
 UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
 COMPARE = {ast.Eq: operator.eq, ast.NotEq: operator.ne, ast.Lt: operator.lt, ast.LtE: operator.le, ast.Gt: operator.gt, ast.GtE: operator.ge}
 # Standard-library arithmetic only: fractions for exact values, math and statistics for the rest.
-FUNCTIONS = {"abs": abs, "round": lambda *arguments: rounded(*arguments), "min": min, "max": max, "sum": lambda *values: sum(values), "sqrt": math.sqrt,
+FUNCTIONS = {"abs": abs, "round": lambda *arguments: rounded(*arguments), "min": min, "max": max, "sum": lambda *values: total(*values), "sqrt": math.sqrt,
              "floor": math.floor, "ceil": math.ceil, "log": math.log, "log2": math.log2, "log10": math.log10,
-             "mean": lambda *values: statistics.mean(values), "median": lambda *values: statistics.median(values),
+             "mean": lambda *values: mean(*values), "median": lambda *values: statistics.median(values),
              "stdev": lambda *values: statistics.stdev(values), "pstdev": lambda *values: statistics.pstdev(values)}
 # Size budget for every exact value, so 9**9**9 or a nested power cannot exhaust memory. 4096 bits is about 1,230
 # digits: far beyond any review arithmetic, and below the 4,300 digits at which Python refuses to print an integer,
 # so every permitted result can be written and read back as JSON.
 MAX_BITS = 4096
 MAX_ROUND_DIGITS = 60
+# Input budget: review arithmetic is a line or two. With at most this many nodes, evaluation depth and the number
+# of operations are bounded, and each operation is bounded by MAX_BITS.
+MAX_CHARS = 2000
+MAX_NODES = 256
 TOLERANCE = 1e-9
 
 
@@ -50,6 +54,8 @@ def bits(value):
 def bounded(value):
     """Every exact value as a Fraction within the size budget. Floor division, floor and ceil return int, which
     would otherwise skip the budget and turn a later division into a float."""
+    if isinstance(value, complex):  # a negative base with a fractional exponent
+        raise ValueError("result is not a real number")
     if isinstance(value, int) and not isinstance(value, bool):
         value = Fraction(value)
     if bits(value) > MAX_BITS:
@@ -66,6 +72,20 @@ def power(left, right):
         elif abs(right.numerator) * math.log2(max(abs(left.numerator), left.denominator)) + 1 > MAX_BITS:
             raise ValueError(f"exact power would exceed {MAX_BITS} bits; use a float base (write 2.0 for 2) or a smaller exponent")
     return operator.pow(left, right)
+
+
+def total(*values):
+    """Sum that checks the size budget after every addition, so many large fractions cannot build a huge denominator."""
+    result = Fraction(0)
+    for value in values:
+        result = bounded(result + value)
+    return result
+
+
+def mean(*values):
+    if not values:
+        raise ValueError("mean needs at least one value")
+    return bounded(total(*values) / len(values))
 
 
 def rounded(value, digits=Fraction(0)):
@@ -88,34 +108,45 @@ def number(node):
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in FUNCTIONS and not node.keywords:
         try:
             result = FUNCTIONS[node.func.id](*(number(argument) for argument in node.args))
-        except (TypeError, statistics.StatisticsError) as error:
+        except (TypeError, statistics.StatisticsError) as error:  # wrong argument count or kind
             raise ValueError(f"{node.func.id}: {error}") from None
         return bounded(result)
     raise ValueError(f"only numbers, arithmetic operators and {sorted(FUNCTIONS)} are accepted")
 
 
 def parse(expression):
+    """The expression's syntax tree, refused when it is not arithmetic or is larger than the input budget."""
+    if len(expression) > MAX_CHARS:
+        raise ValueError(f"expression is longer than {MAX_CHARS} characters")
     try:
-        return ast.parse(expression.strip(), mode="eval").body
+        tree = ast.parse(expression.strip(), mode="eval").body
     except SyntaxError as error:
         raise ValueError(f"not an arithmetic expression: {error.msg}") from None
     except (ValueError, RecursionError, MemoryError) as error:  # an integer literal too long to read, or nesting too deep
         raise ValueError(f"not an arithmetic expression: {error}") from None
+    if sum(1 for _ in ast.walk(tree)) > MAX_NODES:
+        raise ValueError(f"expression has more than {MAX_NODES} parts")
+    return tree
 
 
-def evaluate(expression):
-    """Exact int or Fraction when the inputs allow it, otherwise a float."""
+def value_of(node):
+    """Value of a parsed expression: an exact int or Fraction when the inputs allow it, otherwise a finite float.
+    The one place errors are translated, so no arithmetic failure leaves this module as anything but ValueError."""
     try:
-        value = number(parse(expression))
+        value = number(node)
     except ZeroDivisionError:
         raise ValueError("division by zero") from None
     except OverflowError:
         raise ValueError("result is outside float range") from None
-    except RecursionError:
-        raise ValueError("expression is nested too deeply") from None
-    if isinstance(value, complex) or (isinstance(value, float) and not math.isfinite(value)):
+    except (ArithmeticError, TypeError, RecursionError, MemoryError) as error:
+        raise ValueError(f"cannot evaluate: {error or type(error).__name__}") from None
+    if isinstance(value, float) and not math.isfinite(value):
         raise ValueError("result is not a finite real number")
     return int(value) if isinstance(value, Fraction) and value.denominator == 1 else value
+
+
+def evaluate(expression):
+    return value_of(parse(expression))
 
 
 def check(expression, tolerance=TOLERANCE):
@@ -123,7 +154,7 @@ def check(expression, tolerance=TOLERANCE):
     node = parse(expression)
     if not (isinstance(node, ast.Compare) and len(node.ops) == 1 and type(node.ops[0]) in COMPARE):
         raise ValueError("a check is one comparison, for example \"2 + 2 == 4\"")
-    left, right = evaluate(ast.unparse(node.left)), evaluate(ast.unparse(node.comparators[0]))
+    left, right = value_of(node.left), value_of(node.comparators[0])
     approximate = isinstance(left, float) or isinstance(right, float)
     try:
         if approximate and isinstance(node.ops[0], (ast.Eq, ast.NotEq)):
@@ -150,7 +181,11 @@ def main(argv=None):
     parser.add_argument("expressions", nargs="*", help="arithmetic expressions to evaluate")
     parser.add_argument("--check", action="append", default=[], metavar="COMPARISON", help="a comparison that must hold; repeatable")
     parser.add_argument("--tolerance", type=float, default=TOLERANCE, help=f"relative and absolute tolerance for float equality (default: {TOLERANCE})")
-    args = parser.parse_args(argv)
+    # An expression may begin with a minus sign ("-5 + 3"); a leading space stops argparse reading it as an option.
+    options = {"--check", "--tolerance", "-h", "--help"}
+    argv = sys.argv[1:] if argv is None else list(argv)
+    args = parser.parse_args([argument if not argument.startswith("-") or argument.split("=")[0] in options else " " + argument
+                              for argument in argv])
     if not args.expressions and not args.check:
         parser.error("give at least one expression or --check")
     results, checks, status = [], [], 0
