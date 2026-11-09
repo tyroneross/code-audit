@@ -59,12 +59,19 @@
 //! Pattern leads per file (`patterns`), each compared as source text with
 //! whitespace removed and reported only when no operand calls a function,
 //! awaits, allocates or mutates:
-//! - `identical_operands`: `a == a`, `a && a`, `a - a` and the other operators
-//!   whose result is fixed when both sides are the same expression. Not run for
-//!   Swift, whose grammar does not preserve precedence in mixed expressions.
+//! - `identical_operands`: comparisons, `&&`, `||`, `-`, `/` and `%` whose two
+//!   sides are the same expression, so the result is fixed. Bitwise `&`, `|` and
+//!   `^` are left out (`x & x` coerces to a 32-bit integer in JavaScript). An
+//!   equality test is skipped when its line names a float, NaN or infinity, the
+//!   usual NaN check. Not run for Swift, whose grammar does not preserve
+//!   precedence in mixed expressions, nor when the right side is followed by
+//!   `!`, `.`, `(` or `[`: the grammar then split a longer expression
+//!   (TypeScript `a !== a!.trim()`).
 //! - `self_assignment`: `x = x` with the plain assignment operator.
 //! - `duplicate_branches`: an `if`/`else` or conditional expression whose two
-//!   branches are the same code.
+//!   branches are the same code. Skipped when the condition binds a name
+//!   (`if let`, `if case`, `instanceof` pattern): the same text then reads
+//!   different variables in each branch.
 //! - `repeated_condition`: a condition that repeats an earlier one in the same
 //!   `else if` chain, so its branch cannot run.
 
@@ -82,7 +89,9 @@ const TARGET_RECALL: f64 = 0.98;
 /// TypeScript test-framework calls whose callbacks are test code (Jest, Vitest, Mocha).
 const TEST_CALLEES: [&str; 7] = ["describe", "it", "test", "beforeEach", "afterEach", "beforeAll", "afterAll"];
 /// Operators whose result is fixed when both operands are the same expression.
-const FIXED_WHEN_IDENTICAL: [&str; 16] = ["==", "!=", "===", "!==", "<", ">", "<=", ">=", "&&", "||", "&", "|", "^", "-", "/", "%"];
+const FIXED_WHEN_IDENTICAL: [&str; 13] = ["==", "!=", "===", "!==", "<", ">", "<=", ">=", "&&", "||", "-", "/", "%"];
+/// Words that mark a line as float handling, where `x != x` is the usual NaN test.
+const FLOAT_WORDS: [&str; 6] = ["nan", "float", "inf", "f32", "f64", "double"];
 /// Node-kind fragments that mark an expression with an effect or a fresh value.
 const IMPURE_KINDS: [&str; 10] = ["call", "invocation", "await", "update", "creation", "new_expression", "yield", "try", "closure", "lambda"];
 /// Node-kind fragments where a new statement, block or argument list starts.
@@ -668,6 +677,30 @@ impl<'a> Walker<'a> {
         }
     }
 
+    /// The nodes that make up an `if` condition, in source order.
+    fn condition_parts(&self, node: Node<'a>) -> Vec<Node<'a>> {
+        let mut cursor = node.walk();
+        if self.lang != Lang::Swift {
+            return node.children_by_field_name("condition", &mut cursor).collect();
+        }
+        // Swift exposes only fragments as `condition` fields (`if let a` yields `let`), so take
+        // everything between the keyword and the body.
+        node.children(&mut cursor).skip(1).take_while(|c| !matches!(c.kind(), "{" | "statements")).collect()
+    }
+
+    /// True when the condition introduces a name that only one branch can read.
+    fn condition_binds(&self, node: Node<'a>) -> bool {
+        self.condition_parts(node).iter().any(|part| {
+            let raw = text(*part, self.src);
+            match self.lang {
+                Lang::Rust => part.kind().starts_with("let_"),
+                Lang::Swift => part.kind() == "value_binding_pattern" || part.kind() == "pattern" || matches!(raw, "let" | "var" | "case"),
+                Lang::Java => word_present(raw, "instanceof"),
+                _ => false,
+            }
+        })
+    }
+
     fn pattern(&mut self, rule: &'static str, node: Node, row: Option<usize>, detail: String) {
         self.patterns.push(Pattern { rule, line: node.start_position().row + 1, row, detail });
     }
@@ -678,10 +711,19 @@ impl<'a> Walker<'a> {
         let same = |a: Node, b: Node| pure(a, src) && pure(b, src) && squeezed(a, src) == squeezed(b, src);
         let pair = |first: &str, second: &str| node.child_by_field_name(first).zip(node.child_by_field_name(second));
         let kind = node.kind();
+        // A right operand followed by `!`, `.`, `(` or `[` is the head of a longer expression
+        // that the grammar split off (TypeScript `a !== a!.trim()`), so the sides are not the same.
+        let continues = |operand: Node| matches!(src[operand.end_byte()..].iter().find(|b| !b.is_ascii_whitespace()), Some(b'!' | b'.' | b'(' | b'['))
+            && !src[operand.end_byte()..].iter().skip_while(|b| b.is_ascii_whitespace()).take(2).eq(b"!=".iter());
         if kind == "binary_expression" && self.lang != Lang::Swift {
             let op = field_text(node, "operator", src).unwrap_or("");
-            if let Some((left, _)) = pair("left", "right").filter(|(l, r)| FIXED_WHEN_IDENTICAL.contains(&op) && same(*l, *r)) {
-                let note = if matches!(op, "==" | "!=" | "===" | "!==") { "; a deliberate NaN test is the one valid use" } else { "" };
+            let equality = matches!(op, "==" | "!=" | "===" | "!==");
+            let nan_test = equality && {
+                let line = String::from_utf8_lossy(src).lines().nth(node.start_position().row).unwrap_or("").to_lowercase();
+                FLOAT_WORDS.iter().any(|w| line.contains(w))
+            };
+            if let Some((left, _)) = pair("left", "right").filter(|(l, r)| FIXED_WHEN_IDENTICAL.contains(&op) && !nan_test && !continues(*r) && same(*l, *r)) {
+                let note = if equality { "; a deliberate NaN test is the one valid use" } else { "" };
                 self.pattern("identical_operands", node, row, format!("both sides of `{op}` are `{}`{note}", text(left, src).trim()));
             }
         }
@@ -716,19 +758,17 @@ impl<'a> Walker<'a> {
         };
         // Branches are compared as text even when they call functions: the same call in both is the finding.
         let empty = |n: Node| squeezed(n, src).trim_matches(['{', '}']).is_empty();
-        if branches.is_some_and(|(a, b)| b.kind() != self.if_kind() && !empty(a) && squeezed(a, src) == squeezed(b, src)) {
+        let binds = kind == self.if_kind() && self.condition_binds(node);
+        if branches.is_some_and(|(a, b)| !binds && b.kind() != self.if_kind() && !empty(a) && squeezed(a, src) == squeezed(b, src)) {
             self.pattern("duplicate_branches", node, row, "both branches are the same code".into());
         }
         if kind == self.if_kind() && !self.continues_else_if(node) {
-            let condition = |n: Node| {
-                let mut cursor = n.walk();
-                let parts: Vec<Node> = n.children_by_field_name("condition", &mut cursor).collect();
-                parts.iter().all(|p| pure(*p, src)).then(|| parts.iter().map(|p| squeezed(*p, src)).collect::<Vec<_>>().join(","))
-            };
             let mut seen: Vec<String> = Vec::new();
             let mut link = Some(node);
             while let Some(current) = link {
-                if let Some(text) = condition(current).filter(|t| !t.is_empty()) {
+                let parts = self.condition_parts(current);
+                let condition = parts.iter().all(|p| pure(*p, src)).then(|| parts.iter().map(|p| squeezed(*p, src)).collect::<Vec<_>>().join(" "));
+                if let Some(text) = condition.filter(|t| !t.is_empty()) {
                     if seen.contains(&text) {
                         self.pattern("repeated_condition", current, row, "this condition repeats an earlier one in the same else-if chain".into());
                     }

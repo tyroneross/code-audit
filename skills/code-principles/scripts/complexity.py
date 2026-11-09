@@ -67,6 +67,8 @@ PYTHON_ANALYZER = {"name": "python-ast", "version": sys.version.split()[0], "met
 STRUCTURE_FIELDS = ("max_nesting", "bumps", "condition_operators", "params")
 # Inclusive reading-order thresholds. Sources and the two unsourced defaults: references/measurement.md.
 STRUCTURE_THRESHOLDS = {"max_nesting": 3, "lines": 50, "params": 6, "bumps": 2, "condition_operators": 3}
+# Pattern rules with at least 8 labelled hits at precision >= 0.7 (references/pattern-precision.json); the rest are experimental.
+MEASURED_PATTERNS = {"duplicate_branches"}
 
 
 def native_binary():
@@ -299,7 +301,7 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
         visitor = Functions()
         try:
             visitor.visit(tree)
-            leads = python_structure.patterns(tree)
+            leads = python_structure.patterns(tree, raw.decode("utf-8", "replace").splitlines())
         except RecursionError:
             gaps.append({"path": name, "reason": "expression nesting exceeds the interpreter recursion limit; file not measured"})
             continue
@@ -347,6 +349,7 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
     kinds = {(r["path"], r["function_id"]): r["kind"] for r in rows}
     for lead in patterns:
         lead["kind"] = kinds.get((lead["path"], lead["function_id"])) or classify(lead["path"])[0]
+        lead["tier"] = "measured" if lead["rule"] in MEASURED_PATTERNS else "experimental"
     patterns.sort(key=lambda lead: (lead["kind"] != "production", lead["path"], lead["line"], lead["rule"]))
     revision = git(root, "rev-parse", "HEAD")
     return {"schema": "code-audit.complexity.v1", "root": str(root),

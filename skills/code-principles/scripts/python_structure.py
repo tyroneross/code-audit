@@ -12,7 +12,8 @@ SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
 CONDITION_BOUNDARIES = (ast.stmt, ast.ExceptHandler, ast.match_case, ast.Call)
 IMPURE = (ast.Call, ast.Await, ast.Yield, ast.YieldFrom, ast.NamedExpr, ast.Lambda)
 COMPARISONS = {ast.Eq: "==", ast.NotEq: "!=", ast.Lt: "<", ast.Gt: ">", ast.LtE: "<=", ast.GtE: ">=", ast.Is: "is", ast.IsNot: "is not"}
-ARITHMETIC = {ast.Sub: "-", ast.Div: "/", ast.FloorDiv: "//", ast.Mod: "%", ast.BitXor: "^", ast.BitAnd: "&", ast.BitOr: "|"}
+ARITHMETIC = {ast.Sub: "-", ast.Div: "/", ast.FloorDiv: "//", ast.Mod: "%"}  # & | ^ are set operations here
+FLOAT_WORDS = ("nan", "float", "inf")  # a line naming these makes `x != x` the usual NaN test
 
 
 def continues_elif(parent, child):
@@ -64,15 +65,18 @@ def same(first, second):
     return pure(first) and pure(second) and ast.unparse(first) == ast.unparse(second)
 
 
-def patterns(tree):
+def patterns(tree, source_lines):
     """[(rule, line, detail)] for the whole module, in source order."""
     found = []
 
-    def visit(node, parent):
+    def visit(node, parent, in_function):
         if isinstance(node, ast.Compare) and len(node.ops) == 1 and type(node.ops[0]) in COMPARISONS and same(node.left, node.comparators[0]):
             op = COMPARISONS[type(node.ops[0])]
-            note = "; a deliberate NaN test is the one valid use" if op in ("==", "!=") else ""
-            found.append(("identical_operands", node.lineno, f"both sides of `{op}` are `{ast.unparse(node.left)}`{note}"))
+            equality = op in ("==", "!=")
+            line = source_lines[node.lineno - 1].lower() if node.lineno <= len(source_lines) else ""
+            if not (equality and any(word in line for word in FLOAT_WORDS)):
+                note = "; a deliberate NaN test is the one valid use" if equality else ""
+                found.append(("identical_operands", node.lineno, f"both sides of `{op}` are `{ast.unparse(node.left)}`{note}"))
         elif isinstance(node, ast.BinOp) and type(node.op) in ARITHMETIC and same(node.left, node.right):
             found.append(("identical_operands", node.lineno, f"both sides of `{ARITHMETIC[type(node.op)]}` are `{ast.unparse(node.left)}`"))
         elif isinstance(node, ast.BoolOp):
@@ -81,7 +85,8 @@ def patterns(tree):
             if repeated is not None:
                 op = "and" if isinstance(node.op, ast.And) else "or"
                 found.append(("identical_operands", node.lineno, f"both sides of `{op}` are `{repeated}`"))
-        elif isinstance(node, ast.Assign) and len(node.targets) == 1 and same(node.targets[0], node.value):
+        elif isinstance(node, ast.Assign) and in_function and len(node.targets) == 1 and same(node.targets[0], node.value):
+            # Outside a function `NAME = NAME` rebinds an imported or enclosing name on purpose.
             found.append(("self_assignment", node.lineno, f"`{ast.unparse(node.value)}` is assigned to itself"))
         elif isinstance(node, ast.IfExp) and ast.dump(node.body) == ast.dump(node.orelse):
             found.append(("duplicate_branches", node.lineno, "both branches are the same code"))
@@ -99,8 +104,9 @@ def patterns(tree):
                             found.append(("repeated_condition", link.lineno, "this condition repeats an earlier one in the same else-if chain"))
                         seen.append(text)
                     link = link.orelse[0] if len(link.orelse) == 1 and continues_elif(link, link.orelse[0]) else None
+        inside = in_function or isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))
         for child in ast.iter_child_nodes(node):
-            visit(child, node)
+            visit(child, node, inside and not isinstance(node, ast.ClassDef))
 
-    visit(tree, None)
+    visit(tree, None, False)
     return sorted(found, key=lambda f: (f[1], f[0]))

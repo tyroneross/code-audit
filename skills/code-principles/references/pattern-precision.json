@@ -1,0 +1,193 @@
+{
+ "date": "2026-11-08",
+ "method": "complexity.py over the git-tracked source of each working tree at the recorded HEAD (uncommitted edits, if any, were included); every reported lead of every rule was read against its source and labelled explicitly by one rater (the author). Informal: single rater, six repositories, four of them the owner's and two of those private (labelled, with names, paths and code withheld). tp means the reported code does what the rule says: the two sides, branches or conditions are the same code and no name binding or float test makes them differ.",
+ "files_scanned": 8776,
+ "functions_measured": 110791,
+ "repos": {
+  "private-web-app (private; name, paths and code withheld)": "not published",
+  "build-loop": "e488a090b946550a7cae1aa9470b5717908eb569",
+  "private-desktop-app (private; name, paths and code withheld)": "not published",
+  "agent-rally-point": "bad56c141f95031bd056770ec82ea270186504c1",
+  "dioxus": "57d6794ad60b949e5bd8aa282f6f8c3dc97a365e",
+  "cargo-upstream": "786e846387365cca3f66675cfeb517b756488dcb"
+ },
+ "rules": {
+  "duplicate_branches": {
+   "hits": 21,
+   "sampled": 21,
+   "true_positive": 21,
+   "precision": 1.0,
+   "sample": [
+    {
+     "key": "private-web-app#1 (.ts)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "the inner conditional returns the same HTTP status in both arms"
+    },
+    {
+     "key": "private-web-app#2 (.ts)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "the inner conditional returns the same HTTP status in both arms"
+    },
+    {
+     "key": "private-web-app#3 (.tsx)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "both arms are the same CSS class; the flag has no effect"
+    },
+    {
+     "key": "private-web-app#4 (.tsx)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "both arms are the same CSS class; the flag has no effect"
+    },
+    {
+     "key": "private-web-app#5 (.tsx)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "both arms are the same CSS class; the flag has no effect"
+    },
+    {
+     "key": "private-web-app#6 (.ts)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "both arms call the same function with the same arguments; the option is dead"
+    },
+    {
+     "key": "private-web-app#7 (.ts)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "both arms are the same string literal; the option cannot change the stored value"
+    },
+    {
+     "key": "private-web-app#8 (.ts)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "the last conditional in a chain has identical arms"
+    },
+    {
+     "key": "private-web-app#9 (.ts)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "a dry-run flag selects between two identical queries"
+    },
+    {
+     "key": "private-web-app#10 (.ts)",
+     "kind": "test",
+     "label": "tp",
+     "reason": "test code: both arms are the same number in a mock"
+    },
+    {
+     "key": "build-loop/scripts/attestation_lint.py:344",
+     "kind": "production",
+     "label": "tp",
+     "reason": "`\"applied\" if claim else \"applied\"`: the claim cannot change the status"
+    },
+    {
+     "key": "build-loop/scripts/bridge_lesson_to_harness.py:144",
+     "kind": "production",
+     "label": "tp",
+     "reason": "both arms format the same f-string; the isinstance test has no effect"
+    },
+    {
+     "key": "build-loop/scripts/rally_point/hooks.py:281",
+     "kind": "production",
+     "label": "tp",
+     "reason": "`cand if cand.exists() else cand`: the existence test has no effect, so nothing is resolved"
+    },
+    {
+     "key": "build-loop/scripts/retrospective/__main__.py:89",
+     "kind": "production",
+     "label": "tp",
+     "reason": "`0 if ok else 0`: deliberate per its comment, still a conditional that cannot matter"
+    },
+    {
+     "key": "build-loop/src/log-reader.ts:251",
+     "kind": "production",
+     "label": "tp",
+     "reason": "`typeof obj.ts === 'number' ? obj.ts : obj.ts`: the type test has no effect"
+    },
+    {
+     "key": "private-desktop-app#1 (.swift)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "both arms are the same enum case"
+    },
+    {
+     "key": "private-desktop-app#2 (.swift)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "both arms are the same theme colour"
+    },
+    {
+     "key": "private-desktop-app#3 (.rs)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "both arms build the same struct literal"
+    },
+    {
+     "key": "agent-rally-point/tests/scripts/test_rally_wake.py:90",
+     "kind": "test",
+     "label": "tp",
+     "reason": "test code: both arms assign `current`"
+    },
+    {
+     "key": "cargo-upstream/tests/testsuite/artifact_dep.rs:819",
+     "kind": "test",
+     "label": "tp",
+     "reason": "test code: both cfg!(msvc) arms assert the same snapshot"
+    },
+    {
+     "key": "private-web-app#11 (.js)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "both arms call the same callback with the same value"
+    }
+   ]
+  },
+  "identical_operands": {
+   "hits": 1,
+   "sampled": 1,
+   "true_positive": 1,
+   "precision": 1.0,
+   "sample": [
+    {
+     "key": "private-web-app#12 (.ts)",
+     "kind": "production",
+     "label": "tp",
+     "reason": "a value is compared with itself, so the reported flag is always false"
+    }
+   ]
+  }
+ },
+ "zero_hit_rules": {
+  "self_assignment": 0,
+  "repeated_condition": 0
+ },
+ "status": {
+  "duplicate_branches": "measured: precision 1.00 (21 tp of 21 hits; 18 production, 3 test)",
+  "identical_operands": "experimental: 1 tp of 1 hit; fewer than 8 hits",
+  "self_assignment": "experimental: 0 hits after the module-level rebinding exclusion",
+  "repeated_condition": "experimental: 0 hits after the Swift condition-text fix"
+ },
+ "corrected_before_this_record": {
+  "duplicate_branches with a binding condition": "4 fp of 24: `if let Some((w, h)) = size { f(w, h) } else { f(w, h) }` (dioxus default_icon.rs x3, cargo report.rs). The same text reads the bound names in one arm and outer names in the other. Conditions that bind a name are now skipped.",
+  "identical_operands on bitwise `&`": "5 fp: `hash = hash & hash` x4 (private web app) coerces to a 32-bit integer in JavaScript; one Python set intersection in a test (build-loop). `&`, `|`, `^` removed.",
+  "identical_operands under a TypeScript non-null `!`": "2 fp: `raw !== raw!.trimStart()` parses as `(raw !== raw)!.trimStart()` in tree-sitter-typescript 0.23.2. Leads are skipped when the right operand is followed by `!`, `.`, `(` or `[`.",
+  "identical_operands as a NaN test": "1 fp: `value != value` inside a float check (private desktop app, a Python tool). Equality leads are skipped when the line names a float, NaN or infinity.",
+  "self_assignment at module level": "1 fp: `VALID_OUTCOMES = VALID_OUTCOMES  # re-exported` (build-loop). Python leads now require an enclosing function.",
+  "repeated_condition in Swift": "13 fp of 13 (private desktop app): `if let a {} else if let b {}` exposes only `let` as the condition field. The condition is now every token between the keyword and the body."
+ },
+ "before_corrections": "47 leads, 26 false",
+ "contamination": "The six corrections were derived from these same repositories, so the 21 surviving labels are not an independent estimate. Recall is not measured.",
+ "functions_by_language": {
+  "javascript": 5033,
+  "python": 23463,
+  "rust": 41644,
+  "swift": 20679,
+  "typescript": 19972
+ },
+ "withheld": "21 leads in 2 minified bundles (private web app, under a test report directory) are withheld by the 2000-byte line rule and were not labelled",
+ "outcome": "The private web app's 12 labelled leads were filed on the owner's work queue and removed there the same day; re-measured afterwards: 0 leads. The leads in the other five repositories were unchanged by the analyzer's later review fixes."
+}
