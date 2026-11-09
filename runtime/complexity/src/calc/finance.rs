@@ -55,6 +55,16 @@ fn timing(value: Option<&Value>) -> Outcome<Value> {
 
 /// (1 + rate)**nper, and the payment factor (1 + rate*when)*(that - 1)/rate, which is nper when rate is 0.
 fn growth(rate: &Value, nper: &Value, when: &Value) -> Outcome<(Value, Value)> {
+    // In floats, (1 + rate)**nper - 1 subtracts two nearly equal numbers when the rate is small
+    // (a rate of 1e-12 loses four digits of the answer). log1p and expm1 give the same
+    // quantities without the subtraction. Exact inputs take the exact path below.
+    let in_floats = matches!(rate, Value::Float(_)) || !matches!(nper, Value::Exact(periods) if periods.is_integer());
+    if let (true, Ok(r), Ok(n), Ok(w)) = (in_floats, as_float(rate), as_float(nper), as_float(when)) {
+        if r > -1.0 && r != 0.0 {
+            let log_growth = n * r.ln_1p();
+            return Ok((float(log_growth.exp())?, float((1.0 + r * w) * log_growth.exp_m1() / r)?));
+        }
+    }
     let grown = power(add(&whole(1)?, rate)?, nper.clone())?;
     let factor = if is_zero(rate) {
         nper.clone()
@@ -202,14 +212,16 @@ pub(super) fn call(name: &str, values: &[Value]) -> Option<Outcome<Value>> {
             if is_zero(rate) {
                 return div(&negate(add(&fv, pv)?), pmt);
             }
-            // nper = log((-fv + z) / (pv + z)) / log(1 + rate), with z = pmt*(1 + rate*when)/rate
+            // nper = log((-fv + z) / (pv + z)) / log(1 + rate), with z = pmt*(1 + rate*when)/rate.
+            // The ratio is 1 - (fv + pv)/(pv + z), so log1p takes the part after the 1 directly and
+            // a small rate, where the ratio is close to 1, keeps its digits.
             let z = div(&mul(pmt, &add(&whole(1)?, &mul(rate, &when)?)?)?, rate)?;
-            let ratio = as_float(&div(&sub(&z, &fv)?, &add(pv, &z)?)?)?;
-            let base = 1.0 + as_float(rate)?;
-            if ratio <= 0.0 || base <= 0.0 {
+            let beyond_one = as_float(&negate(div(&add(&fv, pv)?, &add(pv, &z)?)?))?;
+            let r = as_float(rate)?;
+            if beyond_one <= -1.0 || r <= -1.0 {
                 return Err("nper: these payments never reach the future value; check the signs (cash paid out is negative)".into());
             }
-            float(ratio.ln() / base.ln())
+            float(beyond_one.ln_1p() / r.ln_1p())
         })(),
         ("rate", [nper, pmt, pv, fv, rest @ ..]) if rest.len() <= 1 => timing(rest.first()).and_then(|when| rate(nper, pmt, pv, fv, &when)),
         ("npv", [rate, flows @ ..]) if !flows.is_empty() => present(rate, flows),

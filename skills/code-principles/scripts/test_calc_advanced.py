@@ -288,6 +288,25 @@ class FinanceTests(unittest.TestCase):
             expression = f"fv({rate}, {periods}, {payment}, {present}, {when})"
             self.assertEqual(value(expression), -balance, expression)
 
+    def test_float_rates_match_exact_fractions_even_when_tiny(self):
+        # The textbook formula subtracts nearly equal numbers at a small rate: fv(1e-12, 10, -100, 0) came out as
+        # 1000.0889 where the true value is 1000.0000000045. The oracle is the same formula in exact fractions.
+        rng = random.Random(89)
+        for _ in range(120):
+            rate = rng.choice([1e-15, 1e-12, 3e-9, 1e-6, 0.004, 0.05, 0.35, -0.02, -1e-10])
+            periods, payment, present, when = rng.randint(1, 60), rng.randint(-900, 900), rng.randint(-90000, 90000), rng.randint(0, 1)
+            r = Fraction(rate)
+            grown = (1 + r) ** periods
+            factor = (1 + r * when) * (grown - 1) / r
+            cases = {f"fv({rate!r}, {periods}, {payment}, {present}, {when})": -(present * grown + payment * factor),
+                     f"pv({rate!r}, {periods}, {payment}, {present}, {when})": -(present + payment * factor) / grown,
+                     f"pmt({rate!r}, {periods}, {present}, {payment}, {when})": -(payment + present * grown) / factor}
+            for expression, expected in cases.items():
+                if expected != 0:
+                    self.assertTrue(math.isclose(value(expression), float(expected), rel_tol=1e-11), (expression, value(expression), float(expected)))
+        # Ten payments repay 1000 plus a sliver of interest; the expected value is the formula evaluated to 50 digits.
+        self.assertTrue(math.isclose(value("nper(1e-12, -100, 1000)"), 10.000000000055, rel_tol=1e-14))
+
     def test_each_function_inverts_the_others(self):
         rng = random.Random(43)
         for _ in range(40):
