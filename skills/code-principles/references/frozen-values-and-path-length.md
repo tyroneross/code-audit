@@ -45,11 +45,23 @@ Two review procedures for problems that pass tests on the author's machine and b
 | F3 | this package's version stated in code: a copy of the nearest manifest's version, or a CLI/server self-report that contradicts it | 6/6 |
 | F5 | cloud account ARN; a year compared in logic | no hits to measure |
 | F6 | an upper-case feature toggle fixed to true/false at module level | 1/1 |
-| F7 | the same file name, path, URL, schema id or env-var name defined as a constant in several files (config/constants files, fixtures and MIME types excluded) | 14/15 sampled of 32 |
+| F7 | the same file name, path, URL, schema id or env-var name defined as a constant in several files (config/constants files, fixtures and MIME types excluded); typed Rust/Go/Kotlin/TS constants and Swift `static let` count since 2026-11-09 | 14/15 sampled of 40 |
 
 Measured 2026-10-29 on git-tracked non-test source of 8 public repositories, read at the commits recorded in [frozen-values-precision.json](frozen-values-precision.json), which lists every sampled hit with its explicit label (labels: `evals/scanner/labels-2026-10-29.json`). `evals/scanner/measure_precision.py --check` re-scans those commits and fails if the sample or any label is missing. One rater labelled each hit and samples are at most 15 per rule, so treat these as estimates. On 6 private repositories an earlier version of the rules measured F1 9/11, F2 9/15 and F7 15/15; those labels are not published.
 
 Rules measured and **cut** because they were noisier than useful: model ids in code (~25%: most are catalogs, pricing tables or docs), generic account/tenant id assignments (mostly test data and wire-name mappings), date constructors (fixtures and "last updated" stamps), and unrestricted boolean toggles (UI properties and state assignments). Review those kinds by hand with the table above.
+
+#### Inline copies and limits (experimental, `scan.py --experimental`)
+
+Measured 2026-11-09 on agent-rally-point `crates/`, code-audit and private-desktop-app at the commits under `experimental` in [frozen-values-precision.json](frozen-values-precision.json); one rater who also wrote the rules, so treat as estimates. Promotion to the default scan needs the owner.
+
+| Item | Signal | Hits | Precision |
+|---|---|---|---|
+| F7 | a string literal equal to a named constant's value away from its definition (markers like `key:` and `key=value`, dotted keys, file names, paths, URLs, UPPER_SNAKE); the label names the constant's file:line | 444 | 14/15 |
+| F7 | a `key:`/`key=value` marker in 3+ places over 2+ files with no constant anywhere in the scan | 103 | 14/15 |
+| F4 | an integer >= 2 in `.take/.min/.max/.clamp`, `unwrap_or`, `min/max(.., N)`, `Duration::from_*`, `setTimeout(.., N)`, `timeout=`/`timeout:`, `[:N]`/`[-N:]`, `<< (x - N)`; not on a named-constant line, a poll wait (`sleep(`, `.timer(`), or a 60/1000/1024/3600/86400 unit factor | 578 | 12/15 (first version with poll waits: 10/15) |
+
+Cut: a round number (power of two >= 16, multiple of 50 >= 100) passed bare as a call argument, 7/15; mostly unit conversions, colour tables, sizes and CLI bounds.
 
 #### Failure-path rules (experimental, `scan.py --experimental`)
 

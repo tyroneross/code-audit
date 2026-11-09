@@ -46,13 +46,29 @@ LINE_RULES = [
 # Protocol constants such as MIME types are the same everywhere by definition; they are not shared project identifiers.
 PROTOCOL_VALUE = re.compile(r"^['\"](?:application|text|image|audio|video|multipart|font|message|model)/(?![\w.-]*\.[A-Za-z0-9]{2,5}['\"])[\w.+-]+['\"]$")
 IDENTIFIER_VALUE = re.compile(r"^['\"](?:[\w.-]+\.[A-Za-z]{2,5}|[\w.-]*/[\w./-]+|https?://\S+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)['\"]$")
-CONST_DEF = re.compile(r"^\s*(?:export\s+)?(?:(?:const|let|var|final|static|public|private|readonly)\s+)*([A-Z][A-Z0-9_]{2,})\s*(?::\s*[\w<>\[\]|. ]+)?\s*[:=]\s*('[^'\n]{1,200}'|\"[^\"\n]{1,200}\")\s*[;,]?\s*(?:#.*|//.*)?$")
+# Typed constants count: Rust `pub(crate) const X: &str` / `static X: &'static str`, Go `const X string =`, Kotlin
+# `const val X`, TypeScript `const X: string`. Swift names type constants in lowerCamelCase, so a Swift `static let`
+# with a string value is a constant whatever its case (SWIFT_CONST_DEF, .swift files only).
+CONST_DEF = re.compile(r"^\s*(?:export\s+)?(?:(?:pub(?:\([\w:]+\))?|const|let|var|val|final|static|public|private|internal|readonly)\s+)*([A-Z][A-Z0-9_]{2,})\s*(?::\s*&?(?:'static\s+)?[\w<>\[\]|. ]+|\s+string)?\s*[:=]\s*('[^'\n]{1,200}'|\"[^\"\n]{1,200}\")\s*[;,]?\s*(?:#.*|//.*)?$")
+SWIFT_CONST_DEF = re.compile(r"^\s*(?:(?:public|private|fileprivate|internal|open|nonisolated)\s+)*static\s+let\s+([A-Za-z_]\w*)\s*(?::\s*String\s*)?=\s*(\"[^\"\n]{1,200}\")\s*(?://.*)?$")
+
+
+def const_def(rel, line):
+    """(name, quoted value) when the line defines a named string constant, else None."""
+    m = CONST_DEF.match(line) or (rel.endswith(".swift") and SWIFT_CONST_DEF.match(line))
+    return (m.group(1), m.group(2)) if m else None
 VERSION = re.compile(r"""['"](\d+\.\d+\.\d+(?:-[\w.]+)?)['"]""")
 
-def line_hits(rel, no, line, in_test=False):
+def line_hits(rel, no, line, in_test=False, experimental=False):
     """Line-level F hits for one source line; `in_test` marks an inline test module (Rust #[cfg(test)])."""
     if in_test:
         return []
+    if experimental:
+        return _line_hits(rel, line) + limit_hits(rel, line)
+    return _line_hits(rel, line)
+
+
+def _line_hits(rel, line):
     in_constants = bool(CONSTANTS_PATH.search(rel))
     if FIXTURE_PATH.search(rel) or NOT_A_USE.search(line):
         return []
@@ -150,9 +166,11 @@ def collect_line(rel, no, line, store, in_test=False, root=None):
     Fixture files and inline test code are not sources and not copies."""
     if in_test or FIXTURE_PATH.search(rel):
         return
-    m = CONST_DEF.match(line)
-    if m and IDENTIFIER_VALUE.match(m.group(2)) and not PROTOCOL_VALUE.match(m.group(2)):
-        store["consts"][m.group(2).strip("'\"")].append((rel, no, m.group(1), line.strip()[:160]))
+    d = const_def(rel, line)
+    if d and IDENTIFIER_VALUE.match(d[1]) and not PROTOCOL_VALUE.match(d[1]):
+        store["consts"][d[1].strip("'\"")].append((rel, no, d[0], line.strip()[:160]))
+    if store.get("experimental") and not RUST_TEST_FILE.search(rel):
+        collect_copies(rel, no, line, d, store)
     context = SELF_VERSION.search(line)
     if context:
         store["version_context"][rel] = no
@@ -166,8 +184,128 @@ def collect_line(rel, no, line, store, in_test=False, root=None):
             store["self_versions"].append((rel, no, v.group(1), line.strip()[:160], server, root))
 
 
-def new_store():
-    return {"consts": defaultdict(list), "self_versions": [], "version_context": {}, "server_context": {}}
+def new_store(experimental=False):
+    return {"consts": defaultdict(list), "self_versions": [], "version_context": {}, "server_context": {},
+            "experimental": experimental, "copy_consts": defaultdict(list), "literals": defaultdict(list)}
+
+
+# ---- Experimental (scan.py --experimental): inline copies of shared identifiers, and inline numeric limits. ----
+# A shared value worth one owner: a key/marker (`lease_expires_at:`, `protocol:session_state=closed`), a dotted key or
+# file name (`rallyd.pid`, `alerts.soundEnabled`), a path, a URL or an UPPER_SNAKE name. Plain words are left out:
+# they collide with unrelated uses. Format templates and escapes are not values.
+MARKER = re.compile(r"^[A-Za-z_][\w.-]*(?::[\w.=-]*)+$|^[A-Za-z_][\w.:-]*=[\w.:-]+$")
+DOTTED_KEY = re.compile(r"^[A-Za-z_][\w-]*(?:\.[A-Za-z_][\w-]*)+$")
+COPY_VALUE_BAD = re.compile(r"::|[{}%\\\s]|^https?:$")
+STRING_LIT = re.compile(r'"((?:[^"\\\n]|\\.){4,200})"')
+STRING_LIT_SQ = re.compile(r"'((?:[^'\\\n]|\\.){4,200})'")
+RUST_TEST_FILE = re.compile(r"(^|/)(test_\w+|\w+_tests?)\.rs$")  # included from a `#[cfg(test)] mod x;` line elsewhere
+COPY_LABEL = "copies constant"
+MARKER_LABEL = "marker repeated with no constant"
+MARKER_MIN_SITES = 3
+
+
+def copy_value(value):
+    """True for a value distinctive enough that two equal literals are one shared identifier."""
+    if len(value) < 4 or COPY_VALUE_BAD.search(value) or PROTOCOL_VALUE.match(f'"{value}"'):
+        return False
+    return bool(MARKER.match(value) or DOTTED_KEY.match(value) or IDENTIFIER_VALUE.match(f'"{value}"'))
+
+
+def code_literals(rel, line):
+    """String literal values on one line, outside a trailing comment; single quotes count except in Rust/Swift/Go."""
+    rx = [STRING_LIT] if rel.endswith((".rs", ".swift", ".go")) else [STRING_LIT, STRING_LIT_SQ]
+    out = []
+    for r in rx:
+        for m in r.finditer(line):
+            before = line[:m.start()]
+            if "//" in before.replace("://", "") or (rel.endswith(".py") and "#" in before):
+                continue
+            out.append(m.group(1))
+    return out
+
+
+def collect_copies(rel, no, line, defined, store):
+    if FIXTURE_PATH.search(rel) or NOT_A_USE.search(line):
+        return
+    if defined:
+        value = defined[1].strip("'\"")
+        if copy_value(value):
+            store["copy_consts"][value].append((rel, no, defined[0]))
+        return
+    for value in dict.fromkeys(code_literals(rel, line)):  # a value twice on one line is one site
+        if copy_value(value):
+            store["literals"][value].append((rel, no, line.strip()[:160]))
+
+
+def copy_hits(store):
+    """F7 (experimental): a literal equal to a named constant's value, away from its definition; and a key:value marker
+    used in MARKER_MIN_SITES places across at least two files with no constant anywhere in the scan."""
+    hits = []
+    for value, sites in store["literals"].items():
+        owners = store["copy_consts"].get(value)
+        if owners:
+            rel0, no0, name = owners[0]
+            for rel, no, text in sites:
+                hits.append(("F7", f"{COPY_LABEL} {name} ({rel0}:{no0}) value `{value}` inline", rel, no, text))
+        elif MARKER.match(value) and len(sites) >= MARKER_MIN_SITES and len({s[0] for s in sites}) >= 2:
+            for rel, no, text in sites:
+                hits.append(("F7", f"{MARKER_LABEL}: `{value}` in {len(sites)} places", rel, no, text))
+    return hits
+
+
+# Inline numeric limits in a decision position. N is an integer literal (Rust suffixes and `_` separators allowed).
+_N = r"(\d[\d_]*)(?:u8|u16|u32|u64|u128|usize|i32|i64|isize)?(?![\w.])"
+LIMIT_FORMS = [
+    re.compile(r"\.take\(\s*" + _N),
+    re.compile(r"\bunwrap_or\(\s*" + _N),
+    re.compile(r"\.(?:min|max)\(\s*" + _N),
+    re.compile(r"\.clamp\(\s*" + _N + r"\s*,\s*" + _N),
+    re.compile(r"(?<![\w.])(?:Math\.)?(?:min|max)\([^()]*,\s*" + _N + r"\s*\)"),
+    re.compile(r"Duration::from_(?:secs|millis|micros)\(\s*" + _N),
+    re.compile(r"\bsetTimeout\([^;]*,\s*" + _N + r"\s*\)"),
+    re.compile(r"\btimeout\w*\s*(?:=(?!=)|:)\s*" + _N, re.I),
+    re.compile(r"\[\s*-?" + _N + r"\s*:\s*\]|\[\s*:\s*" + _N + r"\s*\]"),
+    re.compile(r"<<\s*\(\s*\w+\s*-\s*" + _N),
+]
+UNIT = {60, 1000, 1024, 3600, 86400, 1_000_000}
+NUM_CONST_LINE = re.compile(r"^\s*(?:export\s+)?(?:(?:pub(?:\([\w:]+\))?|const|let|var|val|final|static|public|private|internal|readonly)\s+)*[A-Z][A-Z0-9_]+\s*(?::[^=]+)?=")
+LIMIT_LABEL = "inline numeric limit in a decision position"
+# A poll or spin wait (`sleep(Duration::from_millis(10))`, `.timer(..)`) sets a cadence, not a limit: 3 of the 5 false
+# positives in the first labelled sample (2026-11-09).
+POLL_WAIT = re.compile(r"\bsleep\(|\.timer\(")
+
+
+def _code_only(line):
+    """The line with string bodies emptied and a trailing comment dropped."""
+    line = re.sub(r'"(?:[^"\\]|\\.)*"', '""', line)
+    line = re.sub(r"(?<![\w])'(?:[^'\\\n]|\\.)*'", "''", line)
+    return re.split(r"//|(?<![\w\[])#(?!\[)", line, maxsplit=1)[0]
+
+
+def limit_hits(rel, line, in_test=False):
+    """F4 (experimental): one hit per line with an integer >= 2 in a decision position, not on a named-constant line."""
+    if in_test or RUST_TEST_FILE.search(rel) or FIXTURE_PATH.search(rel) or CONSTANTS_PATH.search(rel) or NOT_A_USE.search(line):
+        return []
+    code = _code_only(line)
+    if NUM_CONST_LINE.match(code) or POLL_WAIT.search(code):
+        return []
+    for rx in LIMIT_FORMS:
+        for m in rx.finditer(code):
+            for g in range(1, (m.lastindex or 0) + 1):
+                raw = m.group(g)
+                if raw is None:
+                    continue
+                n = int(raw.replace("_", ""))
+                after = code[m.end(g):].lstrip()
+                before = code[:m.start(g)].rstrip()
+                if n < 2 or (n in UNIT and (after[:1] in "*/" or before[-1:] in "*/")):
+                    continue
+                return [("F4", LIMIT_LABEL)]
+    return []
+
+
+# Labels of the experimental rules above; their precision is recorded under `experimental` in frozen-values-precision.json.
+EXPERIMENTAL_LABELS = (COPY_LABEL, MARKER_LABEL, LIMIT_LABEL)
 
 
 # The version a CLI or server reports about itself. Script-local `__version__` values and the versions that test or
@@ -252,6 +390,8 @@ def cross_file_hits(store, roots):
         elif server:
             declared = ", ".join(f"{name(m)} {v}" for v, m in sorted(manifests.items(), key=lambda x: x[1]))
             hits.append(("F3", f"states version {version} but {declared}", rel, no, text))
+    if store.get("experimental"):
+        hits.extend(copy_hits(store))
     for value, defs in store["consts"].items():
         files = {d[0] for d in defs}
         if len(files) < 2:

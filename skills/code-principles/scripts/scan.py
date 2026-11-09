@@ -193,7 +193,7 @@ def scan_file(path, rel, skipped, store=None, root=None, experimental=False):
             if unless and unless.search(window):
                 continue
             hits.append((item, label, rel, no, stripped[:160]))
-        for item, label in frozen.line_hits(rel, no, line, in_test):
+        for item, label in frozen.line_hits(rel, no, line, in_test, experimental):
             hits.append((item, label, rel, no, stripped[:160]))
         if store is not None:
             frozen.collect_line(rel, no, line, store, in_test, root)
@@ -370,6 +370,67 @@ except ValueError: pass
 except KeyError:
     log(1)
 """, {"B2", "C1"}, {("B2", 2), ("C1", 6)}),
+    # Multi-file fixtures (a dict of files) also run the cross-file rules; expected hits name the file.
+    # Typed string constants in Rust, Swift and Go: one value defined in three files is F7 (default rule).
+    ("typed", {
+        "a.rs": 'pub(crate) const PID_FILE: &str = "daemon.pid";\nstatic LOG_FILE: &\'static str = "daemon.log";\n',
+        "b.swift": 'enum Paths {\n    private static let pidFile: String = "daemon.pid"\n    static let title = "Daemon status"\n}\n',
+        "c.go": 'const PID_FILE string = "daemon.pid"\nconst LOG_NAME = "other.log"\n',
+    }, {"F7"}, {("F7", "a.rs", 1), ("F7", "b.swift", 2), ("F7", "c.go", 1)}),
+    # Experimental F7: a literal copying a named constant's value, and a key=value marker in 3 places over 2 files.
+    ("copies", {
+        "writer.rs": "\n".join([
+            'const LEASE_PREFIX: &str = "lease_expires_at:";',
+            'fn write(e: &mut Vec<String>) {',
+            '    e.push("state=closed".to_string());',             # marker site 1
+            '    e.push("role:lead".to_string());',                # a marker in only two places
+            '    // e.strip_prefix("lease_expires_at:")',          # comment
+            '    let m = "lease_expires_at: missing";',            # not the value
+            '    let f = format!("lease_expires_at:{t}");',        # a template, not the value
+            '}',
+            '#[cfg(test)]',
+            'mod tests {',
+            '    fn t(e: &str) { e.strip_prefix("lease_expires_at:"); }',  # test code
+            '}',
+        ]) + "\n",
+        "reader.rs": "\n".join([
+            'fn read(e: &str) -> Option<&str> {',
+            '    e.strip_prefix("lease_expires_at:")',             # copy of LEASE_PREFIX
+            '}',
+            'fn closed(v: &[String]) -> bool {',
+            '    v.iter().any(|x| x == "state=closed") || v.iter().any(|x| x == "role:lead")',  # marker site 2
+            '}',
+            'fn closed2(v: &[String]) -> bool { v.contains(&"state=closed".to_string()) }',     # marker site 3
+        ]) + "\n",
+    }, {"F7"}, {("F7", "reader.rs", 2), ("F7", "writer.rs", 3), ("F7", "reader.rs", 5), ("F7", "reader.rs", 7)}),
+    # Experimental F4: inline numeric limits in decision positions.
+    ("limits.rs", "\n".join([
+        'const MAX_ROWS: usize = 64;',
+        'fn f(xs: &[u8], budget: Option<usize>, q: usize, attempt: u32, secs: u64) {',
+        '    let n = budget.unwrap_or(6000);',
+        '    let page = q.clamp(64, 1_024);',
+        '    let first: Vec<_> = xs.iter().take(8).collect();',
+        '    let backoff = (1u64 << (attempt - 8)).min(10);',
+        '    let one = xs.iter().take(1).count();',
+        '    let ms = secs * 1000;',
+        '    let t = Duration::from_millis(secs * 1000);',
+        '    std::thread::sleep(Duration::from_millis(10));',
+        '    let d = Duration::from_secs(30);',
+        '    let m = xs.iter().take(MAX_ROWS);',
+        '    let k = xs.len().max(1) * 60;',
+        '}',
+        '#[cfg(test)]',
+        'mod tests { fn t(xs: &[u8]) { xs.iter().take(5); } }',
+    ]) + "\n", {"F4"}, {("F4", 3), ("F4", 4), ("F4", 5), ("F4", 6), ("F4", 11)}),
+    ("limits.py", """\
+r = requests.get(url, timeout=30)
+tail = rows[-20:]
+head = rows[:50]
+first = rows[:1]
+seconds = elapsed_ms / 1000
+x = run(rows)  # timeout=5 in a comment
+best = min(scores, 10)
+""", {"F4"}, {("F4", 1), ("F4", 2), ("F4", 3), ("F4", 7)}),
 ]
 
 
@@ -379,12 +440,21 @@ def self_test():
     failures = []
     with tempfile.TemporaryDirectory(prefix="scan-self-test-") as folder:
         for name, source, items, want in SELF_TEST:
-            path = os.path.join(folder, name)
-            with open(path, "w", encoding="utf-8") as fh:
-                fh.write(source)
-            got = {(h[0], h[3]) for h in scan_file(path, name, [], experimental=True) or [] if h[0] in items}
-            failures += [f"{name}: planted {i} on line {n} not found" for i, n in sorted(want - got)]
-            failures += [f"{name}: clean line {n} fired {i}" for i, n in sorted(got - want)]
+            files = source if isinstance(source, dict) else {name: source}
+            base = os.path.join(folder, name + ".d")
+            store = frozen.new_store(experimental=True)
+            got = set()
+            for rel, text in files.items():
+                path = os.path.join(base, rel)
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(text)
+            for rel in files:
+                got |= {(h[0], h[2], h[3]) for h in scan_file(os.path.join(base, rel), rel, [], store, base, experimental=True) or [] if h[0] in items}
+            got |= {(h[0], h[2], h[3]) for h in frozen.cross_file_hits(store, [base]) if h[0] in items}
+            want = {w if len(w) == 3 else (w[0], name, w[1]) for w in want}
+            failures += [f"{name}: planted {i} at {f}:{n} not found" for i, f, n in sorted(want - got)]
+            failures += [f"{name}: clean line {f}:{n} fired {i}" for i, f, n in sorted(got - want)]
     print("\n".join(failures) if failures else f"self-test passed: {len(SELF_TEST)} fixtures")
     return 1 if failures else 0
 
@@ -393,7 +463,7 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("paths", nargs="*")
     ap.add_argument("--json", action="store_true")
-    ap.add_argument("--experimental", action="store_true", help="also run rules too rare to measure (see FAILURE_RULES)")
+    ap.add_argument("--experimental", action="store_true", help="also run experimental rules: FAILURE_RULES and the frozen.EXPERIMENTAL_LABELS rules (see references/frozen-values-and-path-length.md)")
     ap.add_argument("--self-test", action="store_true", help="run the planted fixtures and exit")
     ap.add_argument("--include-tests", action="store_true", help="also scan test and fixture files")
     ap.add_argument("--max-hits", type=int, default=5, help="hits shown per item in text output")
@@ -406,7 +476,7 @@ def main(argv=None):
         if not os.path.exists(p):
             print(f"scan.py: no such path: {p}", file=sys.stderr)
             return 2
-    hits, files, skipped, store = [], 0, [], frozen.new_store()
+    hits, files, skipped, store = [], 0, [], frozen.new_store(args.experimental)
     for full, rel, root in iter_files(args.paths, args.include_tests, skipped):
         found = scan_file(full, rel, skipped, store, root, args.experimental)
         if found is not None:

@@ -36,7 +36,7 @@ PER_RULE = 15
 FAILURE_NAMES = {label: rule.__name__ for _, label, rule, _ in scan.FAILURE_RULES}
 SETS = {
     'frozen': {'record': REFS / 'frozen-values-precision.json', 'labels': 'labels-2026-10-29.json', 'seed': 20261029, 'date': '2026-10-29',
-               'select': lambda item, label: item if item[0] == 'F' else None},
+               'select': lambda item, label: item if item[0] == 'F' and not label.startswith(frozen.EXPERIMENTAL_LABELS) else None},
     'failure': {'record': REFS / 'failure-path-precision.json', 'labels': 'labels-2026-11-01.json', 'seed': 20261101, 'date': '2026-11-01',
                 'select': lambda item, label: FAILURE_NAMES.get(label)},
 }
