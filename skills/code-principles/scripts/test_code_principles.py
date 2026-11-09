@@ -295,6 +295,17 @@ class FailurePathRuleTest(unittest.TestCase):
         self.assertEqual(lines(off, "B3"), [])
         self.assertEqual(lines(on, "B3"), [3])
 
+    def test_experimental_frozen_rules_need_the_flag(self):
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "a.rs").write_text('const PREFIX: &str = "lease_expires_at:";\nfn f(o: Option<usize>) -> usize { o.unwrap_or(6000) }\n')
+            Path(d, "b.rs").write_text('fn g(e: &str) -> Option<&str> { e.strip_prefix("lease_expires_at:") }\n')
+            _, off = run_scan([d])
+            _, on = run_scan([d, "--experimental"])
+        self.assertNotIn("F4", off["items"]); self.assertNotIn("F7", off["items"])
+        self.assertEqual([(h["file"], h["line"]) for h in on["items"]["F4"]], [("a.rs", 2)])
+        self.assertEqual([(h["file"], h["line"]) for h in on["items"]["F7"]], [("b.rs", 1)])
+        self.assertIn("PREFIX (a.rs:1)", on["items"]["F7"][0]["label"])
+
     def test_self_test_passes(self):
         with redirect_stdout(io.StringIO()):
             self.assertEqual(scan.main(["--self-test"]), 0)

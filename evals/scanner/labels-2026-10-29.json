@@ -259,6 +259,38 @@
   "NavGator/web/components/ui/use-toast.ts:21": [
    "tp",
    "same identifier defined in two files that must agree"
+  ],
+  "agent-rally-point/crates/rally-cli/src/rallyd_core.rs:169": [
+   "tp",
+   "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
+  ],
+  "agent-rally-point/crates/rally-cli/src/store_client.rs:63": [
+   "tp",
+   "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
+  ],
+  "spectra/macos/Spectra/DaemonCore/BundleHelperPaths.swift:54": [
+   "tp",
+   "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
+  ],
+  "spectra/src/native/compiler.ts:724": [
+   "tp",
+   "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
+  ],
+  "spectra/macos/Spectra/DaemonCore/BundleHelperPaths.swift:55": [
+   "tp",
+   "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
+  ],
+  "spectra/src/native/compiler.ts:222": [
+   "tp",
+   "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
+  ],
+  "spectra/macos/Spectra/DaemonCore/BundleHelperPaths.swift:56": [
+   "tp",
+   "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
+  ],
+  "spectra/src/native/compiler.ts:223": [
+   "tp",
+   "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
   ]
  }
 }

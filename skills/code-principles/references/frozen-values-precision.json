@@ -1,6 +1,17 @@
 {
  "date": "2026-10-29",
  "method": "git-tracked non-test source read from git archive at the recorded commits; one sample per rule (seed 20261029-<rule>, at most 15); one rater (the author) labelled every sampled hit explicitly, tp meaning the value has a source of truth or varies by context and is frozen in code. Informal: single rater, small samples.",
+ "held_out_informal": {
+  "repos": 6,
+  "note": "private local repositories; labels kept outside this repository. Measured on 2026-10-28 with an earlier version of the rules: F1 9/11, F2 9/15, F7 15/15."
+ },
+ "cut_rules_informal": {
+  "model ids": "~25% (3 of 12 sampled)",
+  "pass-through functions": "~20% (2-3 of 12)",
+  "generic account/tenant ids": "mostly test data and wire-name mappings",
+  "unrestricted boolean toggles": "mostly UI properties and state assignments",
+  "single-implementation interfaces": "second implementation is usually a test fake the scanner skips"
+ },
  "files_scanned": 2099,
  "repos": {
   "build-loop": "271c93887599f6dd8f0784fcd01f62405ffd327f",
@@ -244,7 +255,7 @@
    ]
   },
   "F7": {
-   "hits": 32,
+   "hits": 40,
    "sampled": 15,
    "true_positive": 14,
    "precision": 0.93,
@@ -256,20 +267,20 @@
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "key": "build-loop/src/build_loop/architecture/storage.py:31",
-     "signal": "`.build-loop/architecture` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
+     "key": "build-loop/scripts/install_memory.py:62",
+     "signal": "`manifest.json` is defined as a constant in 2 files; a change must reach all",
+     "label": "fp",
+     "reason": "same file name, different manifest (a seed manifest, not the architecture manifest)"
     },
     {
-     "key": "NavGator/src/registry-journal.ts:122",
-     "signal": "`registry-conflicts.jsonl` is defined as a constant in 2 files; a change must reach all",
+     "key": "spectra/macos/Spectra/DaemonCore/BundleHelperPaths.swift:55",
+     "signal": "`SPECTRA_APP_BUNDLE_HELPERS_DIR` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
+     "reason": "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
     },
     {
-     "key": "build-loop/scripts/model_resolver.py:90",
-     "signal": "`model-availability.json` is defined as a constant in 2 files; a change must reach all",
+     "key": "NavGator/web/lib/server/registry-lock.ts:35",
+     "signal": "`projects.json.lock` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     },
@@ -280,44 +291,26 @@
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "key": "build-loop/scripts/model_resolver.py:91",
-     "signal": "`model-tier-cache.json` is defined as a constant in 2 files; a change must reach all",
+     "key": "build-loop/scripts/model_resolver.py:90",
+     "signal": "`model-availability.json` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "key": "NavGator/src/registry-journal.ts:105",
+     "key": "NavGator/web/components/ui/use-toast.ts:21",
+     "signal": "`DISMISS_TOAST` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "key": "build-loop/scripts/migrate_project_memory.py:92",
+     "signal": "`.MOVED.md` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "key": "NavGator/web/lib/server/registry-journal.ts:109",
      "signal": "`registry-journal.jsonl` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "key": "build-loop/scripts/classify_model_tier.py:63",
-     "signal": "`model-tier-cache.json` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "key": "NavGator/web/lib/server/registry-lock.ts:35",
-     "signal": "`projects.json.lock` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "key": "NavGator/src/registry-journal.ts:106",
-     "signal": "`registry-journal.1.jsonl` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "key": "NavGator/web/lib/server/registry-journal.ts:129",
-     "signal": "`registry-conflicts.1.jsonl` is defined as a constant in 2 files; a change must reach all",
-     "label": "tp",
-     "reason": "same identifier defined in two files that must agree"
-    },
-    {
-     "key": "build-loop/scripts/migrate_project_memory.py:91",
-     "signal": "`.build-loop/memory` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
     },
@@ -328,29 +321,549 @@
      "reason": "same identifier defined in two files that must agree"
     },
     {
-     "key": "build-loop/scripts/install_memory.py:62",
-     "signal": "`manifest.json` is defined as a constant in 2 files; a change must reach all",
-     "label": "fp",
-     "reason": "same file name, different manifest (a seed manifest, not the architecture manifest)"
+     "key": "NavGator/src/registry-journal.ts:123",
+     "signal": "`registry-conflicts.1.jsonl` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree"
     },
     {
-     "key": "NavGator/web/components/ui/use-toast.ts:21",
+     "key": "NavGator/web/hooks/use-toast.ts:21",
      "signal": "`DISMISS_TOAST` is defined as a constant in 2 files; a change must reach all",
      "label": "tp",
      "reason": "same identifier defined in two files that must agree"
+    },
+    {
+     "key": "spectra/macos/Spectra/DaemonCore/BundleHelperPaths.swift:56",
+     "signal": "`SPECTRA_APP_BUNDLE_PATH` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
+    },
+    {
+     "key": "spectra/src/native/compiler.ts:222",
+     "signal": "`SPECTRA_APP_BUNDLE_HELPERS_DIR` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
+    },
+    {
+     "key": "spectra/macos/Spectra/DaemonCore/BundleHelperPaths.swift:54",
+     "signal": "`SPECTRA_HELPER_MODE` is defined as a constant in 2 files; a change must reach all",
+     "label": "tp",
+     "reason": "same identifier defined in two files that must agree (typed Rust/Swift constant, parsed since 2026-11-09)"
     }
    ]
   }
  },
- "held_out_informal": {
-  "repos": 6,
-  "note": "private local repositories; labels kept outside this repository. Measured on 2026-10-28 with an earlier version of the rules: F1 9/11, F2 9/15, F7 15/15."
- },
- "cut_rules_informal": {
-  "model ids": "~25% (3 of 12 sampled)",
-  "pass-through functions": "~20% (2-3 of 12)",
-  "generic account/tenant ids": "mostly test data and wire-name mappings",
-  "unrestricted boolean toggles": "mostly UI properties and state assignments",
-  "single-implementation interfaces": "second implementation is usually a test fake the scanner skips"
+ "experimental": {
+  "date": "2026-11-09",
+  "flag": "scan.py --experimental",
+  "method": "git-tracked non-test source read from git archive at the recorded commits (agent-rally-point limited to crates/); one sample per rule (seed 20261109-<rule>, at most 15; the refined F4 rule used seed 20261109-F4-inline-limit-v2 over hits not in the v1 sample); one rater (the author, the rules' author) labelled every sampled hit, tp meaning the value is a shared identifier or behaviour-shaping limit frozen inline with no single owner. Informal: single rater who wrote the rules, small samples, one sample dominated by private-desktop-app (most hits).",
+  "repos": {
+   "agent-rally-point": "38cfa06f9adf78ed73b666d6629c61036d8db99d",
+   "code-audit": "566ab7a598ac78c7b87b1ad503bab6f34132d1be",
+   "private-desktop-app": "not published"
+  },
+  "files_scanned": {
+   "agent-rally-point": 94,
+   "code-audit": 152,
+   "private-desktop-app": 1360
+  },
+  "typed_constant_fix": "CONST_DEF now parses typed Rust/Go/Kotlin/TS string constants and Swift `static let` (bug fix to F7, default scan). At the section F commits F7 went from 32 to 40 hits (8 new, all labelled tp); the record above was rebuilt with measure_precision.py --record and stays 14/15. On these 3 repos it adds 37 F7 hits (rally 2, private-desktop-app 35), mostly Swift/Rust cross-language env-var and file-name pairs; not separately sampled.",
+  "rules": {
+   "F7-literal-copy": {
+    "status": "experimental; promotion candidate (owner decides)",
+    "hits": 444,
+    "sampled": 15,
+    "true_positive": 14,
+    "precision": 0.93,
+    "sample": [
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "canvas entry file name copied; CanvasStarter.entryName owns it"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "wire method name matched inline; client constant names it, server has no constant"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/store.rs:11499",
+      "signal": "copies constant BRANCH_HEAD_PREFIX (crates/rally-cli/src/observed_liveness.rs:22) value `branch_head_sha:` inline",
+      "label": "tp",
+      "reason": "evidence prefix copied; observed_liveness BRANCH_HEAD_PREFIX owns it"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "env-var name copied; two Rust constants already define it"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "canvas entry file name copied"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "id prefix copied, with its length frozen as dropFirst(5)"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/init.rs:107",
+      "signal": "copies constant PID_FILENAME (crates/rally-cli/src/rallyd_core.rs:173) value `rallyd.pid` inline",
+      "label": "tp",
+      "reason": "runtime file name listed inline; rallyd_core PID_FILENAME owns it"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "env-var name copied"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "wire method name in the grant list; client constant names it"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "roster file path copied; team_roster <withheld> owns it"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "wire method name in the grant list; STATUS constant in the same crate owns it"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "env-var name read inline in Swift; Rust constants define it"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "wire method name inline; inbox_engine <withheld> owns it"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "tp",
+      "reason": "env-var name set inline"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "copies a private constant inline (name, path and value withheld)",
+      "label": "fp",
+      "reason": "file name used only as an error-message label, not to locate the file"
+     }
+    ]
+   },
+   "F7-repeated-marker": {
+    "status": "experimental; promotion candidate (owner decides)",
+    "hits": 103,
+    "sampled": 15,
+    "true_positive": 14,
+    "precision": 0.93,
+    "sample": [
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "marker repeated with no constant: `session:` in 3 places",
+      "label": "tp",
+      "reason": "member-key prefix parsed in several files with no owner"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/next.rs:975",
+      "signal": "marker repeated with no constant: `file:` in 28 places",
+      "label": "tp",
+      "reason": "scope prefix written and read in 28 places with no owner"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "marker repeated with no constant: `pane:` in 5 places",
+      "label": "tp",
+      "reason": "focus-key prefix built and compared in several places"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "marker repeated with no constant: `terminal:` in 3 places",
+      "label": "tp",
+      "reason": "member-key prefixes checked by hand"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "marker repeated with no constant: `file:` in 5 places",
+      "label": "tp",
+      "reason": "reads another project's scope prefix with no shared definition"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/lib.rs:22846",
+      "signal": "marker repeated with no constant: `file:` in 28 places",
+      "label": "tp",
+      "reason": "scope prefix"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "marker repeated with no constant: `report:withdrawn` in 6 places",
+      "label": "tp",
+      "reason": "receipt evidence marker matched in 6 places"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "marker repeated with no constant: `file:` in 5 places",
+      "label": "tp",
+      "reason": "scope prefix"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "marker repeated with no constant: `not_sent:` in 3 places",
+      "label": "tp",
+      "reason": "delivery status prefix written and read separately"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/lib.rs:5002",
+      "signal": "marker repeated with no constant: `file:` in 28 places",
+      "label": "tp",
+      "reason": "scope prefix"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/lib.rs:4263",
+      "signal": "marker repeated with no constant: `file:` in 28 places",
+      "label": "tp",
+      "reason": "scope prefix"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/route_findings.rs:62",
+      "signal": "marker repeated with no constant: `file:` in 28 places",
+      "label": "tp",
+      "reason": "scope prefix"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "marker repeated with no constant: `team:` in 6 places",
+      "label": "tp",
+      "reason": "focus-key prefix"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "marker repeated with no constant: `BRANCH:` in 3 places",
+      "label": "fp",
+      "reason": "parses agent-written free text; the prefix is self-consistent on the line"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/store.rs:1403",
+      "signal": "marker repeated with no constant: `protocol:` in 4 places",
+      "label": "tp",
+      "reason": "protocol evidence namespace checked by hand"
+     }
+    ]
+   },
+   "F4-inline-limit@v1": {
+    "status": "superseded: below 0.7, refined to exclude poll waits (sleep(, .timer()",
+    "hits": 678,
+    "sampled": 15,
+    "true_positive": 10,
+    "precision": 0.67,
+    "sample": [
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "slug length cap"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "echo-verify threshold"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "receipt wait caps"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "fp",
+      "reason": "spin-wait poll interval"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "grace default and cap"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "fp",
+      "reason": "UI poll cadence"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "stdin deadline for a hook"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "fp",
+      "reason": "fixed by the kernel struct layout"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "fp",
+      "reason": "spin-wait poll interval"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "entry count cap"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "reconnect backoff cap"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/lib.rs:6030",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "display width, repeated on the next line"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "fp",
+      "reason": "idle wake sentinel, not a limit"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "lockout penalty"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "token cap for a diff"
+     }
+    ]
+   },
+   "F4-inline-limit": {
+    "status": "experimental; promotion candidate (owner decides). Refined after the v1 sample; measured on a fresh sample that excludes the 15 v1 hits",
+    "hits": 578,
+    "sampled": 15,
+    "true_positive": 12,
+    "precision": 0.8,
+    "sample": [
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "heavy-row threshold floor"
+     },
+     {
+      "key": "code-audit/evals/hard/harness.py:73",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "git read timeout"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "restart backoff schedule"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/doctor.rs:2491",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "display row cap"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "label width cap"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "fp",
+      "reason": "editor word-boundary scan window; algorithmic, not deployment-varying"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "fp",
+      "reason": "animation duration; design constant"
+     },
+     {
+      "key": "code-audit/skills/code-principles/scripts/frozen.py:155",
+      "signal": "inline numeric limit in a decision position",
+      "label": "fp",
+      "reason": "display truncation of a report line"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "RPC timeout"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "call timeout"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "reconnect backoff cap"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "entry scan cap"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/runtime_setup.rs:626",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "installer timeout"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "worker count cap"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline numeric limit in a decision position",
+      "label": "tp",
+      "reason": "stdin deadline"
+     }
+    ]
+   },
+   "F4-round-argument": {
+    "status": "cut (below 0.7); removed from scan.py",
+    "hits": 317,
+    "sampled": 15,
+    "true_positive": 7,
+    "precision": 0.47,
+    "sample": [
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "fp",
+      "reason": "unit conversion (s to ms)"
+     },
+     {
+      "key": "code-audit/skills/audit/scripts/campaign.py:283",
+      "signal": "inline round-number call argument",
+      "label": "fp",
+      "reason": "CLI flag defaults, named by the flag"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "tp",
+      "reason": "text length limit repeated 3 times"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/store.rs:14125",
+      "signal": "inline round-number call argument",
+      "label": "tp",
+      "reason": "tail read size"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "fp",
+      "reason": "test data in a source file"
+     },
+     {
+      "key": "code-audit/runtime/debugger/src/logger.ts:319",
+      "signal": "inline round-number call argument",
+      "label": "tp",
+      "reason": "message truncation"
+     },
+     {
+      "key": "agent-rally-point/crates/rally-cli/src/cli.rs:1893",
+      "signal": "inline round-number call argument",
+      "label": "fp",
+      "reason": "CLI argument bounds; the CLI is the owner"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "tp",
+      "reason": "list limit"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "fp",
+      "reason": "colour table"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "tp",
+      "reason": "evidence length limit"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "fp",
+      "reason": "parse radix"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "tp",
+      "reason": "text truncation"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "fp",
+      "reason": "unit conversion (ms per day)"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "fp",
+      "reason": "snapshot canvas sizes"
+     },
+     {
+      "key": "private-desktop-app/<path withheld>",
+      "signal": "inline round-number call argument",
+      "label": "tp",
+      "reason": "description length cap"
+     }
+    ]
+   }
+  }
  }
 }
