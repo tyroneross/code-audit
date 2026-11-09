@@ -190,6 +190,29 @@ class StructureDeltaTests(unittest.TestCase):
         recon.recon(str(self.root), base="HEAD")
         self.assertFalse(marker.exists(), "a Git read executed a program named in the repository configuration")
 
+    def test_repetitive_file_is_counted_like_git_without_stalling(self):
+        self.write("data.txt", "{\n}\n" * 10000)
+        self.commit("data")
+        self.write("data.txt", "{\n{\n}\n" * 6000)
+        _, report = self.flags()
+        expected = self.git("diff", "--numstat", "HEAD", "--", "data.txt").split("\t")[:2]
+        self.assertEqual(report["changed_lines"], int(expected[0]) + int(expected[1]))
+
+    def test_unchanged_submodule_is_not_listed(self):
+        self.git("update-index", "--add", "--cacheinfo", f"160000,{self.git('rev-parse', 'HEAD')},vendor/mod")
+        (self.root / "vendor/mod").mkdir(parents=True)
+        self.git("commit", "-q", "-m", "submodule")
+        _, report = self.flags()
+        self.assertEqual((report["changed_files"], report["binary_or_unreadable_files"]), (0, []))
+
+    def test_reordered_same_name_functions_pair_with_themselves(self):
+        getter = "    @property\n    def x(self):\n        return self._x\n"
+        setter = "    @x.setter\n    def x(self, value):\n        if value:\n            for v in value:\n                if v:\n                    self._x = v\n"
+        self.write("prop.py", "class A:\n" + getter + "\n" + setter)
+        self.commit("props")
+        self.write("prop.py", "class A:\n" + setter + "\n" + getter)
+        self.assertEqual(self.flags()[0], {})
+
     def test_links_fifos_and_devices_are_never_opened(self):
         import os
         os.mkfifo(self.root / "pipe.py")

@@ -54,10 +54,12 @@ def churn(root, since):
     for commit in log.decode("utf-8", "surrogateescape").split("\x01")[1:]:
         fields = [field for field in commit.split("\0") if field.strip("\n")]
         touched, index = set(), 0
-        while index < len(fields):
+        while index + 1 < len(fields):
             status, path = fields[index].strip("\n"), fields[index + 1]
             index += 2
             if status[:1] in ("R", "C"):
+                if index >= len(fields):
+                    return None  # a record this parser does not understand: report no history rather than wrong counts
                 old, path = path, fields[index]
                 index += 1
                 if status[:1] == "R":
@@ -103,7 +105,7 @@ def rank(root, since=SINCE, paths=None, top=TOP, **scoring):
     report = complexity.measure(root, paths, **scoring)
     commits = churn(root, since)
     if commits is None:
-        raise ValueError("git log failed; hotspots need a Git repository with history")
+        raise ValueError("git log failed or returned records this tool cannot read; hotspots need a Git repository with history")
     gaps = list(report["gaps"])
     if (gitsafe.run(root, "rev-parse", "--is-shallow-repository") or b"").strip() == b"true":
         gaps.append({"path": ".", "reason": "shallow clone: commit counts cover only the fetched history"})

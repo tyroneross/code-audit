@@ -26,7 +26,6 @@ incomplete. Read-only: no project code or tests are executed and nothing is writ
 """
 import argparse
 import collections
-import difflib
 import json
 from pathlib import Path
 import re
@@ -73,13 +72,9 @@ def line_counts(before, after):
     """(added, deleted) lines between two byte strings, or None when either looks binary."""
     if any(b"\0" in data[:8000] for data in (before, after)):
         return None
-    old, new = before.decode("utf-8", "replace").splitlines(), after.decode("utf-8", "replace").splitlines()
-    added = deleted = 0
-    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, old, new, autojunk=False).get_opcodes():
-        if tag != "equal":
-            deleted += i2 - i1
-            added += j2 - j1
-    return added, deleted
+    if not before or not after:  # a whole file added or deleted needs no diff
+        return len(after.splitlines()), len(before.splitlines())
+    return gitsafe.numstat(before, after)
 
 
 def base_bytes(root, base, path):
@@ -171,9 +166,9 @@ def pair_functions(before, after):
     for key in sorted(set(old) | set(new)):
         a, b = old.get(key, []), list(new.get(key, []))
         unmatched = []
-        # When a name repeats (overloads, a stub added beside an implementation), an unchanged function pairs with itself first.
+        # When a name repeats (overloads, a getter and setter, a stub beside an implementation), an unchanged function pairs with itself first.
         for row in a:
-            twin = next((candidate for candidate in b if shape(candidate) == shape(row)), None) if len(a) != len(b) else None
+            twin = next((candidate for candidate in b if shape(candidate) == shape(row)), None)
             if twin is None:
                 unmatched.append(row)
             else:

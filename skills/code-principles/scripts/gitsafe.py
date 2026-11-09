@@ -1,26 +1,50 @@
 """One guarded way to read Git state in a repository under review.
 
 A reviewed repository's own configuration can name programs that Git runs during read commands:
-`core.fsmonitor` on status, diff and ls-files; external diff and textconv drivers on diff, log and show; and
-clean or process filters whenever Git compares with the working tree. Every script reads Git through `run`,
-which disables the first. Pass NO_DRIVERS to log and show to disable the second. Nothing here asks Git to
-compare with the working tree: `changed_paths` hashes working files itself with filters off.
+`core.fsmonitor` on status, diff and ls-files; `gpg.program` on log and show when `log.showSignature` is set;
+external diff and textconv drivers on diff, log and show; and clean or process filters whenever Git compares
+with the working tree. Every script reads Git through `run`, which overrides the first two. Pass NO_DRIVERS to
+log and show to disable the third. Nothing here asks Git to compare with the working tree: `changed_paths`
+hashes working files itself with filters off, and `numstat` compares two scratch copies outside the repository.
 """
 import hashlib
 import os
 import stat
 import subprocess
+import tempfile
 
 NO_DRIVERS = ("--no-ext-diff", "--no-textconv")
+# Command-line configuration outranks the repository's own.
+OVERRIDES = ("-c", "core.fsmonitor=false", "-c", "log.showSignature=false")
 
 
-def run(root, *args, timeout=20, stdin=None):
-    """stdout bytes of `git -C root args`, or None when Git is missing, times out or exits non-zero."""
+def run(root, *args, timeout=20, stdin=None, ok=(0,)):
+    """stdout bytes of `git -C root args`, or None when Git is missing, times out or exits with a status outside ok."""
     try:
-        result = subprocess.run(["git", "-c", "core.fsmonitor=false", "-C", str(root), *args], capture_output=True, timeout=timeout, input=stdin)
+        result = subprocess.run(["git", *OVERRIDES, "-C", str(root), *args], capture_output=True, timeout=timeout, input=stdin)
     except (OSError, subprocess.TimeoutExpired):
         return None
-    return result.stdout if result.returncode == 0 else None
+    return result.stdout if result.returncode in ok else None
+
+
+def numstat(before, after):
+    """(added, deleted) lines between two byte strings as Git counts them, or None when Git treats either as binary.
+
+    The two sides are written to a scratch directory and compared with `diff --no-index` from there, so no
+    repository configuration or attribute applies and no working-tree file is read.
+    """
+    with tempfile.TemporaryDirectory(prefix="gitsafe-numstat-") as scratch:
+        for name, data in (("before", before), ("after", after)):
+            with open(os.path.join(scratch, name), "wb") as handle:
+                handle.write(data)
+        # Exit 1 means the files differ, which is the expected case.
+        output = run(scratch, "diff", "--no-index", "--numstat", *NO_DRIVERS, "--", "before", "after", timeout=120, ok=(0, 1))
+    fields = (output or b"").decode("utf-8", "replace").split("\t")
+    if output == b"":
+        return 0, 0
+    if len(fields) < 3 or not (fields[0].isdigit() and fields[1].isdigit()):
+        return None
+    return int(fields[0]), int(fields[1])
 
 
 def names(output):
@@ -44,8 +68,8 @@ def changed_paths(root, base):
     `hash-object --no-filters`. A repository that relies on filters (LFS, line-ending conversion) therefore
     lists the filtered files as modified. Submodules are skipped.
     """
-    tree, tracked, untracked = run(root, "ls-tree", "-r", "-z", base, "--", "."), run(root, "ls-files", "-z"), run(root, "ls-files", "--others", "--exclude-standard", "-z")
-    if tree is None or tracked is None or untracked is None:
+    tree, staged, untracked = run(root, "ls-tree", "-r", "-z", base, "--", "."), run(root, "ls-files", "-s", "-z"), run(root, "ls-files", "--others", "--exclude-standard", "-z")
+    if tree is None or staged is None or untracked is None:
         return None
     at_base = {}
     for entry in names(tree):
@@ -53,7 +77,9 @@ def changed_paths(root, base):
         _mode, object_type, oid = meta.split()
         if object_type == "blob":
             at_base[path] = oid
-    tracked, untracked = set(names(tracked)), names(untracked)
+    # `ls-files -s` rows are "<mode> <oid> <stage>\t<path>"; mode 160000 is a submodule, which has no bytes to compare.
+    tracked = {path for meta, path in (entry.split("\t", 1) for entry in names(staged)) if not meta.startswith("160000 ")}
+    untracked = names(untracked)
     states, to_hash = {}, []
     for path in sorted(set(at_base) | tracked | set(untracked)):
         found = kind(os.path.join(str(root), path))

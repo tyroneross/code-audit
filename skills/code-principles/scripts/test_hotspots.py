@@ -74,6 +74,30 @@ class HotspotTests(unittest.TestCase):
         self.assertEqual(top["renamed.py"], 6)  # 4 as busy.py, the rename, one edit after it
         self.assertNotIn("busy.py", top)
 
+    def test_signed_commit_does_not_run_the_repository_signature_program(self):
+        marker = self.root.parent / (self.root.name + "-gpg-ran")
+        self.addCleanup(lambda: marker.unlink(missing_ok=True))
+        program = self.root.parent / (self.root.name + "-gpg")
+        self.addCleanup(lambda: program.unlink(missing_ok=True))
+        program.write_text('#!/bin/sh\n: > "' + str(marker) + '"\nexit 1\n')
+        program.chmod(0o700)
+        # An unsigned commit, then the same commit with one planted OpenPGP signature header.
+        self.write("busy.py", DEEP + "# signed\n")
+        self.git("add", "-A")
+        self.git("-c", "commit.gpgsign=false", "commit", "-q", "-m", "to sign")
+        head = subprocess.run(["git", "-C", str(self.root), "cat-file", "commit", "HEAD"], check=True, capture_output=True, text=True).stdout
+        headers, message = head.split("\n\n", 1)
+        self.assertNotIn("gpgsig", headers)
+        signed = headers + "\ngpgsig -----BEGIN PGP SIGNATURE-----\n \n planted\n -----END PGP SIGNATURE-----\n\n" + message
+        commit = subprocess.run(["git", "-C", str(self.root), "hash-object", "-t", "commit", "-w", "--stdin"], input=signed, check=True, capture_output=True, text=True).stdout.strip()
+        self.git("update-ref", "HEAD", commit)
+        self.git("config", "log.showSignature", "true")
+        for key in ("gpg.program", "gpg.openpgp.program", "gpg.ssh.program", "gpg.x509.program"):
+            self.git("config", key, str(program))
+        report = hotspots.rank(self.root)
+        self.assertFalse(marker.exists(), "git log ran a signature program named in the repository configuration")
+        self.assertEqual(report["top"][0]["path"], "busy.py")
+
     def test_invalid_input_and_missing_history_exit_two(self):
         def run(*argv):
             out = io.StringIO()
