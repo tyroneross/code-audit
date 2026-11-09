@@ -14,6 +14,8 @@ IMPURE = (ast.Call, ast.Await, ast.Yield, ast.YieldFrom, ast.NamedExpr, ast.Lamb
 COMPARISONS = {ast.Eq: "==", ast.NotEq: "!=", ast.Lt: "<", ast.Gt: ">", ast.LtE: "<=", ast.GtE: ">=", ast.Is: "is", ast.IsNot: "is not"}
 ARITHMETIC = {ast.Sub: "-", ast.Div: "/", ast.FloorDiv: "//", ast.Mod: "%"}  # & | ^ are set operations here
 FLOAT_WORDS = ("nan", "float", "inf")  # a line naming these makes `x != x` the usual NaN test
+NAN_NOTE = "; a deliberate NaN test is the one valid use"
+SAME_BRANCHES = "both branches are the same code"
 
 
 def continues_elif(parent, child):
@@ -65,48 +67,90 @@ def same(first, second):
     return pure(first) and pure(second) and ast.unparse(first) == ast.unparse(second)
 
 
+def comparison_lead(node, source_lines):
+    """`a == a` and the other single comparisons whose two sides are the same pure expression."""
+    if not (isinstance(node, ast.Compare) and len(node.ops) == 1 and type(node.ops[0]) in COMPARISONS and same(node.left, node.comparators[0])):
+        return None
+    op = COMPARISONS[type(node.ops[0])]
+    equality = op in ("==", "!=")
+    line = source_lines[node.lineno - 1].lower() if node.lineno <= len(source_lines) else ""
+    if equality and any(word in line for word in FLOAT_WORDS):
+        return None
+    return "identical_operands", f"both sides of `{op}` are `{ast.unparse(node.left)}`" + (NAN_NOTE if equality else "")
+
+
+def arithmetic_lead(node):
+    if isinstance(node, ast.BinOp) and type(node.op) in ARITHMETIC and same(node.left, node.right):
+        return "identical_operands", f"both sides of `{ARITHMETIC[type(node.op)]}` are `{ast.unparse(node.left)}`"
+    return None
+
+
+def boolean_lead(node):
+    """`a and a`: a pure operand that repeats inside one and/or."""
+    if not isinstance(node, ast.BoolOp):
+        return None
+    texts = [ast.unparse(value) for value in node.values if pure(value)]
+    repeated = next((text for index, text in enumerate(texts) if text in texts[:index]), None)
+    if repeated is None:
+        return None
+    return "identical_operands", f"both sides of `{'and' if isinstance(node.op, ast.And) else 'or'}` are `{repeated}`"
+
+
+def assignment_lead(node, in_function):
+    # Outside a function `NAME = NAME` rebinds an imported or enclosing name on purpose.
+    if isinstance(node, ast.Assign) and in_function and len(node.targets) == 1 and same(node.targets[0], node.value):
+        return "self_assignment", f"`{ast.unparse(node.value)}` is assigned to itself"
+    return None
+
+
+def conditional_expression_lead(node):
+    if isinstance(node, ast.IfExp) and ast.dump(node.body) == ast.dump(node.orelse):
+        return "duplicate_branches", SAME_BRANCHES
+    return None
+
+
+def elif_of(node):
+    """The `elif` that continues this `if`, or None."""
+    return node.orelse[0] if len(node.orelse) == 1 and continues_elif(node, node.orelse[0]) else None
+
+
+def duplicate_if_lead(node):
+    """An if/else (not an elif chain, not `pass`) whose two bodies are the same statements."""
+    if not node.orelse or elif_of(node) is not None or all(isinstance(statement, ast.Pass) for statement in node.body):
+        return None
+    if [ast.dump(statement) for statement in node.body] != [ast.dump(statement) for statement in node.orelse]:
+        return None
+    return "duplicate_branches", node.lineno, SAME_BRANCHES
+
+
+def repeated_condition_leads(head):
+    """Conditions in the chain starting at head that repeat an earlier pure condition."""
+    seen, leads, link = [], [], head
+    while link is not None:
+        if pure(link.test):
+            text = ast.unparse(link.test)
+            if text in seen:
+                leads.append(("repeated_condition", link.lineno, "this condition repeats an earlier one in the same else-if chain"))
+            seen.append(text)
+        link = elif_of(link)
+    return leads
+
+
 def patterns(tree, source_lines):
     """[(rule, line, detail)] for the whole module, in source order."""
     found = []
 
     def visit(node, parent, in_function):
-        if isinstance(node, ast.Compare) and len(node.ops) == 1 and type(node.ops[0]) in COMPARISONS and same(node.left, node.comparators[0]):
-            op = COMPARISONS[type(node.ops[0])]
-            equality = op in ("==", "!=")
-            line = source_lines[node.lineno - 1].lower() if node.lineno <= len(source_lines) else ""
-            if not (equality and any(word in line for word in FLOAT_WORDS)):
-                note = "; a deliberate NaN test is the one valid use" if equality else ""
-                found.append(("identical_operands", node.lineno, f"both sides of `{op}` are `{ast.unparse(node.left)}`{note}"))
-        elif isinstance(node, ast.BinOp) and type(node.op) in ARITHMETIC and same(node.left, node.right):
-            found.append(("identical_operands", node.lineno, f"both sides of `{ARITHMETIC[type(node.op)]}` are `{ast.unparse(node.left)}`"))
-        elif isinstance(node, ast.BoolOp):
-            texts = [ast.unparse(v) for v in node.values if pure(v)]
-            repeated = next((t for i, t in enumerate(texts) if t in texts[:i]), None)
-            if repeated is not None:
-                op = "and" if isinstance(node.op, ast.And) else "or"
-                found.append(("identical_operands", node.lineno, f"both sides of `{op}` are `{repeated}`"))
-        elif isinstance(node, ast.Assign) and in_function and len(node.targets) == 1 and same(node.targets[0], node.value):
-            # Outside a function `NAME = NAME` rebinds an imported or enclosing name on purpose.
-            found.append(("self_assignment", node.lineno, f"`{ast.unparse(node.value)}` is assigned to itself"))
-        elif isinstance(node, ast.IfExp) and ast.dump(node.body) == ast.dump(node.orelse):
-            found.append(("duplicate_branches", node.lineno, "both branches are the same code"))
+        expression_leads = (comparison_lead(node, source_lines), arithmetic_lead(node), boolean_lead(node),
+                            assignment_lead(node, in_function), conditional_expression_lead(node))
+        found.extend((rule, node.lineno, detail) for rule, detail in filter(None, expression_leads))
         if isinstance(node, ast.If):
-            chained_else = len(node.orelse) == 1 and continues_elif(node, node.orelse[0])
-            trivial = all(isinstance(s, ast.Pass) for s in node.body)
-            if node.orelse and not chained_else and not trivial and [ast.dump(s) for s in node.body] == [ast.dump(s) for s in node.orelse]:
-                found.append(("duplicate_branches", node.lineno, "both branches are the same code"))
+            found.extend(filter(None, [duplicate_if_lead(node)]))
             if not continues_elif(parent, node):
-                seen, link = [], node
-                while link is not None:
-                    if pure(link.test):
-                        text = ast.unparse(link.test)
-                        if text in seen:
-                            found.append(("repeated_condition", link.lineno, "this condition repeats an earlier one in the same else-if chain"))
-                        seen.append(text)
-                    link = link.orelse[0] if len(link.orelse) == 1 and continues_elif(link, link.orelse[0]) else None
-        inside = in_function or isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))
+                found.extend(repeated_condition_leads(node))
+        inside = (in_function or isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda))) and not isinstance(node, ast.ClassDef)
         for child in ast.iter_child_nodes(node):
-            visit(child, node, inside and not isinstance(node, ast.ClassDef))
+            visit(child, node, inside)
 
     visit(tree, None, False)
-    return sorted(found, key=lambda f: (f[1], f[0]))
+    return sorted(found, key=lambda lead: (lead[1], lead[0]))
