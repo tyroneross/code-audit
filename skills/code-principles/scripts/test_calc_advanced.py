@@ -173,7 +173,9 @@ class SolveTests(unittest.TestCase):
         self.assertEqual(calc("--solve", "tan(x) == 0", "--between", "1", "2")[0], 2)  # the sign changes at a pole
         self.assertEqual(calc("--solve", "1/x == 0", "--between", "-1", "1")[0], 2)
         # A jump stays a jump when the equation is scaled down or up; floor(x) is never 1/2.
-        for equation in ("(floor(x) - 1/2)/10**12 == 0", "floor(x) == 1/2", "(floor(x) - 1/2)*10**12 == 0", "round(x)/10**30 == 1/(2*10**30)"):
+        for equation in ("(floor(x) - 1/2)/10**12 == 0", "floor(x) == 1/2", "(floor(x) - 1/2)*10**12 == 0", "round(x)/10**30 == 1/(2*10**30)",
+                         "floor(x) - 1 + 1/10**6 + (x - 1)/10**9 == 0",  # from far below zero to just above it
+                         "10**6*floor(x) - 1 == 0"):  # from just below zero (-1) to far above it (999999)
             code, report = calc("--solve", equation, "--between", "0", "2")
             self.assertEqual((code, report["status"]), (2, "invalid"), (equation, report))
         # A real crossing passes at any scale, including a flat one and one at the end of the bracket.

@@ -27,7 +27,7 @@ const MAX_ROOT_WORK: u64 = 200_000;
 const MAX_EQUATIONS: usize = 32;
 /// Enough for bisection alone to walk from 1 down to the smallest float, as a flat root at zero needs.
 const BRENT_STEPS: usize = 2200;
-/// At a crossing, the value at the root is at most this fraction of the values a step away.
+/// At a crossing, the value at the root is at most this fraction of the value a step away on either side.
 const CROSSING: f64 = 1e-3;
 /// Bisection steps for a single root of a long polynomial; enough for a rate as small as 2**-300.
 const MAX_SINGLE_STEPS: u64 = 480;
@@ -448,18 +448,20 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
     // values a short step to either side, which have opposite signs; at a jump it is as
     // large as one of them. The test is a ratio, so scaling the equation does not change it.
     let step = 1e-6 * root.abs().max(high - low);
-    let (before, after) = (f((root - step).max(low)), f((root + step).min(high)));
-    if failure.borrow().is_some() || !residual.is_finite() || !before.is_finite() || !after.is_finite() {
+    // A side that would leave the bracket is not looked at; a root at an end has one neighbour.
+    let sides: Vec<f64> = [root - step, root + step].into_iter().filter(|x| *x >= low && *x <= high).map(&f).collect();
+    if failure.borrow().is_some() || !residual.is_finite() || sides.is_empty() || sides.iter().any(|side| !side.is_finite()) {
         return Err(format!("left minus right cannot be evaluated all around {name} = {root:?}, so it is not established as a root"));
     }
-    let beside = before.abs().max(after.abs());
-    if residual == 0.0 && beside == 0.0 {
-        // Exactly zero on both sides too: the expression has underflowed (exp(-x) for large x)
-        // or is zero over a stretch, and no single root can be named.
+    if residual == 0.0 && sides.iter().all(|side| *side == 0.0) {
+        // Exactly zero beside it too: the expression has underflowed (exp(-x) for large x) or
+        // is zero over a stretch, and no single root can be named.
         return Err(format!("left minus right is exactly zero all around {name} = {root:?}: it is too small for floats there or zero over a stretch, so no single root can be named"));
     }
-    if residual.abs() > CROSSING * beside {
-        return Err(format!("left minus right jumps across zero near {name} = {root:?} without reaching it: a discontinuity, not a root"));
+    let smallest = sides.iter().fold(f64::INFINITY, |least, side| least.min(side.abs()));
+    let same_side = sides.len() == 2 && (sides[0] < 0.0) == (sides[1] < 0.0);
+    if residual.abs() > CROSSING * smallest || same_side {
+        return Err(format!("left minus right jumps across zero near {name} = {root:?} without passing through it: a discontinuity, not a root"));
     }
     let method = format!("Brent's method between {low:?} and {high:?}: one root; others may exist");
     Ok(report(&free, &method, &[solution(&[(name, &super::float(root)?)], false, Some(residual))], None))
