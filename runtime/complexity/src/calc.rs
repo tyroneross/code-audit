@@ -255,6 +255,10 @@ fn power(base: Value, exponent: Value) -> Outcome<Value> {
     if result.is_infinite() && b.is_finite() && e.is_finite() {
         return Err(if b == 0.0 { "division by zero".into() } else { "result is outside float range".to_string() });
     }
+    if !result.is_normal() && b != 0.0 && (matches!(base, Value::Exact(_)) || matches!(exponent, Value::Exact(_))) {
+        // A power of a non-zero base is never zero: this one is too small for a float.
+        return Err("this power is too small for a float (below about 2e-308); keep the arithmetic exact or rescale".into());
+    }
     if let Some(nearby) = other_side(&base, b) {
         steady("this power", result, nearby.powf(e))?;
     }

@@ -119,6 +119,13 @@ def steady(result, other):
 def power(left, right):
     if isinstance(left, Fraction) and isinstance(right, Fraction):
         if right.denominator == 1:
+            if max(abs(left.numerator), left.denominator) == 1:
+                # 0, 1 and -1 do not grow, whatever the exponent; Python would try to convert a huge exponent.
+                if left == 0:
+                    if right < 0:
+                        raise ZeroDivisionError
+                    return Fraction(0 if right else 1)
+                return Fraction(-1 if left < 0 and right.numerator % 2 else 1)
             # Checked before computing: the result has about exponent x log2(base) bits.
             if abs(right.numerator) * math.log2(max(abs(left.numerator), left.denominator)) + 1 > MAX_BITS:
                 raise ValueError(f"exact power would exceed {MAX_BITS} bits; use a float base (write 2.0 for 2) or a smaller exponent")
@@ -131,6 +138,9 @@ def power(left, right):
         # float nearest this exponent is a different number.
         raise ValueError("a negative base needs an exponent that a float holds exactly; this exact exponent is not one")
     result = operator.pow(base, exponent)
+    if isinstance(result, float) and base != 0 and abs(result) < sys.float_info.min:
+        # A power of a non-zero base is never zero: this one is too small for a float.
+        raise ValueError("this power is too small for a float; keep the arithmetic exact or rescale")
     if isinstance(result, float):
         for moved in ((other_side(left, base), exponent), (base, other_side(right, exponent))):
             if None not in moved:

@@ -14,6 +14,7 @@ import math
 import random
 import shutil
 import subprocess
+import sys
 import time
 import unittest
 from fractions import Fraction
@@ -837,6 +838,53 @@ class OracleTests(unittest.TestCase):
             else:
                 self.assertLessEqual(abs(got - truth), mpmath.mpf(10) ** -9 * abs(truth), (expression, shown, mpmath.nstr(truth, 20)))
         self.assertGreater(answered, 100)
+
+    def test_functions_of_exact_values_are_right_or_refused_in_both_calculators(self):
+        # A function, a power, or arithmetic with one float, on exact values at the edges: next to 1, next to -1,
+        # too small or too large for a float, and whole numbers no float holds. Each printed result must agree with
+        # a 1,300-digit evaluation to one part in 10**9, and the script must agree with the binary; refusing is fine.
+        mpmath.mp.dps = 1300
+        self.addCleanup(setattr, mpmath.mp, "dps", 15)
+        script = Path(__file__).with_name("calc.py")
+        rng = random.Random(107)
+        precise = lambda x: mpmath.mpf(x.numerator) / mpmath.mpf(x.denominator)
+        exacts = {"1/2**2000": Fraction(1, 2**2000), "2**2000": Fraction(2**2000), "1 + 1/2**60": 1 + Fraction(1, 2**60), "1 - 1/2**70": 1 - Fraction(1, 2**70),
+                  "10**30 + 1": Fraction(10**30 + 1), "1/3": Fraction(1, 3), "22/7": Fraction(22, 7), "2": Fraction(2), "1/2": Fraction(1, 2), "-3": Fraction(-3),
+                  "10**16 + 1": Fraction(10**16 + 1), "1/10**16": Fraction(1, 10**16), "2**60 + 1": Fraction(2**60 + 1), "2**60 + 1/2": 2**60 + Fraction(1, 2),
+                  "1/2**1074": Fraction(1, 2**1074), "2**1023": Fraction(2**1023), "7/5": Fraction(7, 5), "-7/5": Fraction(-7, 5), "3/2**600": Fraction(3, 2**600),
+                  "10**300": Fraction(10**300), "1 + 1/10**20": 1 + Fraction(1, 10**20), "-1": Fraction(-1), "5": Fraction(5)}
+        functions = {"sqrt": mpmath.sqrt, "log": mpmath.log, "log2": lambda v: mpmath.log(v, 2), "log10": mpmath.log10, "exp": mpmath.exp, "sin": mpmath.sin, "cos": mpmath.cos}
+        answered = 0
+        for _ in range(220):
+            a, b = rng.choice(list(exacts)), rng.choice(list(exacts))
+            roll = rng.random()
+            try:
+                if roll < 0.45:
+                    name = rng.choice(list(functions))
+                    expression, in_script, truth = f"{name}({a})", name in ("sqrt", "log", "log2", "log10"), functions[name](precise(exacts[a]))
+                elif roll < 0.75:
+                    expression, in_script, truth = f"({a}) ** ({b})", True, precise(exacts[a]) ** precise(exacts[b])
+                else:
+                    number_text, op = rng.choice(["0.5", "1e300", "1e-300", "0.1", "-2.5", "1e16"]), rng.choice("+-*")
+                    left, right = precise(exacts[a]), precise(Fraction(float(number_text)))
+                    expression, in_script, truth = f"({a}) {op} {number_text}", True, left + right if op == "+" else left - right if op == "-" else left * right
+            except (ZeroDivisionError, ValueError):
+                continue
+            code, report = calc(expression)
+            if in_script:
+                done = subprocess.run([sys.executable, str(script), " " + expression], capture_output=True, text=True, timeout=60)
+                other = json.loads(done.stdout)
+                self.assertEqual(report["status"], other["status"], (expression, report, other))
+                if code == 0:
+                    self.assertEqual(report["results"][0]["value"], other["results"][0]["value"], expression)
+            if code != 0:
+                continue
+            answered += 1
+            self.assertIsInstance(truth, mpmath.mpf, (expression, report))  # a result that is not real must be refused
+            shown = report["results"][0]["value"]
+            got = precise(Fraction(shown["exact"])) if isinstance(shown, dict) else mpmath.mpf(shown)
+            self.assertLessEqual(abs(got - truth), mpmath.mpf(10) ** -9 * abs(truth), (expression, shown, mpmath.nstr(truth, 20)))
+        self.assertGreater(answered, 80)
 
     def test_irr_matches_the_numpy_financial_algorithm(self):
         rng = random.Random(83)
