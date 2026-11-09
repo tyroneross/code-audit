@@ -11,12 +11,11 @@
 //! give exact results and a float input gives a float.
 
 use super::poly::Poly;
-use super::solve::{real_roots, Narrow, Root};
+use super::solve::{real_roots, single_root_above, Root, Span};
 use super::{as_exact, as_float, binary, float, integer, is_zero, negate, power, Outcome, Value};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Signed, Zero};
-use roots::find_root_brent;
 
 const RATE_STEPS: usize = 100;
 const RATE_TOLERANCE: f64 = 1e-12;
@@ -118,25 +117,6 @@ fn rate(nper: &Value, pmt: &Value, pv: &Value, fv: &Value, when: &Value) -> Outc
     Err("rate: the iteration did not settle on a rate; check the signs (cash paid out is negative)".into())
 }
 
-/// The one rate above -100% at which the flows' present value is zero, for flows whose sign
-/// changes once. The search runs in u = log(1 + rate), bracketed between powers of two of the
-/// growth factor and finished by Brent's method; the rate is expm1(u), which keeps the digits
-/// of a rate near zero.
-fn only_rate(flows: &[Value]) -> Outcome<f64> {
-    let amounts = flows.iter().map(as_float).collect::<Outcome<Vec<_>>>()?;
-    let last = (amounts.len() - 1) as f64;
-    // Present value times exp(u * periods) when u is negative, so neither form overflows; the sign is the same.
-    let f = |u: f64| {
-        let weight = |period: f64| if u >= 0.0 { (-u * period).exp() } else { (u * (last - period)).exp() };
-        amounts.iter().enumerate().map(|(period, amount)| amount * weight(period as f64)).sum::<f64>()
-    };
-    let grid: Vec<f64> = (-40..=40).map(|power| power as f64 * std::f64::consts::LN_2).collect();
-    let bracket = grid.windows(2).find(|pair| (f(pair[0]) < 0.0) != (f(pair[1]) < 0.0) || f(pair[1]) == 0.0);
-    let pair = bracket.ok_or("irr: no rate between -100% and a trillion-fold brings the net present value to zero")?;
-    let u = find_root_brent(pair[0], pair[1], &f, &mut Narrow).map_err(|error| format!("irr: {error}"))?;
-    Ok(u.exp_m1())
-}
-
 /// The internal rate of return: the rate at which the flows' net present value is zero.
 fn irr(flows: &[Value]) -> Outcome<Value> {
     if flows.len() < 2 || flows.len() > MAX_FLOWS {
@@ -155,14 +135,17 @@ fn irr(flows: &[Value]) -> Outcome<Value> {
     // signs), which a bracketed search finds at any length; several changes need every root.
     let signs: Vec<bool> = exact_flows.iter().filter(|flow| !flow.is_zero()).map(Signed::is_positive).collect();
     let changes = signs.windows(2).filter(|pair| pair[0] != pair[1]).count();
-    let rates = if changes == 1 && exact_flows.len() - 1 > MAX_EXACT_PERIODS {
-        vec![Root::Near(only_rate(&flows[..exact_flows.len()])?)]
+    // With g = 1 + rate, sum(flow[t] / g**t) = 0 is the polynomial sum(flow[t] * g**(n - t)) = 0.
+    // It is rewritten in the rate itself before the roots are found, so a rate near zero is
+    // located as a small number and not as the difference of two numbers near one.
+    let in_rate = Poly::new(exact_flows.iter().rev().cloned().collect(), inexact).shifted_by_one();
+    let floor = -BigRational::one();
+    let rates = if changes == 1 {
+        vec![single_root_above(&in_rate, &floor).map_err(|error| format!("irr: {error}"))?]
+    } else if exact_flows.len() - 1 > MAX_EXACT_PERIODS {
+        return Err(format!("irr: these flows change sign {changes} times, so several rates may exist; all of them are found only up to {MAX_EXACT_PERIODS} periods"));
     } else {
-        // With g = 1 + rate, sum(flow[t] / g**t) = 0 is the polynomial sum(flow[t] * g**(n - t)) = 0.
-        // It is rewritten in the rate itself before the roots are found, so a rate near zero
-        // is located as a small number and not as the difference of two numbers near one.
-        let in_growth = Poly::new(exact_flows.iter().rev().cloned().collect(), inexact);
-        real_roots(&in_growth.shifted_by_one()?, Some(&-BigRational::one()))?
+        real_roots(&in_rate, &Span { low: Some(&floor), high: None, closed: false })?
     };
     let size = |root: &Root| root.value().and_then(|value| as_float(&value)).map(f64::abs).unwrap_or(f64::INFINITY);
     let positive = |root: &Root| matches!(root, Root::Exact(r) if !r.is_negative()) || matches!(root, Root::Near(r) if *r >= 0.0);

@@ -5,7 +5,7 @@
 //! against a central difference; it is integrated numerically by the `quadrature` crate's
 //! double exponential rule, which reports its own error estimate.
 
-use super::poly::{mentions, polynomial, reported, unknowns, Poly};
+use super::poly::{mentions, polynomial, reported, unknowns, with_constants_folded, Poly};
 use super::solve::function;
 use super::{as_exact, as_float, binary, eval, float, list, object, parse, quoted, shown, text, Names, Node, Outcome, Value};
 use num_bigint::BigInt;
@@ -13,6 +13,7 @@ use num_rational::BigRational;
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 /// A derivative larger than this many parts is evaluated but not printed.
 const MAX_PRINTED_PARTS: usize = 400;
@@ -24,6 +25,15 @@ const PANELS: usize = 32;
 const PANEL_AGREEMENT: f64 = 1e-11;
 const MAX_HALVINGS: u32 = 48;
 const MAX_EVALUATIONS: u64 = 400_000;
+/// The scan before integrating: about this many part evaluations in all, so between MIN_SCAN and
+/// MAX_SCAN evenly spaced points depending on the expression's length, and the most rough
+/// stretches worth cutting at.
+const SCAN_WORK: usize = 8_000_000;
+const MIN_SCAN: usize = 4096;
+const MAX_SCAN: usize = 1 << 20;
+const MAX_STRETCHES: usize = 256;
+/// Wall-clock budget for one numeric integral; past it the result is reported as not converged.
+const TIME_BUDGET: Duration = Duration::from_secs(3);
 const DERIVATIVE_AGREEMENT: f64 = 1e-5;
 
 /// The name the command is about: `--var`, or the only name without a value, or x.
@@ -163,6 +173,97 @@ fn approximate(node: &Node, names: Names) -> bool {
     }
 }
 
+/// The expression as a plain float function of `name`, for scanning only. It rounds where
+/// the calculator proper is exact and returns NaN where that would refuse, so it decides where
+/// to look closely and never supplies a reported number. `None` when a part has no float form.
+fn scanner(node: &Node, name: &str, names: Names) -> Option<Box<dyn Fn(f64) -> f64>> {
+    let part = |inner: &Node| scanner(inner, name, names);
+    Some(match node {
+        Node::Number(value) => {
+            let constant = as_float(value).ok()?;
+            Box::new(move |_| constant)
+        }
+        Node::Name(found) if found == name => Box::new(|x| x),
+        Node::Name(found) => {
+            let constant = as_float(&names(found)?).ok()?;
+            Box::new(move |_| constant)
+        }
+        Node::Negate(inner) => {
+            let inner = part(inner)?;
+            Box::new(move |x| -inner(x))
+        }
+        Node::Binary(op, left, right) => {
+            let (left, right) = (part(left)?, part(right)?);
+            match *op {
+                "+" => Box::new(move |x| left(x) + right(x)),
+                "-" => Box::new(move |x| left(x) - right(x)),
+                "*" => Box::new(move |x| left(x) * right(x)),
+                "/" => Box::new(move |x| left(x) / right(x)),
+                "**" => Box::new(move |x| left(x).powf(right(x))),
+                _ => return None,
+            }
+        }
+        Node::Call(function, arguments) => {
+            let [inner] = arguments.as_slice() else { return None };
+            let inner = part(inner)?;
+            let apply: fn(f64) -> f64 = match function.as_str() {
+                "sqrt" => f64::sqrt,
+                "exp" => f64::exp,
+                "log" => f64::ln,
+                "log2" => f64::log2,
+                "log10" => f64::log10,
+                "sin" => f64::sin,
+                "cos" => f64::cos,
+                "tan" => f64::tan,
+                "abs" => f64::abs,
+                _ => return None,
+            };
+            Box::new(move |x| apply(inner(x)))
+        }
+    })
+}
+
+/// Places inside the range where evenly spaced samples show the integrand bending faster
+/// than a smooth function of the panel's width would: the ends of each such stretch. A peak
+/// or step wider than the sample spacing shows up here even when it falls between the
+/// quadrature rule's own points.
+fn rough_stretches(scan: &dyn Fn(f64) -> f64, low: f64, high: f64, points: usize, late: &dyn Fn() -> bool) -> Vec<f64> {
+    let at = |index: usize| low + (high - low) * index as f64 / points as f64;
+    let mut values = Vec::with_capacity(points + 1);
+    for index in 0..=points {
+        if index % 1024 == 0 && late() {
+            return Vec::new(); // out of time: integrate without the scan's cuts
+        }
+        values.push(scan(at(index)));
+    }
+    let scale = values.iter().filter(|value| value.is_finite()).fold(0.0_f64, |largest, value| largest.max(value.abs()));
+    // The bend of a smooth feature as wide as a panel, measured over one sample spacing.
+    let allowed = (PANELS as f64 * 2.0 / points as f64).powi(2) * scale;
+    let bends = |index: usize| {
+        let (before, here, after) = (values[index - 1], values[index], values[index + 1]);
+        !(before.is_finite() && here.is_finite() && after.is_finite()) || (before - 2.0 * here + after).abs() > allowed
+    };
+    let mut ends = Vec::new();
+    let mut open: Option<usize> = None;
+    let mut flagged = 0;
+    for index in 1..points {
+        match (bends(index), open) {
+            (true, None) => open = Some(index - 1),
+            (false, Some(start)) => {
+                ends.extend([at(start), at(index)]);
+                open = None;
+            }
+            _ => {}
+        }
+        flagged += bends(index) as usize;
+    }
+    if let Some(start) = open {
+        ends.extend([at(start), high]);
+    }
+    // Rough nearly everywhere (a fast oscillation, or a coarse scan): the stretches say nothing the panels do not.
+    if ends.len() > 2 * MAX_STRETCHES || flagged * 5 > points { Vec::new() } else { ends }
+}
+
 struct Area {
     value: f64,
     /// Sum over the panels of the difference between a panel and its two halves.
@@ -174,10 +275,11 @@ struct Area {
 
 /// The integral of f from low to high. One pass of a quadrature rule reports a small error
 /// for a function with a narrow peak between its sample points, so the range is cut into
-/// panels and each panel is accepted only when it agrees with the sum of its two halves;
-/// a panel that does not is halved again. A feature much narrower than a panel's sample
-/// spacing can still be missed: no finite sampling can exclude that.
-fn area(f: &dyn Fn(f64) -> f64, low: f64, high: f64, failed: &dyn Fn() -> bool) -> Area {
+/// panels (evenly, and at `cuts`, the ends of the stretches the scan found rough) and each
+/// panel is accepted only when it agrees with the sum of its two halves; a panel that does
+/// not is halved again. A feature narrower than the scan's spacing can still be missed: no
+/// finite sampling can exclude that, and the report states the spacing.
+fn area(f: &dyn Fn(f64) -> f64, low: f64, high: f64, cuts: &[f64], failed: &dyn Fn() -> bool) -> Area {
     let mut result = Area { value: 0.0, error: 0.0, evaluations: 0, settled: true };
     if low >= high || low.is_nan() || high.is_nan() {
         return result;
@@ -187,18 +289,23 @@ fn area(f: &dyn Fn(f64) -> f64, low: f64, high: f64, failed: &dyn Fn() -> bool) 
         *evaluations += part.num_function_evaluations as u64;
         part.integral
     };
+    let mut edges: Vec<f64> = (0..=PANELS).map(|panel| if panel == PANELS { high } else { low + (high - low) * panel as f64 / PANELS as f64 }).collect();
+    edges.extend(cuts.iter().filter(|cut| **cut > low && **cut < high));
+    edges.sort_by(f64::total_cmp);
+    edges.dedup();
     // (from, to, estimate, depth)
     let mut pending = Vec::new();
     let mut scale = 0.0;
-    for panel in 0..PANELS {
-        let from = low + (high - low) * panel as f64 / PANELS as f64;
-        let to = if panel + 1 == PANELS { high } else { low + (high - low) * (panel + 1) as f64 / PANELS as f64 };
-        let whole = piece(from, to, &mut result.evaluations);
+    for pair in edges.windows(2) {
+        let whole = piece(pair[0], pair[1], &mut result.evaluations);
         scale += whole.abs();
-        pending.push((from, to, whole, 0));
+        pending.push((pair[0], pair[1], whole, 0));
     }
     while let Some((from, to, whole, depth)) = pending.pop() {
         if failed() {
+            // Stopped early (out of time, or a point that cannot be evaluated): what is left
+            // keeps its unrefined estimate and the result is marked as not settled.
+            result.value += whole + pending.iter().map(|panel| panel.2).sum::<f64>();
             result.settled = false;
             break;
         }
@@ -296,9 +403,24 @@ pub(super) fn integral(expression: &str, wanted: Option<&str>, from: Option<&str
     let (low, high) = bounds.ok_or("only a polynomial has its antiderivative written out: give --from and --to for a numeric integral")?;
     range(&mut fields, &low, &high);
     let (a, b) = (as_float(&low)?, as_float(&high)?);
+    let node = with_constants_folded(&node, &name, names);
+    let deadline = Instant::now() + TIME_BUDGET;
     let failure = RefCell::new(None);
     let f = function(&node, &name, names, &failure);
-    let result = area(&f, a.min(b), a.max(b), &|| failure.borrow().is_some());
+    let (from, to) = (a.min(b), a.max(b));
+    // Scan first, with a fast float form of the integrand when it has one; the scan only
+    // chooses where the panels are cut, and its own failures (a point outside a domain) are
+    // read as roughness.
+    let fast = scanner(&node, &name, names);
+    let points = if fast.is_some() { (SCAN_WORK / size(&node, usize::MAX).max(1)).clamp(MIN_SCAN, MAX_SCAN) } else { MIN_SCAN };
+    let ignored = RefCell::new(None);
+    let slow = function(&node, &name, names, &ignored);
+    let late = || Instant::now() > deadline;
+    let cuts = match &fast {
+        Some(fast) => rough_stretches(fast, from, to, points, &late),
+        None => rough_stretches(&slow, from, to, points, &late),
+    };
+    let result = area(&f, from, to, &cuts, &|| failure.borrow().is_some() || late());
     if let Some(error) = failure.borrow_mut().take() {
         return Err(format!("the integrand cannot be evaluated {error}"));
     }
@@ -308,7 +430,8 @@ pub(super) fn integral(expression: &str, wanted: Option<&str>, from: Option<&str
     fields.push(("error_estimate", if result.error.is_finite() { format!("{:?}", result.error) } else { "null".into() }));
     fields.push(("evaluations", result.evaluations.to_string()));
     fields.push(("converged", converged.to_string()));
-    fields.push(("method", quoted("double exponential (tanh-sinh) quadrature on panels, each halved until whole and halves agree")));
+    fields.push(("scan_points", points.to_string()));
+    fields.push(("method", quoted("double exponential (tanh-sinh) quadrature on panels cut where a scan found the integrand rough, each halved until whole and halves agree; a feature narrower than the range divided by scan_points can be missed")));
     Ok((object(&fields), converged))
 }
 

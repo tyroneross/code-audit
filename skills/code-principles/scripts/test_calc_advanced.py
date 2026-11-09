@@ -14,6 +14,7 @@ import math
 import random
 import shutil
 import subprocess
+import time
 import unittest
 from fractions import Fraction
 from pathlib import Path
@@ -154,6 +155,15 @@ class SolveTests(unittest.TestCase):
         self.assertEqual(self.roots("x == 1 + 1/2**60", "--between", "0", "2"), [(1 + Fraction(1, 2**60), True)])
         self.assertEqual(self.roots("x**2 == 4", "--between", "2", "3"), [(2, True)])  # a bound itself counts
 
+    def test_a_bound_beside_an_irrational_root_is_decided_exactly(self):
+        # sqrt(2) = 1.41421356237309504880...: the first bound is above it, the second below. The float nearest
+        # sqrt(2) is above both, so comparing the rounded root would get the first one wrong.
+        self.assertEqual(len(self.roots("x**2 == 2", "--between", "0", "14142135623730951/10000000000000000")), 1)
+        self.assertEqual(self.roots("x**2 == 2", "--between", "0", "14142135623730950/10000000000000000"), [])
+        self.assertEqual(self.roots("(x - 1)*(x - 2)*(x - 3) == 0", "--between", "1", "3"), [(1, True), (2, True), (3, True)])
+        self.assertEqual(self.roots("(x - 1)*(x - 2)*(x**2 - 2) == 0", "--between", "1", "2")[0], (1, True))
+        self.assertEqual(len(self.roots("(x - 1)*(x - 2)*(x**2 - 2) == 0", "--between", "1", "2")), 3)
+
     def test_an_underflow_or_a_flat_zero_is_not_a_root(self):
         self.assertEqual(calc("exp(-1000)")[0], 2)  # exp is never zero; 0.0 would be an underflow
         for arguments in (["--solve", "exp(-x) == 0", "--between", "1000", "1001"], ["--solve", "0*sin(x) == 0", "--between", "1", "2"],
@@ -227,6 +237,24 @@ class CalculusTests(unittest.TestCase):
         self.assertTrue(report["integral"]["converged"])
         code, report = calc("--integral", "1/x", "--from", "0", "--to", "1")  # diverges: reported as not converged, exit 1
         self.assertEqual((code, report["integral"]["converged"]), (1, False))
+
+    def test_a_flat_narrow_peak_between_quadrature_points_is_found_by_the_scan(self):
+        # A plateau of height 1 and width 2e-5 on top of 1: every quadrature sample missed it and the answer was
+        # 0.9999999999999967, "converged". The area of 1/(1 + t**16) over the line is (pi/8)/sin(pi/16).
+        code, report = calc("--integral", "1 + 1/(1 + (100000*(x - 0.341378011))**16)", "--from", "0", "--to", "1")
+        expected = 1 + (math.pi / 8) / math.sin(math.pi / 16) / 100000
+        self.assertTrue(math.isclose(report["integral"]["value"], expected, rel_tol=1e-10), (report, expected))
+        self.assertTrue(report["integral"]["converged"])
+        self.assertGreaterEqual(report["integral"]["scan_points"], 4096)
+
+    def test_a_costly_constant_is_worked_out_once(self):
+        # irr(-1, 2) is 1. Recomputed at each sample point this integral took over ten seconds.
+        started = time.monotonic()
+        code, report = calc("--integral", "exp(-x**2) + irr(-1, 2)", "--from", "0", "--to", "1")
+        self.assertTrue(close(report["integral"]["value"], 1.7468241328124271))
+        self.assertLess(time.monotonic() - started, 2.0)
+        solved = calc("--solve", "sin(x) + irr(-1, 2)/10 == 0", "--between", "3", "4")[1]["solve"]["solutions"][0]["values"]["x"]
+        self.assertTrue(close(solved, math.pi + math.asin(0.1)))
 
     def test_an_integrand_undefined_inside_the_range_is_refused(self):
         self.assertEqual(calc("--integral", "log(x)", "--from", "-1", "--to", "1")[0], 2)
@@ -330,6 +358,15 @@ class FinanceTests(unittest.TestCase):
         # sqrt(1 + 2**-60) - 1: found as a root in the rate itself, not as a growth factor near one minus one.
         self.assertTrue(math.isclose(value("irr(-1, 0, 1 + 1/2**60)"), 4.336808689942018e-19, rel_tol=1e-12))
         self.assertEqual(value("irr(-1, 2, 0)"), 1)  # a closing flow of zero changes nothing
+
+    def test_long_flows_are_solved_exactly_too(self):
+        # Thirty-four flows whose sum exceeds zero by 2**-60: floats cannot hold the difference. Expected value from
+        # the closed form (1 + 2**-60)**(1/33) - 1, which is 2**-60/33 to first order.
+        flows = ", ".join(["-1"] + ["0"] * 32 + ["1 + 1/2**60"])
+        self.assertTrue(math.isclose(value(f"irr({flows})"), 2.6283689029951623e-20, rel_tol=1e-12))
+        self.assertEqual(value("irr(" + ", ".join(["-100"] + ["0"] * 39 + ["100"]) + ")"), 0)  # break-even after 40 periods, exactly
+        code, report = calc("irr(" + ", ".join(["-1", "3", "-3"] * 12) + ")")  # many sign changes over 35 periods: refused, not guessed
+        self.assertEqual(code, 2, report)
 
     def test_bad_arguments_are_refused(self):
         for expression in ("irr(100, 110)", "irr(-100)", "fv(0.05, 10)", "pv(0.05, 10, -100, 0, 2)", "mirr(0.1, 0.1, 100, 50)", "npv(-1, 100, 100)",

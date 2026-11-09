@@ -6,6 +6,7 @@ use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 use std::collections::{BTreeMap, BTreeSet};
+use std::rc::Rc;
 
 /// Highest power a polynomial may reach, so `(x + 1)**N` cannot ask for unbounded work.
 pub(super) const MAX_DEGREE: usize = 64;
@@ -61,7 +62,7 @@ impl Poly {
     }
 
     /// self + sign x other
-    pub fn combined(&self, other: &Poly, sign: i32) -> Outcome<Poly> {
+    fn combined(&self, other: &Poly, sign: i32) -> Outcome<Poly> {
         let zero = BigRational::zero();
         let c = (0..self.c.len().max(other.c.len()))
             .map(|i| {
@@ -72,7 +73,7 @@ impl Poly {
         Ok(Poly::new(c, self.inexact || other.inexact))
     }
 
-    pub fn times(&self, other: &Poly) -> Outcome<Poly> {
+    fn times(&self, other: &Poly) -> Outcome<Poly> {
         if self.c.is_empty() || other.c.is_empty() {
             return Ok(Poly::new(Vec::new(), self.inexact || other.inexact));
         }
@@ -103,10 +104,17 @@ impl Poly {
         Ok(result)
     }
 
-    /// The same polynomial written in y, where the name is y + 1: p(y + 1).
-    pub fn shifted_by_one(&self) -> Outcome<Poly> {
-        let step = Poly::new(vec![BigRational::one(), BigRational::one()], false);
-        self.c.iter().rev().try_fold(Poly::new(Vec::new(), self.inexact), |sum, c| sum.times(&step)?.combined(&Poly::new(vec![c.clone()], false), 1))
+    /// The same polynomial written in y, where the name is y + 1: p(y + 1). Repeated synthetic
+    /// division by (name - 1), which is additions only, so it works at any degree.
+    pub fn shifted_by_one(&self) -> Poly {
+        let mut c = self.c.clone();
+        for done in 0..c.len() {
+            for index in (done..c.len().saturating_sub(1)).rev() {
+                let above = c[index + 1].clone();
+                c[index] += above;
+            }
+        }
+        Poly::new(c, self.inexact)
     }
 
     /// The value at x by Horner's rule. At most MAX_DEGREE multiplications; the caller holds the result to the budget.
@@ -157,6 +165,22 @@ pub(super) fn mentions(node: &Node, name: &str) -> bool {
         Node::Negate(inner) => mentions(inner, name),
         Node::Binary(_, left, right) => mentions(left, name) || mentions(right, name),
         Node::Call(_, arguments) => arguments.iter().any(|argument| mentions(argument, name)),
+    }
+}
+
+/// The expression with every part that does not hold `name` worked out once, so a costly
+/// constant (an irr, a long sum) is not recomputed at each of thousands of sample points. A
+/// part that cannot be evaluated is left as it is and fails where it is used.
+pub(super) fn with_constants_folded(node: &Rc<Node>, name: &str, names: Names) -> Rc<Node> {
+    if !mentions(node, name) {
+        return eval(node, names).map_or_else(|_| node.clone(), |value| Rc::new(Node::Number(value)));
+    }
+    let fold = |part: &Rc<Node>| with_constants_folded(part, name, names);
+    match &**node {
+        Node::Negate(inner) => Rc::new(Node::Negate(fold(inner))),
+        Node::Binary(op, left, right) => Rc::new(Node::Binary(op, fold(left), fold(right))),
+        Node::Call(function, arguments) => Rc::new(Node::Call(function.clone(), arguments.iter().map(fold).collect())),
+        Node::Number(_) | Node::Name(_) => node.clone(),
     }
 }
 

@@ -9,7 +9,7 @@
 //! so they are not used. Its bracketed Brent solver is used for equations that are not
 //! polynomials.)
 
-use super::poly::{eliminate, linear, nearest, polynomial, reported, unknowns, Poly, Solution};
+use super::poly::{eliminate, linear, nearest, polynomial, reported, unknowns, with_constants_folded, Poly, Solution};
 use super::{as_exact, as_float, eval, list, object, parse, quoted, relation, shown, to_float, Names, Node, Outcome, Value};
 use num_bigint::BigInt;
 use num_integer::Integer;
@@ -26,6 +26,8 @@ const MAX_ROOT_DEGREE: usize = 32;
 const MAX_ROOT_WORK: u64 = 200_000;
 const MAX_EQUATIONS: usize = 32;
 const BRENT_STEPS: usize = 200;
+/// Bisection steps for a single root of a long polynomial; enough for a rate as small as 2**-300.
+const MAX_SINGLE_STEPS: u64 = 480;
 
 /// Integer coefficients, lowest power first, the highest not zero.
 type Ints = Vec<BigInt>;
@@ -206,10 +208,57 @@ fn refine(q: &Ints, mut a: BigRational, mut b: BigRational, steps: u64) -> Outco
     Ok(Root::Near(near(&middle)?))
 }
 
-/// Every distinct real root of p in ascending order; only those above `above` when it is
-/// given, which must not itself be a root.
-pub(super) fn real_roots(p: &Poly, above: Option<&BigRational>) -> Outcome<Vec<Root>> {
-    let wanted = |root: &BigRational| above.is_none_or(|limit| root > limit);
+/// Where roots are wanted: between two exact bounds, either of which may be absent.
+pub(super) struct Span<'a> {
+    pub low: Option<&'a BigRational>,
+    pub high: Option<&'a BigRational>,
+    /// Whether a root exactly at a bound counts.
+    pub closed: bool,
+}
+
+pub(super) const EVERYWHERE: Span = Span { low: None, high: None, closed: true };
+
+impl Span<'_> {
+    fn holds(&self, value: &BigRational) -> bool {
+        let above = self.low.is_none_or(|low| if self.closed { value >= low } else { value > low });
+        above && self.high.is_none_or(|high| if self.closed { value <= high } else { value < high })
+    }
+
+    fn strictly_holds(&self, value: &BigRational) -> bool {
+        self.low.is_none_or(|low| value > low) && self.high.is_none_or(|high| value < high)
+    }
+}
+
+/// A power of two that every root is smaller than in size: it exceeds 1 + max|c[i]| / |lead|.
+/// Also the bisection steps that are always enough to reach float precision from it.
+fn reach(q: &Ints) -> (BigRational, u64) {
+    let lead_bits = q.last().map_or(1, BigInt::bits);
+    let widest = q.iter().map(BigInt::bits).max().unwrap_or(1);
+    (BigRational::from_integer(BigInt::one() << (widest.saturating_sub(lead_bits) + 2) as usize), 2 * (widest + lead_bits) + 80)
+}
+
+/// Floats for roots when a coefficient came from a float, exact order, and a refusal when two
+/// distinct roots would print as the same float.
+fn presented(mut found: Vec<Root>, inexact: bool) -> Outcome<Vec<Root>> {
+    if inexact {
+        // An exact-looking root would overstate what is known.
+        found = found.into_iter().map(|root| match root { Root::Exact(value) => near(&value).map(Root::Near), other => Ok(other) }).collect::<Outcome<Vec<_>>>()?;
+    }
+    let place = |root: &Root| match root {
+        Root::Exact(value) => value.clone(),
+        Root::Near(value) => BigRational::from_float(*value).unwrap_or_default(),
+    };
+    found.sort_by_cached_key(place);
+    if let Some(pair) = found.windows(2).find(|pair| pair[0].float() == pair[1].float() && !matches!((&pair[0], &pair[1]), (Root::Exact(_), Root::Exact(_)))) {
+        return Err(format!("two distinct roots near {:?} are closer together than floats can tell apart; rescale the equation", pair[0].float()));
+    }
+    Ok(found)
+}
+
+/// Every distinct real root of p inside `span`, in ascending order. The bounds are applied
+/// exactly, inside the isolation: a root is in or out by the sign of the polynomial at the
+/// bound, never by comparing a rounded root with it.
+pub(super) fn real_roots(p: &Poly, span: &Span) -> Outcome<Vec<Root>> {
     let mut c = integral(p);
     let degree = c.len().saturating_sub(1);
     let bits = c.iter().map(BigInt::bits).max().unwrap_or(0);
@@ -223,53 +272,72 @@ pub(super) fn real_roots(p: &Poly, above: Option<&BigRational>) -> Outcome<Vec<R
     let zeros = c.iter().take_while(|value| value.is_zero()).count();
     if zeros > 0 && degree > 0 {
         c.drain(..zeros);
-        if wanted(&BigRational::zero()) {
+        if span.holds(&BigRational::zero()) {
             found.push(Root::Exact(BigRational::zero()));
         }
     }
-    if c.len() == 2 {
-        let root = BigRational::new(-c[0].clone(), c[1].clone());
-        if wanted(&root) {
-            found.push(Root::Exact(root));
-        }
-    } else if c.len() > 2 {
+    if c.len() > 2 {
         let repeated = common_divisor(c.clone(), derivative(&c));
-        let q = if repeated.len() > 1 { quotient(&c, &repeated).ok_or("root isolation failed: inexact division")? } else { c };
-        let chain = sturm(&q);
-        // Every root is smaller in size than 1 + max|c[i]| / |lead|, which is below this power of two.
-        let lead_bits = q.last().map_or(1, BigInt::bits);
-        let widest = q.iter().map(BigInt::bits).max().unwrap_or(1);
-        let bound = BigRational::from_integer(BigInt::one() << (widest.saturating_sub(lead_bits) + 2) as usize);
-        let low = above.cloned().unwrap_or_else(|| -bound.clone());
-        let steps = 2 * (widest + lead_bits) + 80;
-        let mut pending = if low < bound { vec![(low, bound)] } else { Vec::new() };
-        while let Some((a, b)) = pending.pop() {
-            match variations(&chain, &a).saturating_sub(variations(&chain, &b)) {
-                0 => {}
-                1 => found.push(refine(&q, a, b, steps)?),
-                _ => {
-                    let middle = split(&q, &a, &b)?;
-                    pending.push((a, middle.clone()));
-                    pending.push((middle, b));
+        c = if repeated.len() > 1 { quotient(&c, &repeated).ok_or("root isolation failed: inexact division")? } else { c };
+        // A root exactly at a bound is settled here and divided out, so neither end of the
+        // interval below is a root and Sturm's count applies.
+        for end in [span.low, span.high].into_iter().flatten() {
+            if c.len() > 1 && sign_at(&c, end) == 0 {
+                if span.closed {
+                    found.push(Root::Exact(end.clone()));
                 }
+                c = quotient(&c, &vec![-end.numer().clone(), end.denom().clone()]).ok_or("root isolation failed: inexact division")?;
             }
         }
+        if c.len() > 2 {
+            let chain = sturm(&c);
+            let (bound, steps) = reach(&c);
+            let low = span.low.filter(|low| **low > -bound.clone()).cloned().unwrap_or_else(|| -bound.clone());
+            let high = span.high.filter(|high| **high < bound).cloned().unwrap_or(bound);
+            let mut pending = if low < high { vec![(low, high)] } else { Vec::new() };
+            while let Some((a, b)) = pending.pop() {
+                match variations(&chain, &a).saturating_sub(variations(&chain, &b)) {
+                    0 => {}
+                    1 => found.push(refine(&c, a, b, steps)?),
+                    _ => {
+                        let middle = split(&c, &a, &b)?;
+                        pending.push((a, middle.clone()));
+                        pending.push((middle, b));
+                    }
+                }
+            }
+            return presented(found, p.inexact);
+        }
+        // Dividing out the bounds left one root: it is strictly between them or outside.
+        if c.len() == 2 {
+            let root = BigRational::new(-c[0].clone(), c[1].clone());
+            if span.strictly_holds(&root) {
+                found.push(Root::Exact(root));
+            }
+        }
+    } else if c.len() == 2 {
+        let root = BigRational::new(-c[0].clone(), c[1].clone());
+        if span.holds(&root) {
+            found.push(Root::Exact(root));
+        }
     }
-    if p.inexact {
-        // Coefficients came from floats, so an exact-looking root would overstate what is known.
-        found = found.into_iter().map(|root| match root { Root::Exact(value) => near(&value).map(Root::Near), other => Ok(other) }).collect::<Outcome<Vec<_>>>()?;
+    presented(found, p.inexact)
+}
+
+/// The one root above `above` of a polynomial known to have exactly one there and to be
+/// non-zero at `above` (Descartes' rule of signs gives this for cash flows whose sign changes
+/// once). Exact bisection, with no limit on the degree.
+pub(super) fn single_root_above(p: &Poly, above: &BigRational) -> Outcome<Root> {
+    let c = integral(p);
+    if c.first().is_some_and(Zero::is_zero) && above.is_negative() {
+        return Ok(Root::Exact(BigRational::zero()));
     }
-    // Ordered by exact value: two exact roots may share one float.
-    let place = |root: &Root| match root {
-        Root::Exact(value) => value.clone(),
-        Root::Near(value) => BigRational::from_float(*value).unwrap_or_default(),
-    };
-    found.sort_by_cached_key(place);
-    // Distinct roots that round to one float would read as a single root, or as a repeated one.
-    if let Some(pair) = found.windows(2).find(|pair| pair[0].float() == pair[1].float() && !matches!((&pair[0], &pair[1]), (Root::Exact(_), Root::Exact(_)))) {
-        return Err(format!("two distinct roots near {:?} are closer together than floats can tell apart; rescale the equation", pair[0].float()));
+    let (bound, steps) = reach(&c);
+    if c.len() < 2 || *above >= bound || sign_at(&c, above) == 0 || sign_at(&c, above) == sign_at(&c, &bound) {
+        return Err("no single root above the bound".into());
     }
-    Ok(found)
+    let root = refine(&c, above.clone(), bound, steps.min(MAX_SINGLE_STEPS))?;
+    Ok(presented(vec![root], p.inexact)?.remove(0))
 }
 
 /// Stops Brent's method when the bracket is as narrow as floats allow.
@@ -323,7 +391,7 @@ fn report(free: &[String], method: &str, solutions: &[String], note: Option<&str
 }
 
 /// One equation in one name: the difference of its two sides is zero.
-fn one(difference: &Node, name: &str, between: Option<(Value, Value)>, names: Names) -> Outcome<String> {
+fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names: Names) -> Outcome<String> {
     let free = [name.to_string()];
     if let Some(p) = polynomial(difference, name, names)? {
         if p.degree() == 0 {
@@ -331,14 +399,11 @@ fn one(difference: &Node, name: &str, between: Option<(Value, Value)>, names: Na
             return Ok(report(&free, "the name cancels out", &[], Some(note)));
         }
         let mut solutions = Vec::new();
-        // --between is compared exactly: a root just past a bound is outside it.
+        // --between is applied exactly, inside the root isolation.
         let range = between.as_ref().map(|(low, high)| Ok::<_, String>((as_exact(low)?, as_exact(high)?))).transpose()?;
-        for root in real_roots(&p, None)? {
+        let span = range.as_ref().map_or(EVERYWHERE, |(low, high)| Span { low: Some(low), high: Some(high), closed: true });
+        for root in real_roots(&p, &span)? {
             let value = root.value()?;
-            let place = as_exact(&value)?;
-            if range.as_ref().is_some_and(|(low, high)| place < *low || place > *high) {
-                continue;
-            }
             let residual = match &root {
                 Root::Exact(_) => None,
                 Root::Near(x) => to_float(&p.at(&as_exact(&Value::Float(*x))?)).ok(), // omitted when outside float range
@@ -352,7 +417,8 @@ fn one(difference: &Node, name: &str, between: Option<(Value, Value)>, names: Na
     let (low, high) = between.ok_or(format!("this equation is not a polynomial in {name}: give --between LOW HIGH, two values where its sides differ in opposite directions"))?;
     let (low, high) = (as_float(&low)?, as_float(&high)?);
     let failure = RefCell::new(None);
-    let f = function(difference, name, names, &failure);
+    let folded = with_constants_folded(difference, name, names);
+    let f = function(&folded, name, names, &failure);
     let (at_low, at_high) = (f(low), f(high));
     if let Some(error) = failure.borrow_mut().take() {
         return Err(format!("cannot evaluate the equation {error}"));
