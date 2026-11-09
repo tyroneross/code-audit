@@ -161,43 +161,74 @@ def brief(row):
             "signals": row["signals"], **{name: row[name] for name in COMPARED}}
 
 
-def compare(before, after):
-    """Structure section of the report and the three structure flags."""
-    pairs, added, removed = pair_functions(before["functions"], after["functions"])
-    changed, worse = [], []
+def function_changes(pairs):
+    """One entry per paired function whose measurements moved, with what got higher and what newly crossed a threshold."""
+    changed = []
     for old, new in pairs:
         moves = {name: [old[name], new[name]] for name in COMPARED if old[name] != new[name]}
         if not moves:
             continue
         higher = [name for name in WORSE_WHEN_HIGHER if None not in (old[name], new[name]) and new[name] > old[name]]
         crossed = sorted(set(new["signals"]) - set(old["signals"])) + (["hotspot"] if new["hotspot"] and not old["hotspot"] else [])
-        entry = {"path": new["path"], "function": new["name"], "kind": new["kind"], "changes": moves,
-                 "worse": higher, "newly_flagged": crossed}
-        changed.append(entry)
-        if higher or crossed:
-            worse.append(entry)
-    def lead_keys(report):
-        owners = {r["function_id"]: r["name"] for r in report["functions"]}
-        return collections.Counter((p["path"], p["rule"], owners.get(p["function_id"]), p["detail"]) for p in report["patterns"])
+        changed.append({"path": new["path"], "function": new["name"], "kind": new["kind"], "changes": moves,
+                        "worse": higher, "newly_flagged": crossed})
+    return changed
+
+
+def lead_keys(report):
+    """Pattern leads keyed without line numbers, which shift when code moves."""
+    owners = {r["function_id"]: r["name"] for r in report["functions"]}
+    return collections.Counter((p["path"], p["rule"], owners.get(p["function_id"]), p["detail"]) for p in report["patterns"])
+
+
+def totals(rows):
+    return {"functions": len(rows), "sum_cc": sum(r["cc"] for r in rows), "max_cc": max((r["cc"] for r in rows), default=0),
+            "max_nesting": max((r["max_nesting"] or 0 for r in rows), default=0),
+            "hotspots": sum(r["hotspot"] for r in rows), "with_signals": sum(bool(r["signals"]) for r in rows)}
+
+
+def compare(before, after):
+    """Structure section of the report and the three structure flags."""
+    pairs, added, removed = pair_functions(before["functions"], after["functions"])
+    changed = function_changes(pairs)
     introduced = [{"path": path, "rule": rule, "function": function, "detail": detail}
                   for path, rule, function, detail in sorted((lead_keys(after) - lead_keys(before)).elements(), key=str)]
-    def totals(rows):
-        return {"functions": len(rows), "sum_cc": sum(r["cc"] for r in rows), "max_cc": max((r["cc"] for r in rows), default=0),
-                "max_nesting": max((r["max_nesting"] or 0 for r in rows), default=0),
-                "hotspots": sum(r["hotspot"] for r in rows), "with_signals": sum(bool(r["signals"]) for r in rows)}
     section = {"before": totals(before["functions"]), "after": totals(after["functions"]),
                "changed_functions": changed, "added_functions": [brief(r) for r in added],
-               "removed_functions": [brief(r) for r in removed],
-               "patterns_introduced": introduced}
-    flags = []
-    if worse:
-        flags.append({"flag": "function_got_worse", "items": [f"{w['path']}:{w['function']}" for w in worse]})
-    hot = [r for r in added if r["kind"] == "production" and (r["hotspot"] or r["signals"])]
-    if hot:
-        flags.append({"flag": "new_hotspot", "items": [f"{r['path']}:{r['function_id']}" for r in hot]})
-    if introduced:
-        flags.append({"flag": "pattern_introduced", "items": [f"{lead['path']}: {lead['rule']}" for lead in introduced]})
-    return section, flags
+               "removed_functions": [brief(r) for r in removed], "patterns_introduced": introduced}
+    candidates = [
+        ("function_got_worse", [f"{c['path']}:{c['function']}" for c in changed if c["worse"] or c["newly_flagged"]]),
+        ("new_hotspot", [f"{r['path']}:{r['function_id']}" for r in added if r["kind"] == "production" and (r["hotspot"] or r["signals"])]),
+        ("pattern_introduced", [f"{lead['path']}: {lead['rule']}" for lead in introduced]),
+    ]
+    return section, [{"flag": flag, "items": items} for flag, items in candidates if items]
+
+
+def hygiene_flags(root, commit, changed, lines, max_changed_lines):
+    """Flags that need no measurement: edited tests, protected regions and the size of the change."""
+    altered, unbalanced = protected_changes(root, commit, changed)
+    candidates = [
+        ("tests_changed", sorted(p for p in changed if TEST_PATH.search(p))),
+        ("protected_region_changed", altered),
+        ("protected_region_unbalanced", unbalanced),
+        ("large_change", [f"{lines} changed lines exceed {max_changed_lines}"] if lines > max_changed_lines else []),
+    ]
+    return [{"flag": flag, "items": items} for flag, items in candidates if items]
+
+
+def measure_both(root, commit, sources, structure, threshold):
+    """(report at the base, report of the working tree) for the changed source files."""
+    with tempfile.TemporaryDirectory(prefix="structure-delta-") as scratch:
+        at_base = []
+        for path in sources:
+            content = gitsafe.run(root, "show", *gitsafe.NO_DRIVERS, f"{commit}:./{path}")
+            if content is not None:
+                target = Path(scratch) / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(content)
+                at_base.append(path)
+        before = measure_side(scratch, at_base, structure, threshold)
+    return before, measure_side(root, [p for p in sources if (root / p).is_file()], structure, threshold)
 
 
 def delta(root, base=None, max_changed_lines=MAX_CHANGED_LINES, threshold=10, structure=None):
@@ -209,32 +240,11 @@ def delta(root, base=None, max_changed_lines=MAX_CHANGED_LINES, threshold=10, st
     commit, chosen = resolve_base(root, base)
     changed = changed_files(root, commit)
     lines = sum(sum(counts) for counts in changed.values() if counts)
-    flags = []
-    tests = sorted(p for p in changed if TEST_PATH.search(p))
-    if tests:
-        flags.append({"flag": "tests_changed", "items": tests})
-    altered, unbalanced = protected_changes(root, commit, changed)
-    if altered:
-        flags.append({"flag": "protected_region_changed", "items": altered})
-    if unbalanced:
-        flags.append({"flag": "protected_region_unbalanced", "items": unbalanced})
-    if lines > max_changed_lines:
-        flags.append({"flag": "large_change", "items": [f"{lines} changed lines exceed {max_changed_lines}"]})
     sources = [p for p in changed if Path(p).suffix in complexity.SOURCE_SUFFIXES]
-    with tempfile.TemporaryDirectory(prefix="structure-delta-") as scratch:
-        at_base = []
-        for path in sources:
-            content = gitsafe.run(root, "show", *gitsafe.NO_DRIVERS, f"{commit}:./{path}")
-            if content is not None:
-                target = Path(scratch) / path
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(content)
-                at_base.append(path)
-        before = measure_side(scratch, at_base, structure, threshold)
-    after = measure_side(root, [p for p in sources if (root / p).is_file()], structure, threshold)
+    before, after = measure_both(root, commit, sources, structure, threshold)
     section, structure_flags = compare(before, after)
+    flags = hygiene_flags(root, commit, changed, lines, max_changed_lines) + structure_flags
     gaps = [{"side": side, **gap} for side, report in (("base", before), ("working tree", after)) for gap in report["gaps"]]
-    flags += structure_flags
     return {"schema": "code-audit.structure-delta.v1", "root": str(root), "base": commit, "base_chosen_by": chosen,
             "changed_files": len(changed), "changed_lines": lines, "max_changed_lines": max_changed_lines,
             "binary_or_unreadable_files": sorted(p for p, counts in changed.items() if counts is None),

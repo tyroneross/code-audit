@@ -52,20 +52,10 @@ def churn(root, since):
     return commits
 
 
-def rank(root, since=SINCE, paths=None, top=TOP, threshold=10, structure=None):
-    root = Path(root).resolve()
-    if isinstance(top, bool) or not isinstance(top, int) or top < 1:
-        raise ValueError("top must be a positive integer")
-    start = window_start(root, since)
-    report = complexity.measure(root, paths, threshold=threshold, structure=structure)
-    commits = churn(root, since)
-    if commits is None:
-        raise ValueError("git log failed; hotspots need a Git repository with history")
-    gaps = list(report["gaps"])
-    if (gitsafe.run(root, "rev-parse", "--is-shallow-repository") or b"").strip() == b"true":
-        gaps.append({"path": ".", "reason": "shallow clone: commit counts cover only the fetched history"})
+def flagged_by_file(functions):
+    """Per file: production function count, worst CC and nesting, and the flagged functions worst first."""
     files = collections.defaultdict(lambda: {"flagged": [], "functions": 0, "max_cc": 0, "max_nesting": 0})
-    for row in report["functions"]:
+    for row in functions:
         if row["kind"] != "production":
             continue
         entry = files[row["path"]]
@@ -74,22 +64,44 @@ def rank(root, since=SINCE, paths=None, top=TOP, threshold=10, structure=None):
         entry["max_nesting"] = max(entry["max_nesting"], row["max_nesting"] or 0)
         if row["hotspot"] or row["signals"]:
             entry["flagged"].append(row)
-    ranked = []
-    for path, entry in files.items():
-        flagged = sorted(entry["flagged"], key=lambda r: (-r["cc"], r["line"]))
-        ranked.append({"path": path, "score": commits[path] * len(flagged), "commits": commits[path], "flagged_functions": len(flagged),
-                       "functions": entry["functions"], "max_cc": entry["max_cc"], "max_nesting": entry["max_nesting"],
-                       "read_first": [{"function_id": r["function_id"], "cc": r["cc"], "signals": r["signals"]} for r in flagged[:3]]})
-    ranked.sort(key=lambda f: (-f["score"], -f["commits"], f["path"]))
-    scored = [f for f in ranked if f["score"] > 0]
+    for entry in files.values():
+        entry["flagged"].sort(key=lambda r: (-r["cc"], r["line"]))
+    return files
+
+
+def scored(files, commits):
+    """Files with their score, highest first."""
+    ranked = [{"path": path, "score": commits[path] * len(entry["flagged"]), "commits": commits[path],
+               "flagged_functions": len(entry["flagged"]), "functions": entry["functions"],
+               "max_cc": entry["max_cc"], "max_nesting": entry["max_nesting"],
+               "read_first": [{"function_id": r["function_id"], "cc": r["cc"], "signals": r["signals"]} for r in entry["flagged"][:3]]}
+              for path, entry in files.items()]
+    return sorted(ranked, key=lambda f: (-f["score"], -f["commits"], f["path"]))
+
+
+def rank(root, since=SINCE, paths=None, top=TOP, **scoring):
+    """Hotspot report; scoring passes `threshold` and `structure` through to complexity.measure."""
+    root = Path(root).resolve()
+    if isinstance(top, bool) or not isinstance(top, int) or top < 1:
+        raise ValueError("top must be a positive integer")
+    start = window_start(root, since)
+    report = complexity.measure(root, paths, **scoring)
+    commits = churn(root, since)
+    if commits is None:
+        raise ValueError("git log failed; hotspots need a Git repository with history")
+    gaps = list(report["gaps"])
+    if (gitsafe.run(root, "rev-parse", "--is-shallow-repository") or b"").strip() == b"true":
+        gaps.append({"path": ".", "reason": "shallow clone: commit counts cover only the fetched history"})
+    ranked = scored(flagged_by_file(report["functions"]), commits)
+    hot = [f for f in ranked if f["score"] > 0]
     return {"schema": "code-audit.hotspots.v1", "root": str(root), "revision": report["revision"], "since": since, "since_resolved_utc": start,
             "score_rule": "commits x flagged production functions (CC hotspot or structural signal)",
             "threshold": report["threshold"], "structure_thresholds": report["structure_thresholds"],
             "status": "incomplete" if gaps else "measured", "gaps": gaps,
-            "files_measured": len(files), "files_changed_in_window": sum(1 for f in ranked if f["commits"]),
+            "files_measured": len(ranked), "files_changed_in_window": sum(1 for f in ranked if f["commits"]),
             "files_with_flagged_functions": sum(1 for f in ranked if f["flagged_functions"]),
-            "hotspot_files": len(scored), "unchanged_flagged_files": sum(1 for f in ranked if f["flagged_functions"] and not f["commits"]),
-            "top": scored[:top]}
+            "hotspot_files": len(hot), "unchanged_flagged_files": sum(1 for f in ranked if f["flagged_functions"] and not f["commits"]),
+            "top": hot[:top]}
 
 
 def main(argv=None):
@@ -102,7 +114,7 @@ def main(argv=None):
     parser.add_argument("--structure", nargs="+", metavar="NAME=N", help="structural-signal thresholds passed to complexity.py")
     args = parser.parse_args(argv)
     try:
-        report = rank(args.root, args.since, args.paths, args.top, args.threshold, args.structure)
+        report = rank(args.root, args.since, args.paths, args.top, threshold=args.threshold, structure=args.structure)
     except (ValueError, OSError) as error:
         print(json.dumps({"schema": "code-audit.hotspots.v1", "status": "invalid", "error": str(error)}))
         return 2
