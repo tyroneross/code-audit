@@ -1924,7 +1924,7 @@
       "source": "code-principles-audit",
       "source_path": "skills/code-principles/SKILL.md",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "ed13e737aa3a23075206231ced29f2711bcaedf177c39db9353463353c459e7f",
+      "current_sha256": "4d754b1bab76b97d54596420bf6e4451fe69067a5de52f5329d0dd316653f318",
       "modified_from_import": true,
       "adaptation": "Checklist extracted from the imported focused skill; contextual failure-handler wording and relative links updated."
     },

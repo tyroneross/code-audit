@@ -6,6 +6,8 @@ Use measurements when scoring is requested or complexity/refactoring is material
 
 Every figure in a report is quoted from the tool that produced it or computed with a script. Totals, percentages, ratios, differences and threshold comparisons are not done by the model: language models make arithmetic errors that read as confident facts. `python3 <cp>/scripts/calc.py "<expression>" ...` evaluates arithmetic exactly (integers and fractions stay exact) and `--check "<left> == <right>"` exits 1 when a claimed equality or bound does not hold. It accepts numbers, operators and a few numeric functions and nothing else, so an expression copied from a repository under review cannot run code. For arithmetic inside reviewed code, see item E10 of the [focused checklist](focused-checklist.md).
 
+`calc.py` uses the Python standard library (`fractions`, `math`, `statistics`) and needs no install. That choice was measured, with the alternatives recorded in [code health sources](../../../research/code-health-sources.md#calculation-engine). For statistics over measurement samples (comparing two timing runs, quantiles, a significance test) use R or another statistics tool when it is installed; do not use base R for exact integer arithmetic, where it loses precision above 2^53.
+
 ## Numerical evidence
 
 Record revision, source digests, analyzer/version, exact command, selection, exclusions, languages and parse gaps. Separate production and test functions. Empty scope, unsupported languages and missing coverage never establish a clean review.

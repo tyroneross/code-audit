@@ -103,12 +103,14 @@ def changed_paths(root, base):
     tree, staged, untracked = run(root, "ls-tree", "-r", "-z", base, "--", "."), run(root, "ls-files", "-s", "-z"), run(root, "ls-files", "--others", "--exclude-standard", "-z")
     if tree is None or staged is None or untracked is None:
         return None
-    at_base = {}
+    at_base, base_links = {}, set()
     for entry in names(tree):
         meta, path = entry.split("\t", 1)
-        _mode, object_type, oid = meta.split()
+        mode, object_type, oid = meta.split()
         if object_type == "blob":
             at_base[path] = oid
+            if mode == "120000":
+                base_links.add(path)
     # `ls-files -s` rows are "<mode> <oid> <stage>\t<path>"; mode 160000 is a submodule, which has no bytes to compare.
     tracked = {path for meta, path in (entry.split("\t", 1) for entry in names(staged)) if not meta.startswith("160000 ")}
     untracked = names(untracked)
@@ -135,6 +137,7 @@ def changed_paths(root, base):
         if found == "link":
             target = os.fsencode(os.readlink(os.path.join(str(root), path)))
             oids[path] = hashlib.new(algorithm, b"blob %d\0" % len(target) + target).hexdigest()
-        if oids[path] != at_base.get(path):
+        # Same bytes but a link on one side and a file on the other is a change: a link target is not file contents.
+        if oids[path] != at_base.get(path) or (path in at_base and (found == "link") != (path in base_links)):
             states[path] = "modified" if path in at_base else "added" if path in tracked else "untracked"
     return states

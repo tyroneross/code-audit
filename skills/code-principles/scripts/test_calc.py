@@ -59,6 +59,30 @@ class CalcTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             calc.check("1 < 2 < 3")
 
+    def test_size_budget_refuses_before_computing(self):
+        for expression in ("((2**4096)**4096)**4096", "9 ** 9 ** 9", "2 ** 16385", "(2**8000) * (2**8000) * (2**8000)", "round(1/3, 10**100)", "round(1/3, 1/2)"):
+            with self.subTest(expression=expression), self.assertRaises(ValueError):
+                calc.evaluate(expression)
+        self.assertEqual(calc.evaluate("2 ** 8000").bit_length(), 8001)
+
+    def test_rounding_and_large_exact_values_do_not_crash(self):
+        self.assertEqual(calc.evaluate("round(1.25, 1)"), 1.2)
+        self.assertEqual(calc.evaluate("round(2/3, 3)"), Fraction(667, 1000))
+        self.assertEqual(calc.evaluate("round(5/2)"), 2)
+        code, report = self.run_main("10**4096 / 3", "--check", "10**4096 / 3 > 1")
+        self.assertEqual((code, report["results"][0]["value"]["decimal"], report["checks"][0]["passed"]), (0, None, True))
+        self.assertTrue(report["results"][0]["value"]["exact"].endswith("/3"))
+        self.assertEqual(self.run_main("--check", "10.0**300 * 10.0**300 == 1")[0], 2)
+
+    def test_statistics_come_from_the_standard_library(self):
+        self.assertEqual(calc.evaluate("mean(1, 2, 4)"), Fraction(7, 3))
+        self.assertEqual(calc.evaluate("median(5, 1, 3, 2)"), Fraction(5, 2))
+        self.assertAlmostEqual(calc.evaluate("stdev(2, 4, 4, 4, 5, 5, 7, 9)"), 2.138089935299395)
+        self.assertEqual(calc.evaluate("pstdev(2, 4, 4, 4, 5, 5, 7, 9)"), 2.0)
+        for expression in ("mean()", "stdev(1)", "min()"):
+            with self.subTest(expression=expression), self.assertRaises(ValueError):
+                calc.evaluate(expression)
+
     def test_crap_formula_matches_the_scorer(self):
         import complexity
         row = complexity.finish_row({"name": "f", "line": 1, "end_line": 3, "function_id": "f:1", "cc": 10, "path": "m.py", "language": "python"},

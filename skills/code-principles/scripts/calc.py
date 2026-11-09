@@ -9,7 +9,9 @@
 Expressions use numbers, + - * / // % **, parentheses, comparisons and the functions listed by --help.
 Nothing else is accepted: no names, attributes, calls to other functions, strings or imports, so an expression
 copied from a repository under review cannot run code. Integers and fractions stay exact (1/3 + 1/6 is 1/2);
-a float in the expression or sqrt/log makes the result a float. --check passes when both sides are equal, or
+a float in the expression or sqrt/log makes the result a float. An exact intermediate result larger than 16384
+bits is refused before it is computed. round follows Python: a tie goes to the even digit, and a float is rounded
+as the binary value it holds. mean and median of exact values are exact; stdev and pstdev return floats. --check passes when both sides are equal, or
 within --tolerance when either side is a float.
 
 Exit: 0 every expression evaluated and every check passed; 1 a check failed; 2 an expression is invalid.
@@ -20,35 +22,66 @@ from fractions import Fraction
 import json
 import math
 import operator
+import statistics
 import sys
 
 BINARY = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
-          ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod, ast.Pow: operator.pow}
+          ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod}
 UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
 COMPARE = {ast.Eq: operator.eq, ast.NotEq: operator.ne, ast.Lt: operator.lt, ast.LtE: operator.le, ast.Gt: operator.gt, ast.GtE: operator.ge}
-FUNCTIONS = {"abs": abs, "round": round, "min": min, "max": max, "sum": lambda *values: sum(values), "sqrt": math.sqrt,
-             "floor": math.floor, "ceil": math.ceil, "log": math.log, "log2": math.log2, "log10": math.log10}
-MAX_EXPONENT = 4096  # keeps a typo such as 9**9**9 from exhausting memory
+# Standard-library arithmetic only: fractions for exact values, math and statistics for the rest.
+FUNCTIONS = {"abs": abs, "round": lambda *arguments: rounded(*arguments), "min": min, "max": max, "sum": lambda *values: sum(values), "sqrt": math.sqrt,
+             "floor": math.floor, "ceil": math.ceil, "log": math.log, "log2": math.log2, "log10": math.log10,
+             "mean": lambda *values: statistics.mean(values), "median": lambda *values: statistics.median(values),
+             "stdev": lambda *values: statistics.stdev(values), "pstdev": lambda *values: statistics.pstdev(values)}
+MAX_BITS = 16384  # size budget for every exact intermediate result, so 9**9**9 or a nested power cannot exhaust memory
+MAX_ROUND_DIGITS = 60
 TOLERANCE = 1e-9
+
+
+def bits(value):
+    """Storage size of an exact value: the longer of its numerator and denominator, in bits."""
+    return max(value.numerator.bit_length(), value.denominator.bit_length()) if isinstance(value, Fraction) else 0
+
+
+def bounded(value):
+    if bits(value) > MAX_BITS:
+        raise ValueError(f"exact result is larger than {MAX_BITS} bits; use a float (write 2.0 for 2) or a smaller expression")
+    return value
+
+
+def power(left, right):
+    if isinstance(left, Fraction) and isinstance(right, Fraction):
+        if right.denominator != 1:
+            left, right = float(left), float(right)  # a fractional power is not exact
+        elif bits(left) * abs(right.numerator) > MAX_BITS:  # checked before computing: the result would have about this many bits
+            raise ValueError(f"exact power could exceed {MAX_BITS} bits; use a float base (write 2.0 for 2) or a smaller exponent")
+    return operator.pow(left, right)
+
+
+def rounded(value, digits=Fraction(0)):
+    if not isinstance(digits, Fraction) or digits.denominator != 1 or abs(digits) > MAX_ROUND_DIGITS:
+        raise ValueError(f"round takes a whole number of digits between -{MAX_ROUND_DIGITS} and {MAX_ROUND_DIGITS}")
+    return round(value, int(digits))
 
 
 def number(node):
     """Value of one expression node; integers become exact fractions so division does not lose precision."""
     if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)) and not isinstance(node.value, bool):
         return Fraction(node.value) if isinstance(node.value, int) else node.value
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow):
+        return bounded(power(number(node.left), number(node.right)))
     if isinstance(node, ast.BinOp) and type(node.op) in BINARY:
-        left, right = number(node.left), number(node.right)
-        if isinstance(node.op, ast.Pow):
-            if abs(right) > MAX_EXPONENT:
-                raise ValueError(f"exponent magnitude above {MAX_EXPONENT}")
-            if isinstance(right, Fraction) and right.denominator != 1:
-                left, right = float(left), float(right)  # a fractional power is not exact
-        return BINARY[type(node.op)](left, right)
+        # Both operands are within the budget, so the product is at most twice it before this check.
+        return bounded(BINARY[type(node.op)](number(node.left), number(node.right)))
     if isinstance(node, ast.UnaryOp) and type(node.op) in UNARY:
         return UNARY[type(node.op)](number(node.operand))
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in FUNCTIONS and not node.keywords:
-        result = FUNCTIONS[node.func.id](*(number(argument) for argument in node.args))
-        return Fraction(result) if isinstance(result, int) else result
+        try:
+            result = FUNCTIONS[node.func.id](*(number(argument) for argument in node.args))
+        except (TypeError, statistics.StatisticsError) as error:
+            raise ValueError(f"{node.func.id}: {error}") from None
+        return bounded(Fraction(result) if isinstance(result, int) else result)
     raise ValueError(f"only numbers, arithmetic operators and {sorted(FUNCTIONS)} are accepted")
 
 
@@ -63,8 +96,12 @@ def evaluate(expression):
     """Exact int or Fraction when the inputs allow it, otherwise a float."""
     try:
         value = number(parse(expression))
-    except (ZeroDivisionError, OverflowError) as error:
-        raise ValueError(str(error)) from None
+    except ZeroDivisionError:
+        raise ValueError("division by zero") from None
+    except OverflowError:
+        raise ValueError("result is outside float range") from None
+    except RecursionError:
+        raise ValueError("expression is nested too deeply") from None
     if isinstance(value, complex) or (isinstance(value, float) and not math.isfinite(value)):
         raise ValueError("result is not a finite real number")
     return int(value) if isinstance(value, Fraction) and value.denominator == 1 else value
@@ -77,15 +114,24 @@ def check(expression, tolerance=TOLERANCE):
         raise ValueError("a check is one comparison, for example \"2 + 2 == 4\"")
     left, right = evaluate(ast.unparse(node.left)), evaluate(ast.unparse(node.comparators[0]))
     approximate = isinstance(left, float) or isinstance(right, float)
-    if approximate and isinstance(node.ops[0], (ast.Eq, ast.NotEq)):
-        equal = math.isclose(left, right, rel_tol=tolerance, abs_tol=tolerance)
-        return equal == isinstance(node.ops[0], ast.Eq), left, right
-    return COMPARE[type(node.ops[0])](left, right), left, right
+    try:
+        if approximate and isinstance(node.ops[0], (ast.Eq, ast.NotEq)):
+            equal = math.isclose(left, right, rel_tol=tolerance, abs_tol=tolerance)
+            return equal == isinstance(node.ops[0], ast.Eq), left, right
+        return COMPARE[type(node.ops[0])](left, right), left, right
+    except OverflowError:
+        raise ValueError("a side is outside float range; compare exact values") from None
 
 
 def shown(value):
-    """JSON form: integers and floats as numbers, an exact fraction as text with its decimal value beside it."""
-    return {"exact": str(value), "decimal": float(value)} if isinstance(value, Fraction) else value
+    """JSON form: integers and floats as numbers, an exact fraction as text with its decimal value beside it
+    (null when the fraction is outside float range)."""
+    if not isinstance(value, Fraction):
+        return value
+    try:
+        return {"exact": str(value), "decimal": float(value)}
+    except OverflowError:
+        return {"exact": str(value), "decimal": None}
 
 
 def main(argv=None):

@@ -245,6 +245,16 @@ class StructureDeltaTests(unittest.TestCase):
         self.assertEqual(report["binary_or_unreadable_files"], ["alias.py"])
         self.assertEqual((report["status"], [(g["side"], g["path"]) for g in report["gaps"]]), ("incomplete", [("base", "alias.py")]))
 
+    def test_link_replaced_by_a_file_with_the_same_bytes_is_a_change(self):
+        import os
+        os.symlink("def f(): return 1", self.root / "alias.py")
+        self.commit("link")
+        (self.root / "alias.py").unlink()
+        (self.root / "alias.py").write_bytes(b"def f(): return 1")
+        _, report = self.flags()
+        self.assertEqual((report["changed_files"], report["status"]), (1, "incomplete"))
+        self.assertEqual([(g["side"], g["path"]) for g in report["gaps"]], [("base", "alias.py")])
+
     def test_partial_clone_does_not_fetch_a_missing_object(self):
         top = self.root.parent / (self.root.name + "-partial")
         self.addCleanup(lambda: shutil.rmtree(top, ignore_errors=True))
