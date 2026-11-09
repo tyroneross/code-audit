@@ -76,9 +76,22 @@ fn to_float(value: &BigRational) -> Outcome<f64> {
     }
 }
 
+/// The float for an exact value that has to become one, refused when no float is near it. A
+/// non-zero value below about 2e-308 would become 0.0 (or a float with few digits left), and
+/// what followed would be a wrong number, not a rounded one: sqrt(1/2**2000) is not zero.
+fn nearest(value: &BigRational) -> Outcome<f64> {
+    if value.is_zero() {
+        return Ok(0.0);
+    }
+    match to_float(value)? {
+        float if float.is_normal() => Ok(float),
+        _ => Err(format!("an exact value is too small for a float (about 2**{}); keep the arithmetic exact or rescale", value.numer().bits() as i64 - value.denom().bits() as i64)),
+    }
+}
+
 fn as_float(value: &Value) -> Outcome<f64> {
     match value {
-        Value::Exact(r) => to_float(r),
+        Value::Exact(r) => nearest(r),
         Value::Float(f) => Ok(*f),
     }
 }
@@ -270,7 +283,7 @@ fn float_sqrt_of_ratio(n: &BigInt, d: &BigInt) -> Outcome<f64> {
     } else {
         BigRational::new(rounded_to_odd(n << (-2 * q) as usize, d.clone()), BigInt::one() << (-q) as usize)
     };
-    to_float(&ratio)
+    nearest(&ratio)
 }
 
 /// Standard deviation from the exact variance, like Python's statistics module. Each exact
@@ -293,6 +306,24 @@ fn deviation(values: &[Value], sample: bool) -> Outcome<Value> {
         return float(0.0);
     }
     float(float_sqrt_of_ratio(variance.numer(), variance.denom())?)
+}
+
+/// Whether an exact value is within one half of 1, where its logarithm needs care.
+fn near_one(value: &Value) -> bool {
+    let half = BigRational::new(BigInt::one(), BigInt::from(2));
+    matches!(value, Value::Exact(r) if r.is_positive() && (r - BigRational::one()).abs() < half)
+}
+
+/// The natural logarithm of a positive value. An exact value near 1 becomes 1.0 as a float and
+/// its logarithm 0.0, so the part beyond 1 is taken exactly and given to log1p instead.
+fn natural_log(value: &Value) -> Outcome<f64> {
+    match value {
+        Value::Exact(r) if near_one(value) => Ok(nearest(&(r - BigRational::one()))?.ln_1p()),
+        _ => match as_float(value)? {
+            x if x > 0.0 => Ok(x.ln()),
+            _ => Err("log is not defined for this value".into()),
+        },
+    }
 }
 
 fn real(name: &str, arguments: &[Value], f: impl Fn(f64) -> f64, domain: impl Fn(f64) -> bool) -> Outcome<Value> {
@@ -341,7 +372,12 @@ fn call(name: &str, arguments: Vec<Value>) -> Outcome<Value> {
         }
         "stdev" => deviation(values, true),
         "pstdev" => deviation(values, false),
-        "sqrt" => real(name, values, f64::sqrt, |x| x >= 0.0),
+        // An exact argument goes straight to the correctly rounded square root of the ratio, so
+        // its size never passes through a float first.
+        "sqrt" => match values {
+            [Value::Exact(r)] if r.is_positive() => float(float_sqrt_of_ratio(r.numer(), r.denom())?),
+            _ => real(name, values, f64::sqrt, |x| x >= 0.0),
+        },
         // exp is never zero; a float result of 0.0 is an underflow, and reads as a root or a vanishing term.
         "exp" => match real(name, values, f64::exp, |_| true)? {
             Value::Float(0.0) => Err("exp is too small for a float here (below about 1e-308)".into()),
@@ -350,16 +386,18 @@ fn call(name: &str, arguments: Vec<Value>) -> Outcome<Value> {
         "sin" => real(name, values, f64::sin, |_| true),
         "cos" => real(name, values, f64::cos, |_| true),
         "tan" => real(name, values, f64::tan, |_| true),
-        "log2" => real(name, values, f64::log2, |x| x > 0.0),
-        "log10" => real(name, values, f64::log10, |x| x > 0.0),
+        "log2" | "log10" => match values {
+            [value] if near_one(value) => float(natural_log(value)? / if name == "log2" { std::f64::consts::LN_2 } else { std::f64::consts::LN_10 }),
+            _ => real(name, values, if name == "log2" { f64::log2 } else { f64::log10 }, |x| x > 0.0),
+        },
         "log" => match values {
-            [_] => real(name, values, f64::ln, |x| x > 0.0),
+            [value] => float(natural_log(value)?),
             [value, base] => {
-                let (x, b) = (as_float(value)?, as_float(base)?);
-                if x <= 0.0 || b <= 0.0 || b == 1.0 {
+                let (x, b) = (natural_log(value)?, natural_log(base)?);
+                if b == 0.0 {
                     return Err("log is not defined for these values".into());
                 }
-                float(x.ln() / b.ln())
+                float(x / b)
             }
             _ => Err("log takes a value and an optional base".into()),
         },

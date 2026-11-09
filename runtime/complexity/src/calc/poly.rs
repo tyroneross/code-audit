@@ -1,7 +1,7 @@
 //! Exact polynomials in one name and linear forms in several: the algebra that the solver,
 //! the calculus commands and the optimizer share.
 
-use super::{as_exact, eval, is_zero, to_float, Names, Node, Outcome, Value, MAX_BITS};
+use super::{as_exact, eval, is_zero, nearest, Names, Node, Outcome, Value, MAX_BITS};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Signed, ToPrimitive, Zero};
@@ -17,18 +17,6 @@ pub(super) fn held(value: BigRational) -> Outcome<BigRational> {
         return Err(format!("exact result is larger than {MAX_BITS} bits; use smaller numbers"));
     }
     Ok(value)
-}
-
-/// The float nearest an exact value, refused when no float is near: a value too small or too
-/// large would round to 0.0 or infinity, and the report would state a number that is wrong.
-pub(super) fn nearest(value: &BigRational) -> Outcome<f64> {
-    if value.is_zero() {
-        return Ok(0.0);
-    }
-    match to_float(value) {
-        Ok(float) if float.is_normal() => Ok(float),
-        _ => Err(format!("a value is outside the range of floats (its size is about 2**{}); rescale the problem", value.numer().bits() as i64 - value.denom().bits() as i64)),
-    }
 }
 
 /// An exact value for a report: a float when any input was a float, so a float is never

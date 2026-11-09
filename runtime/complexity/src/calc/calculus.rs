@@ -403,6 +403,9 @@ pub(super) fn integral(expression: &str, wanted: Option<&str>, from: Option<&str
     let (low, high) = bounds.ok_or("only a polynomial has its antiderivative written out: give --from and --to for a numeric integral")?;
     range(&mut fields, &low, &high);
     let (a, b) = (as_float(&low)?, as_float(&high)?);
+    if a == b && super::compare(&low, &high)? != std::cmp::Ordering::Equal {
+        return Err("--from and --to differ but are the same float; a numeric integral cannot tell them apart".into());
+    }
     let node = with_constants_folded(&node, &name, names);
     let deadline = Instant::now() + TIME_BUDGET;
     let failure = RefCell::new(None);

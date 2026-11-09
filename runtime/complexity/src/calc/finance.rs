@@ -15,11 +15,14 @@ use super::solve::{real_roots, single_root_above, Root, Span};
 use super::{as_exact, as_float, binary, float, integer, is_zero, negate, power, Outcome, Value};
 use num_bigint::BigInt;
 use num_rational::BigRational;
-use num_traits::{One, Signed, Zero};
+use num_traits::{One, Signed, ToPrimitive, Zero};
 
 const RATE_STEPS: usize = 100;
 const RATE_TOLERANCE: f64 = 1e-12;
 const MAX_FLOWS: usize = 240;
+/// rate(): exact polishing steps, and the longest term whose equation is evaluated exactly.
+const RATE_POLISH: usize = 12;
+const MAX_EXACT_RATE_PERIODS: i32 = 1200;
 /// Up to this many periods every real root is isolated exactly, so a rational rate is reported exactly.
 const MAX_EXACT_PERIODS: usize = 32;
 
@@ -95,26 +98,56 @@ fn rate(nper: &Value, pmt: &Value, pv: &Value, fv: &Value, when: &Value) -> Outc
     }
     let (n, p, x, y, w) = (as_float(nper)?, as_float(pmt)?, as_float(pv)?, as_float(fv)?, as_float(when)?);
     let g = |r: f64| y + (r + 1.0).powf(n) * x + p * ((r + 1.0).powf(n) - 1.0) * (r * w + 1.0) / r;
-    let mut r: f64 = 0.1;
-    for _ in 0..RATE_STEPS {
+    let slope = |r: f64| {
         let (t1, t2) = ((r + 1.0).powf(n), (r + 1.0).powf(n - 1.0));
-        let slope = n * t2 * x - p * (t1 - 1.0) * (r * w + 1.0) / (r * r) + n * p * t2 * (r * w + 1.0) / r + p * (t1 - 1.0) * w / r;
-        let next = r - g(r) / slope;
+        n * t2 * x - p * (t1 - 1.0) * (r * w + 1.0) / (r * r) + n * p * t2 * (r * w + 1.0) / r + p * (t1 - 1.0) * w / r
+    };
+    let unsettled = || Err("rate: the iteration did not settle on a rate; check the signs (cash paid out is negative)".to_string());
+    let mut r: f64 = 0.1;
+    let mut settled = false;
+    for _ in 0..RATE_STEPS {
+        let next = r - g(r) / slope(r);
         if !next.is_finite() {
             break;
         }
-        let moved = (next - r).abs();
+        settled = (next - r).abs() < RATE_TOLERANCE;
         r = next;
-        if moved < RATE_TOLERANCE {
-            // The answer is accepted only if it satisfies the equation it came from.
-            let scale = y.abs().max(x.abs()).max((p * n).abs()).max(1.0);
-            if g(r).abs() <= 1e-7 * scale {
-                return float(r);
-            }
+        if settled {
             break;
         }
     }
-    Err("rate: the iteration did not settle on a rate; check the signs (cash paid out is negative)".into())
+    if !settled {
+        return unsettled();
+    }
+    // The floats above may have rounded the inputs (a future value of 1 + 2**-60 is 1.0), so
+    // the rate is polished and confirmed with the equation evaluated exactly: each step
+    // moves by the exact residual over the slope, and the rate is accepted once that step is
+    // below one part in 10**12.
+    let periods = match nper {
+        Value::Exact(count) if count.is_integer() => count.to_integer().to_i32().filter(|count| count.abs() <= MAX_EXACT_RATE_PERIODS),
+        _ => None,
+    };
+    let Some(periods) = periods else {
+        // No exact form (a fractional or very long term): accept on the float residual alone.
+        let scale = y.abs().max(x.abs()).max((p * n).abs()).max(1.0);
+        return if g(r).abs() <= 1e-7 * scale { float(r) } else { unsettled() };
+    };
+    let (exact_pmt, exact_pv, exact_fv, exact_when) = (as_exact(pmt)?, as_exact(pv)?, as_exact(fv)?, as_exact(when)?);
+    let one = BigRational::one();
+    for _ in 0..RATE_POLISH {
+        let Some(rate) = BigRational::from_float(r).filter(|rate| !rate.is_zero() && *rate > -one.clone()) else { return unsettled() };
+        let grown = (&one + &rate).pow(periods);
+        let residual = &exact_fv + &exact_pv * &grown + &exact_pmt * (&one + &rate * &exact_when) / &rate * (&grown - &one);
+        let step = super::to_float(&residual)? / slope(r);
+        if !step.is_finite() {
+            return unsettled();
+        }
+        if step.abs() <= 1e-12 * r.abs() {
+            return float(r);
+        }
+        r -= step;
+    }
+    unsettled()
 }
 
 /// The internal rate of return: the rate at which the flows' net present value is zero.

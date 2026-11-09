@@ -72,12 +72,10 @@ class SharedVectorTests(unittest.TestCase):
                 with self.subTest(engine=engine, comparison=comparison):
                     self.assertEqual(run(["--check", comparison])[0], 2)
 
-    @unittest.skipUnless(BINARY, "analyzer binary not built; the Python calculator is the only engine")
-    def test_random_expressions_agree_between_the_two_calculators(self):
-        rng = random.Random(20261109)
-        numbers = ["0", "1", "2", "3", "7", "10", "12", "100", "1/3", "2/7", "0.5", "1.25", "2.0", "1e3", "-4", "-1/2"]
+    def agree(self, seed, numbers, functions, single):
+        """Run seeded random expressions through both calculators: the same refusals and the same values."""
+        rng = random.Random(seed)
         binary_ops = ["+", "-", "*", "/", "//", "%", "**"]
-        functions = ["abs", "round", "floor", "ceil", "sqrt", "min", "max", "sum", "mean", "median"]
 
         def expression(depth):
             roll = rng.random()
@@ -88,14 +86,13 @@ class SharedVectorTests(unittest.TestCase):
             if roll < 0.85:
                 return f"-{expression(depth - 1)}"
             name = rng.choice(functions)
-            count = 1 if name in ("abs", "round", "floor", "ceil", "sqrt") else rng.randint(1, 4)
+            count = 1 if name in single else rng.randint(1, 4)
             return f"{name}({', '.join(expression(depth - 1) for _ in range(count))})"
 
-        compared = valid = 0
+        valid = 0
         for _ in range(600):
             source = expression(3)
             (python_code, python_report), (rust_code, rust_report) = python_engine([source]), rust_engine([source])
-            compared += 1
             with self.subTest(expression=source):
                 self.assertEqual(python_code, rust_code, (python_report.get("error"), rust_report.get("error")))
                 if python_code == 0:
@@ -103,13 +100,28 @@ class SharedVectorTests(unittest.TestCase):
                     a, b = python_report["results"][0]["value"], rust_report["results"][0]["value"]
                     self.assertEqual(type(a), type(b), (a, b))
                     if isinstance(a, float):
-                        self.assertTrue(math.isclose(a, b, rel_tol=1e-12, abs_tol=1e-300), (a, b))
+                        self.assertTrue(math.isclose(a, b, rel_tol=1e-12, abs_tol=0), (a, b))
                     elif isinstance(a, dict):
                         self.assertEqual(a["exact"], b["exact"])
                     else:
                         self.assertEqual(a, b)
+        return valid
+
+    @unittest.skipUnless(BINARY, "analyzer binary not built; the Python calculator is the only engine")
+    def test_random_expressions_agree_between_the_two_calculators(self):
+        numbers = ["0", "1", "2", "3", "7", "10", "12", "100", "1/3", "2/7", "0.5", "1.25", "2.0", "1e3", "-4", "-1/2"]
+        functions = ["abs", "round", "floor", "ceil", "sqrt", "min", "max", "sum", "mean", "median"]
+        valid = self.agree(20261109, numbers, functions, ("abs", "round", "floor", "ceil", "sqrt"))
         self.assertGreater(valid, 200, "the generator should produce mostly valid expressions")
 
+    @unittest.skipUnless(BINARY, "analyzer binary not built; the Python calculator is the only engine")
+    def test_random_expressions_at_the_edges_of_floats_agree_too(self):
+        # Values too small or too large for a float, values next to 1, and the functions that turn exact values
+        # into floats: where an exact value must become a float, both calculators convert or refuse alike.
+        numbers = ["1", "2", "3", "1/3", "0.5", "2.0", "1/2**1100", "2**1100", "1 + 1/2**60", "1 - 1/2**70", "1e-300", "1e300", "3/2**600", "1/2**2000", "7/5"]
+        functions = ["sqrt", "log", "log2", "log10", "sum", "mean", "median", "stdev", "pstdev", "abs", "min", "max"]
+        valid = self.agree(20261110, numbers, functions, ("sqrt", "log", "log2", "log10", "abs"))
+        self.assertGreater(valid, 100, "the generator should produce a good share of valid expressions")
 
 
 class CalcTests(unittest.TestCase):

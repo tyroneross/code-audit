@@ -9,8 +9,8 @@
 //! so they are not used. Its bracketed Brent solver is used for equations that are not
 //! polynomials.)
 
-use super::poly::{eliminate, linear, nearest, polynomial, reported, unknowns, with_constants_folded, Poly, Solution};
-use super::{as_exact, as_float, eval, list, object, parse, quoted, relation, shown, to_float, Names, Node, Outcome, Value};
+use super::poly::{eliminate, linear, polynomial, reported, unknowns, with_constants_folded, Poly, Solution};
+use super::{as_exact, as_float, eval, list, nearest, object, parse, quoted, relation, shown, to_float, Names, Node, Outcome, Value};
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_rational::BigRational;
@@ -416,6 +416,9 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
     }
     let (low, high) = between.ok_or(format!("this equation is not a polynomial in {name}: give --between LOW HIGH, two values where its sides differ in opposite directions"))?;
     let (low, high) = (as_float(&low)?, as_float(&high)?);
+    if low >= high {
+        return Err("the --between bounds are closer together than floats can tell apart; this equation is solved in floats".into());
+    }
     let failure = RefCell::new(None);
     let folded = with_constants_folded(difference, name, names);
     let f = function(&folded, name, names, &failure);

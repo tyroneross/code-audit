@@ -66,6 +66,12 @@ class NamesAndFunctionsTests(unittest.TestCase):
             code, report = calc(*arguments)
             self.assertEqual((code, report["status"]), (2, "invalid"), arguments)
 
+    def test_an_exact_value_too_small_for_a_float_is_refused_not_zeroed(self):
+        self.assertTrue(math.isclose(value("sqrt(1/2**2000)"), 2.0 ** -1000, rel_tol=1e-15))
+        self.assertTrue(math.isclose(value("log(1 + 1/2**60)"), 8.673617379884035e-19, rel_tol=1e-15))
+        for expression in ("(1/2**2000)**(1/2)", "exp(1/2**2000) - 1", "sin(1/2**2000)", "tiny * 1e300"):
+            self.assertEqual(calc(expression, "--set", "tiny=1/2**2000")[0], 2, expression)
+
     def test_added_functions(self):
         for expression, expected in (("exp(1)", math.e), ("sin(pi/2)", 1.0), ("cos(0)", 1.0), ("tan(pi/4)", 1.0), ("exp(0)", 1.0)):
             self.assertTrue(close(value(expression), expected), expression)
@@ -108,7 +114,7 @@ class SolveTests(unittest.TestCase):
         # The roots are +-sqrt(2) * 2**-1100: rounding them to 0.0 would report a number that is not a root.
         code, report = calc("--solve", "x**2 == 2/2**2200")
         self.assertEqual(code, 2, report)
-        self.assertIn("outside the range of floats", report["error"])
+        self.assertIn("too small for a float", report["error"])
         # Two irrational roots 2**-80 apart share one float.
         code, report = calc("--solve", "(x**2 - 2)*(x**2 - 2 - 1/2**80) == 0")
         self.assertEqual(code, 2, report)
@@ -137,7 +143,7 @@ class SolveTests(unittest.TestCase):
     def test_a_float_answer_too_small_for_a_float_is_refused(self):
         code, report = calc("--solve", "1e200*x + y == 1e-200", "--solve", "y == 0")  # x is 1e-400
         self.assertEqual(code, 2, report)
-        self.assertIn("outside the range of floats", report["error"])
+        self.assertIn("too small for a float", report["error"])
 
     def test_other_equations_need_a_bracket_and_a_jump_is_not_a_root(self):
         solved = self.solutions("--solve", "cos(x) == x", "--between", "0", "1")
@@ -256,6 +262,13 @@ class CalculusTests(unittest.TestCase):
         solved = calc("--solve", "sin(x) + irr(-1, 2)/10 == 0", "--between", "3", "4")[1]["solve"]["solutions"][0]["values"]["x"]
         self.assertTrue(close(solved, math.pi + math.asin(0.1)))
 
+    def test_bounds_that_are_one_float_are_refused(self):
+        code, report = calc("--integral", "2**60*sin(x)", "--from", "1", "--to", "1 + 1/2**60")  # the answer is sin(1), not 0
+        self.assertEqual((code, report["status"]), (2, "invalid"))
+        self.assertEqual(calc("--solve", "sin(x) == 0", "--between", "3", "3 + 1/2**60")[0], 2)
+        code, report = calc("--integral", "x", "--from", "1", "--to", "1 + 1/2**60")  # a polynomial is integrated exactly
+        self.assertEqual(number(report["integral"]["value"]), ((1 + Fraction(1, 2**60)) ** 2 - 1) / 2)
+
     def test_an_integrand_undefined_inside_the_range_is_refused(self):
         self.assertEqual(calc("--integral", "log(x)", "--from", "-1", "--to", "1")[0], 2)
         self.assertEqual(calc("--integral", "sin(x)")[0], 2)  # no antiderivative is written for a non-polynomial
@@ -367,6 +380,13 @@ class FinanceTests(unittest.TestCase):
         self.assertEqual(value("irr(" + ", ".join(["-100"] + ["0"] * 39 + ["100"]) + ")"), 0)  # break-even after 40 periods, exactly
         code, report = calc("irr(" + ", ".join(["-1", "3", "-3"] * 12) + ")")  # many sign changes over 35 periods: refused, not guessed
         self.assertEqual(code, 2, report)
+
+    def test_rate_is_confirmed_against_the_exact_inputs(self):
+        # One period from -1 to 1 + 2**-60: the rate is 2**-60. In floats the future value is 1.0 and the iteration
+        # settled on 2.8e-17; the rate is now polished with the equation evaluated exactly.
+        self.assertTrue(math.isclose(value("rate(1, 0, -1, 1 + 1/2**60)"), 2.0 ** -60, rel_tol=1e-12))
+        self.assertTrue(math.isclose(value("rate(10, 0, -3500, 10000)"), (10000 / 3500) ** 0.1 - 1, rel_tol=1e-13))
+        self.assertTrue(math.isclose(value("rate(2, 0, -100, 121)"), 0.1, rel_tol=1e-13))  # 100 * 1.1**2
 
     def test_bad_arguments_are_refused(self):
         for expression in ("irr(100, 110)", "irr(-100)", "fv(0.05, 10)", "pv(0.05, 10, -100, 0, 2)", "mirr(0.1, 0.1, 100, 50)", "npv(-1, 100, 100)",

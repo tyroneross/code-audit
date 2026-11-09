@@ -26,7 +26,6 @@ from fractions import Fraction
 import json
 import math
 import operator
-import statistics
 import sys
 
 BINARY = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
@@ -35,9 +34,10 @@ UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
 COMPARE = {ast.Eq: operator.eq, ast.NotEq: operator.ne, ast.Lt: operator.lt, ast.LtE: operator.le, ast.Gt: operator.gt, ast.GtE: operator.ge}
 # Standard-library arithmetic only: fractions for exact values, math and statistics for the rest.
 FUNCTIONS = {"abs": abs, "round": lambda *arguments: rounded(*arguments), "min": lambda *values: extreme(min, values),
-             "max": lambda *values: extreme(max, values), "sum": lambda *values: total(*values), "sqrt": math.sqrt,
-             "floor": math.floor, "ceil": math.ceil, "log": math.log, "log2": math.log2, "log10": math.log10,
-             "mean": lambda *values: mean(*values), "median": lambda *values: statistics.median(values),
+             "max": lambda *values: extreme(max, values), "sum": lambda *values: total(*values), "sqrt": lambda value: square_root(value),
+             "floor": math.floor, "ceil": math.ceil, "log": lambda *arguments: log(*arguments),
+             "log2": lambda value: log_to(value, math.log(2), math.log2), "log10": lambda value: log_to(value, math.log(10), math.log10),
+             "mean": lambda *values: mean(*values), "median": lambda *values: median(*values),
              "stdev": lambda *values: deviation(True, values), "pstdev": lambda *values: deviation(False, values)}
 # Size budget for every exact value, so 9**9**9 or a nested power cannot exhaust memory. 4096 bits is about 1,230
 # digits: far beyond any review arithmetic, and below the 4,300 digits at which Python refuses to print an integer,
@@ -77,28 +77,85 @@ def bounded(value):
 
 
 
+def approximate(value):
+    """The float for a value that has to become one. A non-zero exact value below about 2e-308 would become 0.0
+    (or a float with few digits left) and what followed would be a wrong number, not a rounded one, so it is
+    refused. The analyzer binary's calc applies the same rule (nearest)."""
+    if isinstance(value, float):
+        return value
+    result = float(value)  # OverflowError when it is too large, reported as outside float range
+    if value != 0 and abs(result) < sys.float_info.min:
+        raise ValueError("an exact value is too small for a float; keep the arithmetic exact or rescale")
+    return result
+
+
+def paired(left, right):
+    """Two operands as they will be combined: a float beside an exact value makes both floats, by the strict rule."""
+    if isinstance(left, float) != isinstance(right, float):
+        return approximate(left), approximate(right)
+    return left, right
+
+
 def power(left, right):
     if isinstance(left, Fraction) and isinstance(right, Fraction):
         if right.denominator != 1:
-            left, right = float(left), float(right)  # a fractional power is not exact
+            left, right = approximate(left), approximate(right)  # a fractional power is not exact
         # Checked before computing: the result has about exponent x log2(base) bits.
         elif abs(right.numerator) * math.log2(max(abs(left.numerator), left.denominator)) + 1 > MAX_BITS:
             raise ValueError(f"exact power would exceed {MAX_BITS} bits; use a float base (write 2.0 for 2) or a smaller exponent")
-    return operator.pow(left, right)
+    return operator.pow(*paired(left, right))
 
 
 def total(*values):
     """Sum that checks the size budget after every addition, so many large fractions cannot build a huge denominator."""
     result = Fraction(0)
     for value in values:
-        result = bounded(result + value)
+        result = bounded(operator.add(*paired(result, value)))
     return result
 
 
 def mean(*values):
     if not values:
         raise ValueError("mean needs at least one value")
-    return bounded(total(*values) / len(values))
+    return bounded(operator.truediv(*paired(total(*values), Fraction(len(values)))))
+
+
+def median(*values):
+    if not values:
+        raise ValueError("median needs at least one value")
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[middle]
+    return bounded(operator.truediv(*paired(bounded(operator.add(*paired(ordered[middle - 1], ordered[middle]))), Fraction(2))))
+
+
+def square_root(value):
+    """An exact argument goes straight to the correctly rounded square root of the ratio, so its size never passes
+    through a float first: sqrt(1/2**2000) is 2**-1000, not 0.0."""
+    if isinstance(value, Fraction) and value > 0:
+        return root_of_ratio(value.numerator, value.denominator)
+    return math.sqrt(value)
+
+
+def near_one(value):
+    return isinstance(value, Fraction) and value > 0 and abs(value - 1) < Fraction(1, 2)
+
+
+def natural_log(value):
+    """An exact value near 1 becomes 1.0 as a float and its logarithm 0.0, so the part beyond 1 is taken exactly
+    and given to log1p instead."""
+    if near_one(value):
+        return math.log1p(approximate(value - 1))
+    return math.log(approximate(value))
+
+
+def log(value, base=None):
+    return natural_log(value) if base is None else natural_log(value) / natural_log(base)
+
+
+def log_to(value, base_log, plain):
+    return natural_log(value) / base_log if near_one(value) else plain(approximate(value))
 
 
 def root_of_ratio(n, d):
@@ -109,9 +166,10 @@ def root_of_ratio(n, d):
         root = math.isqrt(n // d)
         return root | (root * root * d != n)
     q = (n.bit_length() - d.bit_length() - 109) // 2
-    if q >= 0:
-        return float(rounded_to_odd(n, d << 2 * q) << q)
-    return rounded_to_odd(n << -2 * q, d) / (1 << -q)
+    result = float(rounded_to_odd(n, d << 2 * q) << q) if q >= 0 else rounded_to_odd(n << -2 * q, d) / (1 << -q)
+    if abs(result) < sys.float_info.min:  # the same strict rule as approximate()
+        raise ValueError("an exact value is too small for a float; keep the arithmetic exact or rescale")
+    return result
 
 
 def deviation(sample, values):
@@ -152,13 +210,13 @@ def number(node):
         return bounded(power(number(node.left), number(node.right)))
     if isinstance(node, ast.BinOp) and type(node.op) in BINARY:
         # Both operands are within the budget, so the product is at most twice it before this check.
-        return bounded(BINARY[type(node.op)](number(node.left), number(node.right)))
+        return bounded(BINARY[type(node.op)](*paired(number(node.left), number(node.right))))
     if isinstance(node, ast.UnaryOp) and type(node.op) in UNARY:
         return UNARY[type(node.op)](number(node.operand))
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in FUNCTIONS and not node.keywords:
         try:
             result = FUNCTIONS[node.func.id](*(number(argument) for argument in node.args))
-        except (TypeError, statistics.StatisticsError) as error:  # wrong argument count or kind
+        except TypeError as error:  # wrong argument count or kind
             raise ValueError(f"{node.func.id}: {error}") from None
         return bounded(result)
     raise ValueError(f"only numbers, arithmetic operators and {sorted(FUNCTIONS)} are accepted here; {BINARY_ONLY_MESSAGE}")
@@ -206,10 +264,10 @@ def check(expression, tolerance=TOLERANCE):
     if not (isinstance(node, ast.Compare) and len(node.ops) == 1 and type(node.ops[0]) in COMPARE):
         raise ValueError("a check is one comparison, for example \"2 + 2 == 4\"")
     left, right = value_of(node.left), value_of(node.comparators[0])
-    approximate = isinstance(left, float) or isinstance(right, float)
+    inexact = isinstance(left, float) or isinstance(right, float)
     try:
-        if approximate and isinstance(node.ops[0], (ast.Eq, ast.NotEq)):
-            equal = math.isclose(left, right, rel_tol=tolerance, abs_tol=tolerance)
+        if inexact and isinstance(node.ops[0], (ast.Eq, ast.NotEq)):
+            equal = math.isclose(approximate(left), approximate(right), rel_tol=tolerance, abs_tol=tolerance)
             return equal == isinstance(node.ops[0], ast.Eq), left, right
         return COMPARE[type(node.ops[0])](left, right), left, right
     except OverflowError:

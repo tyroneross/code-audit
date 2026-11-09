@@ -9,8 +9,8 @@
 //! constraints that bind). An answer that passes is reported as exact and proved; any other
 //! is reported as the solver's float answer and marked as such.
 
-use super::poly::{eliminate, linear, nearest, reported, Linear, Solution};
-use super::{list, object, quoted, relation, shown, to_float, Names, Outcome, Value};
+use super::poly::{eliminate, linear, reported, Linear, Solution};
+use super::{list, nearest, object, quoted, relation, shown, to_float, Names, Outcome, Value};
 use microlp::{ComparisonOp, Error, OptimizationDirection, Problem};
 use num_rational::BigRational;
 use num_bigint::BigInt;
