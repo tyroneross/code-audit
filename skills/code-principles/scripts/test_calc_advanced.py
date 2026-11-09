@@ -69,8 +69,11 @@ class NamesAndFunctionsTests(unittest.TestCase):
     def test_an_exact_value_too_small_for_a_float_is_refused_not_zeroed(self):
         self.assertTrue(math.isclose(value("sqrt(1/2**2000)"), 2.0 ** -1000, rel_tol=1e-15))
         self.assertTrue(math.isclose(value("log(1 + 1/2**60)"), 8.673617379884035e-19, rel_tol=1e-15))
-        for expression in ("(1/2**2000)**(1/2)", "exp(1/2**2000) - 1", "sin(1/2**2000)", "tiny * 1e300"):
+        for expression in ("(1/2**2000)**(1/2)", "exp(1/2**2000) - 1", "sin(1/2**2000)", "tiny * 1.0"):
             self.assertEqual(calc(expression, "--set", "tiny=1/2**2000")[0], 2, expression)
+        # Beside a float, an exact value is combined exactly and rounded once: 1e300 / 2**2000 is a normal float.
+        self.assertTrue(math.isclose(value("tiny * 1e300", "--set", "tiny=1/2**2000"), 8.709809816217217e-303, rel_tol=1e-15))
+        self.assertEqual(value("(1 + 1/2**60) - 1.0"), 2.0 ** -60)
 
     def test_added_functions(self):
         for expression, expected in (("exp(1)", math.e), ("sin(pi/2)", 1.0), ("cos(0)", 1.0), ("tan(pi/4)", 1.0), ("exp(0)", 1.0)):

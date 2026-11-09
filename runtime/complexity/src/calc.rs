@@ -155,6 +155,21 @@ fn binary(op: &str, a: Value, b: Value) -> Outcome<Value> {
             _ => Err(format!("unknown operator {op}")),
         };
     }
+    if matches!(a, Value::Exact(_)) != matches!(b, Value::Exact(_)) {
+        // An exact value beside a float: combined exactly, on the float's own value, and
+        // rounded once at the end. Rounding the exact operand first loses what a later
+        // subtraction needs: (1 + 1/2**60) - 1.0 is 2**-60, not 0.0.
+        let (x, y) = (as_exact(&a)?, as_exact(&b)?);
+        return float(nearest(&match op {
+            "+" => x + y,
+            "-" => x - y,
+            "*" => x * y,
+            "/" => x / y,
+            "//" => (x / y).floor(),
+            "%" => &x - &y * (&x / &y).floor(),
+            _ => return Err(format!("unknown operator {op}")),
+        })?);
+    }
     let (x, y) = (as_float(&a)?, as_float(&b)?);
     float(match op {
         "+" => x + y,

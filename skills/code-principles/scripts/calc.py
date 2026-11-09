@@ -90,10 +90,19 @@ def approximate(value):
 
 
 def paired(left, right):
-    """Two operands as they will be combined: a float beside an exact value makes both floats, by the strict rule."""
+    """Two operands of a power: a float beside an exact value makes both floats, by the strict rule."""
     if isinstance(left, float) != isinstance(right, float):
         return approximate(left), approximate(right)
     return left, right
+
+
+def combined(operation, left, right):
+    """left operation right. An exact value beside a float is combined exactly, on the float's own value, and
+    rounded once at the end. Rounding the exact operand first loses what a later subtraction needs:
+    (1 + 1/2**60) - 1.0 is 2**-60, not 0.0. The analyzer binary's calc does the same."""
+    if isinstance(left, float) != isinstance(right, float):
+        return approximate(Fraction(operation(Fraction(left), Fraction(right))))
+    return operation(left, right)
 
 
 def power(left, right):
@@ -110,14 +119,14 @@ def total(*values):
     """Sum that checks the size budget after every addition, so many large fractions cannot build a huge denominator."""
     result = Fraction(0)
     for value in values:
-        result = bounded(operator.add(*paired(result, value)))
+        result = bounded(combined(operator.add, result, value))
     return result
 
 
 def mean(*values):
     if not values:
         raise ValueError("mean needs at least one value")
-    return bounded(operator.truediv(*paired(total(*values), Fraction(len(values)))))
+    return bounded(combined(operator.truediv, total(*values), Fraction(len(values))))
 
 
 def median(*values):
@@ -127,7 +136,7 @@ def median(*values):
     middle = len(ordered) // 2
     if len(ordered) % 2:
         return ordered[middle]
-    return bounded(operator.truediv(*paired(bounded(operator.add(*paired(ordered[middle - 1], ordered[middle]))), Fraction(2))))
+    return bounded(combined(operator.truediv, bounded(combined(operator.add, ordered[middle - 1], ordered[middle])), Fraction(2)))
 
 
 def square_root(value):
@@ -210,7 +219,7 @@ def number(node):
         return bounded(power(number(node.left), number(node.right)))
     if isinstance(node, ast.BinOp) and type(node.op) in BINARY:
         # Both operands are within the budget, so the product is at most twice it before this check.
-        return bounded(BINARY[type(node.op)](*paired(number(node.left), number(node.right))))
+        return bounded(combined(BINARY[type(node.op)], number(node.left), number(node.right)))
     if isinstance(node, ast.UnaryOp) and type(node.op) in UNARY:
         return UNARY[type(node.op)](number(node.operand))
     if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in FUNCTIONS and not node.keywords:
