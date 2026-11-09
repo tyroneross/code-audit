@@ -246,6 +246,8 @@ def pats(a, b, value):
         return 3
     if value != value or value in (float("inf"),):
         return 4
+    if b == b:  # info
+        return 5
     seen = {1} & {1}
     if a > 1:
         pass
@@ -256,9 +258,15 @@ def pats(a, b, value):
         report = self.report()
         self.assertEqual([(p["rule"], p["line"]) for p in report["patterns"]],
                          [("self_assignment", 7), ("identical_operands", 8), ("duplicate_branches", 10), ("repeated_condition", 18),
-                          ("duplicate_branches", 20), ("identical_operands", 23), ("identical_operands", 32)])
+                          ("duplicate_branches", 20), ("identical_operands", 23), ("identical_operands", 27), ("identical_operands", 34)])
         self.assertTrue(all(p["function_id"] == "pats:5" and p["kind"] == "production" for p in report["patterns"]))
-        self.assertEqual(report["production_pattern_count"], 7)
+        self.assertEqual(report["production_pattern_count"], 8)
+
+    def test_non_regular_source_path_is_a_gap_and_is_not_read(self):
+        import os
+        os.mkfifo(self.root / "pipe.py")
+        report = complexity.measure(self.root, ["pipe.py"])
+        self.assertEqual((report["status"], report["gaps"][0]), ("incomplete", {"path": "pipe.py", "reason": "not a regular file; not read"}))
 
     def test_structure_threshold_overrides_are_validated(self):
         self.source("def f(a):\n    return a\n")

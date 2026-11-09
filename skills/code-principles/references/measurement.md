@@ -42,7 +42,7 @@ Every function row also carries the signals below, and `signals` names those at 
 
 `patterns` lists parser-backed leads, each compared as source text and reported only when no operand calls a function, awaits, allocates or mutates:
 
-- `identical_operands`: a comparison, `&&`, `||`, `-`, `/` or `%` whose two sides are the same expression. Skipped as the usual NaN test when the line names a float, NaN or infinity. Not run for Swift.
+- `identical_operands`: a comparison, `&&`, `||`, `-`, `/` or `%` whose two sides are the same expression. Skipped as the usual NaN test when the line names a float, NaN or infinity as a whole word. Not run for Swift.
 - `self_assignment`: `x = x`. In Python only inside a function, because `NAME = NAME` at module level rebinds on purpose.
 - `duplicate_branches`: both arms of an `if`/`else` or conditional expression are the same code. Skipped when the condition binds a name (`if let`, `if case`, an `instanceof` pattern).
 - `repeated_condition`: a condition repeats an earlier one in the same `else if` chain.
@@ -56,11 +56,11 @@ python3 <cp>/scripts/hotspots.py /absolute/project [--since "12 months ago"] [--
 python3 <cp>/scripts/structure_delta.py /absolute/project [--base <rev>] > /scratch/delta.json
 ```
 
-`hotspots.py` scores each file as non-merge commits in the window times its flagged production functions (CC hotspot or structural signal). Code that changes often and carries flagged structure is where simplification pays back first; flagged code that never changes and clean code that changes often score 0. Git never rejects `--since` text, so read `since_resolved_utc`, the start it used. A shallow clone is a gap.
+`hotspots.py` scores each file as non-merge commits in the window times its flagged production functions (CC hotspot or structural signal). Commits made under an earlier file name count for the present name where Git's rename detection links them. Code that changes often and carries flagged structure is where simplification pays back first; flagged code that never changes and clean code that changes often score 0. Git never rejects `--since` text, so read `since_resolved_utc`, the start it used. A shallow clone is a gap.
 
-`structure_delta.py` compares the working tree, uncommitted and untracked files included, with a base revision. The default base is the merge base of HEAD with the first existing of the `origin/HEAD` target, `origin/main`, `origin/master`, `main`, `master`. It measures changed source files on both sides, pairs functions by path and name, and flags `tests_changed`, `protected_region_changed`, `protected_region_unbalanced`, `large_change`, `function_got_worse`, `new_hotspot` and `pattern_introduced`. Flags are places to look and exit 1 only with `--fail-on-flags`. No flag does not show that behaviour is preserved; the project's tests do that. The workflow that uses both tools is [simplification](simplification.md).
+`structure_delta.py` compares the working tree, uncommitted and untracked files included, with a base revision. The default base is the merge base of HEAD with the first existing of the `origin/HEAD` target, `origin/main`, `origin/master`, `main`, `master`. It measures changed source files on both sides, pairs functions by path and name (when a name repeats, an unchanged function pairs with itself first, then by line order), and flags `tests_changed`, `protected_region_changed`, `protected_region_unbalanced`, `large_change`, `function_got_worse`, `new_hotspot` and `pattern_introduced`. Flags are places to look and exit 1 only with `--fail-on-flags`. No flag does not show that behaviour is preserved; the project's tests do that. The workflow that uses both tools is [simplification](simplification.md).
 
-All scripts read Git through one guarded helper that disables `core.fsmonitor`, and pass `--no-ext-diff --no-textconv` to diff, log and show, so a reviewed repository's configuration cannot name a program for them to run.
+All scripts read Git through one guarded helper. It disables `core.fsmonitor`, passes `--no-ext-diff --no-textconv` to log and show, and never asks Git to compare with the working tree, because that runs the clean and process filters a repository's configuration names. Changed files are found by hashing working files with filters off, so a repository that relies on filters (LFS, line-ending conversion) lists those files as changed. Only regular files are opened; a link, FIFO or device is reported as unreadable. The fsmonitor and filter cases have tests that fail when the guard is removed; the external-diff and textconv flags do not.
 
 ## Coverage and mutation companions
 

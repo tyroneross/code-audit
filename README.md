@@ -11,7 +11,7 @@ Ask your agent to use **Code Audit**:
 - Audit the repo against the thirty contextual principles.
 - Check this implementation plan before building.
 - Simplify this working module without changing what it does.
-- Show what limits speed, reliability or scale in this repo and where to start.
+- Show what limits speed, reliability, security or scale in this repo, and where structural debt meets frequent change.
 
 The [entry skill](skills/code-audit/SKILL.md) starts with pseudocode, selects the workflow and loads details relevant to the challenge. A review-only request remains read-only.
 

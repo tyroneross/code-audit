@@ -178,12 +178,40 @@ class StructureDeltaTests(unittest.TestCase):
         hook.write_text('#!/bin/sh\n: > "' + str(marker) + '"\nprintf "token\\0"\n')
         hook.chmod(0o700)
         self.commit("hook")
-        for key in ("core.fsmonitor", "diff.external"):
+        self.write(".gitattributes", "*.py filter=planted diff=planted\n")
+        self.commit("attributes")
+        for key in ("core.fsmonitor", "diff.external", "filter.planted.clean", "filter.planted.process", "diff.planted.textconv"):
             self.git("config", key, str(hook))
         self.git("config", "core.fsmonitorHookVersion", "2")
         self.write("app.py", FLAT)
-        structure_delta.delta(self.root)
+        report = structure_delta.delta(self.root)
+        self.assertEqual(report["changed_files"], 1)
+        import recon
+        recon.recon(str(self.root), base="HEAD")
         self.assertFalse(marker.exists(), "a Git read executed a program named in the repository configuration")
+
+    def test_links_fifos_and_devices_are_never_opened(self):
+        import os
+        os.mkfifo(self.root / "pipe.py")
+        os.symlink(self.root / "pipe.py", self.root / "link.txt")
+        os.symlink("/dev/zero", self.root / "zero.py")
+        _, report = self.flags()
+        # Git does not list a FIFO as untracked; links are listed and reported unreadable without being opened.
+        self.assertEqual(report["binary_or_unreadable_files"], ["link.txt", "zero.py"])
+        self.assertEqual((report["changed_files"], report["measured_source_files"], report["status"]), (2, 1, "clear"))
+        self.assertEqual(report["structure"]["after"]["functions"], 0)
+
+    def test_whitespace_only_edit_inside_a_protected_region_is_flagged(self):
+        self.write("fast.py", PROTECTED.replace("a = buf[0] ^ key[0]\n", "a = buf[0] ^ key[0]  \n"))
+        self.assertEqual(self.flags()[0], {"protected_region_changed": ["fast.py"]})
+
+    def test_unchanged_function_pairs_with_itself_when_a_same_name_function_is_added(self):
+        self.write("over.py", "class A:\n    def run(self, a):\n        if a:\n            for x in a:\n                if x:\n                    return x\n        return None\n")
+        self.commit("impl")
+        self.write("over.py", "class A:\n    def run(self):\n        return 0\n\n    def run(self, a):\n        if a:\n            for x in a:\n                if x:\n                    return x\n        return None\n")
+        flags, report = self.flags()
+        self.assertEqual(flags, {})
+        self.assertEqual([r["function_id"] for r in report["structure"]["added_functions"]], ["A.run:2"])
 
     def commit_flat(self):
         self.write("app.py", FLAT)

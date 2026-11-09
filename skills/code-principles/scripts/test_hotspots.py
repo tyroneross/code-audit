@@ -65,6 +65,15 @@ class HotspotTests(unittest.TestCase):
         self.commit("spaced")
         self.assertIn(("my dir/odd name.py", 1), [(f["path"], f["commits"]) for f in hotspots.rank(self.root)["top"]])
 
+    def test_commits_before_a_rename_count_for_the_present_name(self):
+        self.git("mv", "busy.py", "renamed.py")
+        self.commit("rename")
+        self.write("renamed.py", DEEP + "# after rename\n")
+        self.commit("edit renamed")
+        top = {f["path"]: f["commits"] for f in hotspots.rank(self.root)["top"]}
+        self.assertEqual(top["renamed.py"], 6)  # 4 as busy.py, the rename, one edit after it
+        self.assertNotIn("busy.py", top)
+
     def test_invalid_input_and_missing_history_exit_two(self):
         def run(*argv):
             out = io.StringIO()

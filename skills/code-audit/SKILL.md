@@ -18,7 +18,7 @@ else if authorized simplification or cleanup of working code: load ../code-princ
 else: load ../code-principles/SKILL.md for focused review
 load relevant challenge details
 if scoring requested or complexity/refactoring is material: load ../code-principles/references/measurement.md; measure compatible scope and report unknown coverage explicitly
-if asked what limits speed, reliability, security or scale across a repository: rank with hotspots.py, read pattern leads and structural signals from complexity.py, then confirm each against source
+if asked what limits speed, reliability, security or scale across a repository: scan.py gives speed, load, failure and untrusted-input leads; complexity.py gives pattern leads and structural signals; hotspots.py ranks where structure and change frequency meet; confirm each against source
 if affected Cargo manifests or source identify GPUI: read ../code-principles/references/gpui.md; use only checks applicable to the changed flow
 if agent dependencies or handoffs: read ../code-principles/references/challenge-guidance.md#agent-communication-and-dependency-handoffs
 if unused code, stale experiments or constant flags: read ../code-principles/references/removal-evidence.md

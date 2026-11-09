@@ -331,10 +331,14 @@ PATTERNS = [
   if (raw!.length > 0 && raw !== raw!.trimStart()) return 3;
   const isNaNish = a !== a;
   let hash = a; hash = hash & hash;
+  if ((x = 1) == (x = 1)) return 4;
+  if (a == a) return 5; // info
+  if (a) { return 6; } else // same
+  { return 6; }
   return a - a;
 }
 """, [("self_assignment", 2), ("identical_operands", 3), ("duplicate_branches", 4), ("duplicate_branches", 5),
-      ("repeated_condition", 6), ("identical_operands", 11)]),
+      ("repeated_condition", 6), ("identical_operands", 12), ("duplicate_branches", 13), ("identical_operands", 15)]),
     ("P.java", """class P {
   int f(int a, int b, Object o) {
     int x = a; x = x; this.y = this.y;
@@ -360,9 +364,12 @@ func F(a, b int) int {
 	if a > 1 { g() } else if b > 1 { h() } else if a > 1 { k() }
 	x += x
 	if <-ch == <-ch { return 2 }
+	if v, ok := m["a"]; ok { return v } else if v, ok := m["b"]; ok { return v + 1 }
+	if v, ok := m["a"]; ok { return v } else if v, ok := m["a"]; ok { return v + 1 }
 	return 0
 }
-""", [("self_assignment", 4), ("self_assignment", 5), ("identical_operands", 7), ("duplicate_branches", 8), ("repeated_condition", 9)]),
+""", [("self_assignment", 4), ("self_assignment", 5), ("identical_operands", 7), ("duplicate_branches", 8), ("repeated_condition", 9),
+      ("repeated_condition", 13)]),
     ("p.swift", """struct P {
   func f(a: Int, b: Bool) {
     x = x
@@ -403,6 +410,13 @@ class StructureAndPatternTests(unittest.TestCase):
                     row = rows[function]
                     self.assertEqual((row["max_nesting"], row["bumps"], row["condition_operators"], row["params"]), counts)
                     self.assertEqual(row["lines"], row["end_line"] - row["line"] + 1)
+
+    def test_comment_after_else_keeps_the_chain_flat(self):
+        for name, source in (("e.ts", "function f(a: number, b: number) {\n  if (a) { g(); } else /* one */ if (b) { h(); } else /* two */ if (a > b) { k(); }\n}\n"),
+                             ("e.rs", "fn f(a: u8, b: u8) {\n    if a > 1 { g(); } else /* one */ if b > 1 { h(); } else /* two */ if a > b { k(); }\n}\n")):
+            with self.subTest(file=name):
+                row = self.measure(name, source)["functions"][0]
+                self.assertEqual((row["max_nesting"], row["bumps"]), (1, 0))
 
     def test_single_expression_closures_open_no_nesting_level(self):
         cases = [

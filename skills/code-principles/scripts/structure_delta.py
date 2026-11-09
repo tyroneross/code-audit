@@ -26,6 +26,7 @@ incomplete. Read-only: no project code or tests are executed and nothing is writ
 """
 import argparse
 import collections
+import difflib
 import json
 from pathlib import Path
 import re
@@ -68,56 +69,73 @@ def resolve_base(root, requested):
     return head, "HEAD (no mainline ref resolved)"
 
 
+def line_counts(before, after):
+    """(added, deleted) lines between two byte strings, or None when either looks binary."""
+    if any(b"\0" in data[:8000] for data in (before, after)):
+        return None
+    old, new = before.decode("utf-8", "replace").splitlines(), after.decode("utf-8", "replace").splitlines()
+    added = deleted = 0
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, old, new, autojunk=False).get_opcodes():
+        if tag != "equal":
+            deleted += i2 - i1
+            added += j2 - j1
+    return added, deleted
+
+
+def base_bytes(root, base, path):
+    """The file's bytes at base, or None when it did not exist there."""
+    return gitsafe.run(root, "show", *gitsafe.NO_DRIVERS, f"{base}:./{path}")
+
+
+def working_bytes(root, path):
+    """The working file's bytes; None unless it is a regular file, so links, FIFOs and devices are never opened."""
+    full = Path(root) / path
+    if gitsafe.kind(full) != "file":
+        return None
+    try:
+        return full.read_bytes()
+    except OSError:
+        return None
+
+
 def changed_files(root, base):
-    """{path: (added, deleted) or None for binary} for tracked changes against base, plus untracked files."""
-    numstat = gitsafe.run(root, "diff", *gitsafe.NO_DRIVERS, "--numstat", "-z", "--no-renames", "--relative", base, "--")
-    untracked = gitsafe.run(root, "ls-files", "--others", "--exclude-standard", "-z")
-    if numstat is None or untracked is None:
-        raise ValueError("git diff or ls-files failed; cannot list the change")
-    changed = {}
-    for entry in filter(None, numstat.decode("utf-8", "surrogateescape").split("\0")):
-        added, deleted, path = entry.split("\t", 2)
-        changed[path] = None if added == "-" else (int(added), int(deleted))
-    for path in filter(None, untracked.decode("utf-8", "surrogateescape").split("\0")):
-        try:
-            changed[path] = (len((Path(root) / path).read_text(encoding="utf-8").splitlines()), 0)
-        except (OSError, UnicodeDecodeError):
-            changed[path] = None
-    return changed
+    """({path: (added, deleted) or None for binary or unreadable}, {path: (bytes at base, working bytes)}) for every
+    path that differs from base, untracked included. A side that does not exist is b""; an unreadable side is None."""
+    states = gitsafe.changed_paths(root, base)
+    if states is None:
+        raise ValueError("git could not list the base tree or hash the working files; cannot list the change")
+    changed, contents = {}, {}
+    for path, state in states.items():
+        before = b"" if state in ("added", "untracked") else base_bytes(root, base, path)
+        after = b"" if state == "deleted" else working_bytes(root, path)
+        contents[path] = (before, after)
+        changed[path] = None if before is None or after is None else line_counts(before, after)
+    return changed, contents
 
 
 def protected_regions(source):
     """(Counter of protected block texts, balanced). A block is the lines strictly between a start and an end marker."""
     blocks, current, balanced = collections.Counter(), None, True
-    for line in source.splitlines():
+    for line in source.splitlines(keepends=True):  # exact bytes: trailing spaces and line endings count
         marker = MARKER.match(line)
         if marker is None:
             if current is not None:
-                current.append(line.rstrip())
+                current.append(line)
         elif marker.group(1) == "start":
             balanced, current = balanced and current is None, []
         else:
             balanced = balanced and current is not None
             if current is not None:
-                blocks["\n".join(current)] += 1
+                blocks["".join(current)] += 1
             current = None
     return blocks, balanced and current is None
 
 
-def read_text(path):
-    try:
-        return Path(path).read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        return None
-
-
-def protected_changes(root, base, changed):
+def protected_changes(contents):
     """(paths whose protected code differs from base, paths with unbalanced markers)."""
     altered, unbalanced = [], []
-    for path in sorted(changed):
-        before = gitsafe.run(root, "show", *gitsafe.NO_DRIVERS, f"{base}:./{path}")
-        before = before.decode("utf-8", "replace") if before is not None else ""
-        after = read_text(Path(root) / path) or ""
+    for path, (before, after) in sorted(contents.items()):
+        before, after = ((data or b"").decode("utf-8", "replace") for data in (before, after))
         if "simplify-ignore-" not in before + after:
             continue
         old, _ = protected_regions(before)
@@ -146,13 +164,24 @@ def pair_functions(before, after):
         for row in sorted(rows, key=lambda r: r["line"]):
             groups[(row["path"], row["name"])].append(row)
         return groups
+    def shape(row):
+        return tuple(row[name] for name in COMPARED)
     old, new = grouped(before), grouped(after)
     pairs, added, removed = [], [], []
     for key in sorted(set(old) | set(new)):
-        a, b = old.get(key, []), new.get(key, [])
-        pairs += list(zip(a, b))
-        added += b[len(a):]
-        removed += a[len(b):]
+        a, b = old.get(key, []), list(new.get(key, []))
+        unmatched = []
+        # When a name repeats (overloads, a stub added beside an implementation), an unchanged function pairs with itself first.
+        for row in a:
+            twin = next((candidate for candidate in b if shape(candidate) == shape(row)), None) if len(a) != len(b) else None
+            if twin is None:
+                unmatched.append(row)
+            else:
+                b.remove(twin)
+                pairs.append((row, twin))
+        pairs += list(zip(unmatched, b))
+        added += b[len(unmatched):]
+        removed += unmatched[len(b):]
     return pairs, added, removed
 
 
@@ -204,9 +233,9 @@ def compare(before, after):
     return section, [{"flag": flag, "items": items} for flag, items in candidates if items]
 
 
-def hygiene_flags(root, commit, changed, lines, max_changed_lines):
+def hygiene_flags(changed, contents, lines, max_changed_lines):
     """Flags that need no measurement: edited tests, protected regions and the size of the change."""
-    altered, unbalanced = protected_changes(root, commit, changed)
+    altered, unbalanced = protected_changes(contents)
     candidates = [
         ("tests_changed", sorted(p for p in changed if TEST_PATH.search(p))),
         ("protected_region_changed", altered),
@@ -216,39 +245,39 @@ def hygiene_flags(root, commit, changed, lines, max_changed_lines):
     return [{"flag": flag, "items": items} for flag, items in candidates if items]
 
 
-def measure_both(root, commit, sources, structure, threshold):
-    """(report at the base, report of the working tree) for the changed source files."""
+def measure_both(root, contents, structure, threshold):
+    """(source file count, report at the base, report of the working tree) for the changed source files."""
+    sources = [p for p in contents if Path(p).suffix in complexity.SOURCE_SUFFIXES]
     with tempfile.TemporaryDirectory(prefix="structure-delta-") as scratch:
         at_base = []
         for path in sources:
-            content = gitsafe.run(root, "show", *gitsafe.NO_DRIVERS, f"{commit}:./{path}")
-            if content is not None:
+            before = contents[path][0]
+            if before:
                 target = Path(scratch) / path
                 target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(content)
+                target.write_bytes(before)
                 at_base.append(path)
-        before = measure_side(scratch, at_base, structure, threshold)
-    return before, measure_side(root, [p for p in sources if (root / p).is_file()], structure, threshold)
+        report = measure_side(scratch, at_base, structure, threshold)
+    return len(sources), report, measure_side(root, [p for p in sources if gitsafe.kind(root / p) == "file"], structure, threshold)
 
 
-def delta(root, base=None, max_changed_lines=MAX_CHANGED_LINES, threshold=10, structure=None):
+def delta(root, base=None, max_changed_lines=MAX_CHANGED_LINES, threshold=complexity.CC_THRESHOLD, structure=None):
     root = Path(root).resolve()
     if not root.is_dir():
         raise ValueError(f"source root is not a directory: {root}")
     if isinstance(max_changed_lines, bool) or not isinstance(max_changed_lines, int) or max_changed_lines < 1:
         raise ValueError("max changed lines must be a positive integer")
     commit, chosen = resolve_base(root, base)
-    changed = changed_files(root, commit)
+    changed, contents = changed_files(root, commit)
     lines = sum(sum(counts) for counts in changed.values() if counts)
-    sources = [p for p in changed if Path(p).suffix in complexity.SOURCE_SUFFIXES]
-    before, after = measure_both(root, commit, sources, structure, threshold)
+    measured, before, after = measure_both(root, contents, structure, threshold)
     section, structure_flags = compare(before, after)
-    flags = hygiene_flags(root, commit, changed, lines, max_changed_lines) + structure_flags
+    flags = hygiene_flags(changed, contents, lines, max_changed_lines) + structure_flags
     gaps = [{"side": side, **gap} for side, report in (("base", before), ("working tree", after)) for gap in report["gaps"]]
     return {"schema": "code-audit.structure-delta.v1", "root": str(root), "base": commit, "base_chosen_by": chosen,
             "changed_files": len(changed), "changed_lines": lines, "max_changed_lines": max_changed_lines,
             "binary_or_unreadable_files": sorted(p for p, counts in changed.items() if counts is None),
-            "measured_source_files": len(sources), "status": "incomplete" if gaps else ("flags" if flags else "clear"),
+            "measured_source_files": measured, "status": "incomplete" if gaps else ("flags" if flags else "clear"),
             "flags": flags, "gaps": gaps, "structure": section,
             "note": "Flags are places to look. No flag does not show that behaviour is preserved; run the project's tests."}
 
@@ -258,7 +287,7 @@ def main(argv=None):
     parser.add_argument("root", help="source root inside a Git repository")
     parser.add_argument("--base", help="revision to compare with (default: merge base with the mainline)")
     parser.add_argument("--max-changed-lines", type=int, default=MAX_CHANGED_LINES, help=f"size budget for one change (default: {MAX_CHANGED_LINES})")
-    parser.add_argument("--threshold", type=int, default=10, help="CC hotspot boundary passed to complexity.py (default: 10)")
+    parser.add_argument("--threshold", type=int, default=complexity.CC_THRESHOLD, help=f"CC hotspot boundary passed to complexity.py (default: {complexity.CC_THRESHOLD})")
     parser.add_argument("--structure", nargs="+", metavar="NAME=N", help="structural-signal thresholds passed to complexity.py")
     parser.add_argument("--fail-on-flags", action="store_true", help="exit 1 when any flag fired; a flag never establishes a defect")
     args = parser.parse_args(argv)

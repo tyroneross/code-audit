@@ -5,6 +5,7 @@ the CC count. Pattern leads compare expressions as unparsed source and are repor
 function, awaits, yields or binds a name, so evaluating it twice cannot differ. See measurement.md for definitions.
 """
 import ast
+import re
 
 NESTS = (ast.If, ast.For, ast.AsyncFor, ast.While, ast.ExceptHandler, ast.Match, ast.IfExp)
 SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
@@ -13,7 +14,8 @@ CONDITION_BOUNDARIES = (ast.stmt, ast.ExceptHandler, ast.match_case, ast.Call)
 IMPURE = (ast.Call, ast.Await, ast.Yield, ast.YieldFrom, ast.NamedExpr, ast.Lambda)
 COMPARISONS = {ast.Eq: "==", ast.NotEq: "!=", ast.Lt: "<", ast.Gt: ">", ast.LtE: "<=", ast.GtE: ">=", ast.Is: "is", ast.IsNot: "is not"}
 ARITHMETIC = {ast.Sub: "-", ast.Div: "/", ast.FloorDiv: "//", ast.Mod: "%"}  # & | ^ are set operations here
-FLOAT_WORDS = ("nan", "float", "inf")  # a line naming these makes `x != x` the usual NaN test
+# A line that names a float, NaN or infinity makes `x != x` the usual NaN test. Whole words, so "info" does not match.
+FLOAT_LINE = re.compile(r"\b(nan|inf|infinity|double|f32|f64)\b|is_?nan|float", re.I)
 NAN_NOTE = "; a deliberate NaN test is the one valid use"
 SAME_BRANCHES = "both branches are the same code"
 
@@ -73,8 +75,8 @@ def comparison_lead(node, source_lines):
         return None
     op = COMPARISONS[type(node.ops[0])]
     equality = op in ("==", "!=")
-    line = source_lines[node.lineno - 1].lower() if node.lineno <= len(source_lines) else ""
-    if equality and any(word in line for word in FLOAT_WORDS):
+    line = source_lines[node.lineno - 1] if node.lineno <= len(source_lines) else ""
+    if equality and FLOAT_LINE.search(line):
         return None
     return "identical_operands", f"both sides of `{op}` are `{ast.unparse(node.left)}`" + (NAN_NOTE if equality else "")
 

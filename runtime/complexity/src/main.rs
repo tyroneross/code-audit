@@ -65,7 +65,7 @@
 //!   sides are the same expression, so the result is fixed. Bitwise `&`, `|` and
 //!   `^` are left out (`x & x` coerces to a 32-bit integer in JavaScript). An
 //!   equality test is skipped when its line names a float, NaN or infinity, the
-//!   usual NaN check. Not run for Swift, whose grammar does not preserve
+//!   usual NaN check (whole words, so `info` does not count). Not run for Swift, whose grammar does not preserve
 //!   precedence in mixed expressions, nor when the right side is followed by
 //!   `!`, `.`, `(` or `[`: the grammar then split a longer expression
 //!   (TypeScript `a !== a!.trim()`).
@@ -97,10 +97,12 @@ const TARGET_RECALL: f64 = 0.98;
 const TEST_CALLEES: [&str; 7] = ["describe", "it", "test", "beforeEach", "afterEach", "beforeAll", "afterAll"];
 /// Operators whose result is fixed when both operands are the same expression.
 const FIXED_WHEN_IDENTICAL: [&str; 13] = ["==", "!=", "===", "!==", "<", ">", "<=", ">=", "&&", "||", "-", "/", "%"];
-/// Words that mark a line as float handling, where `x != x` is the usual NaN test.
-const FLOAT_WORDS: [&str; 6] = ["nan", "float", "inf", "f32", "f64", "double"];
+/// Whole words that mark a line as float handling, where `x != x` is the usual NaN test.
+const FLOAT_WORDS: [&str; 6] = ["nan", "inf", "infinity", "f32", "f64", "double"];
+/// Fragments that mark the same inside a longer word (`isNaN`, `is_nan`, `parseFloat`, `float64`).
+const FLOAT_FRAGMENTS: [&str; 3] = ["isnan", "is_nan", "float"];
 /// Node-kind fragments that mark an expression with an effect or a fresh value.
-const IMPURE_KINDS: [&str; 10] = ["call", "invocation", "await", "update", "creation", "new_expression", "yield", "try", "closure", "lambda"];
+const IMPURE_KINDS: [&str; 11] = ["call", "invocation", "await", "update", "assignment", "creation", "new_expression", "yield", "try", "closure", "lambda"];
 /// Node-kind fragments where a new statement, block or argument list starts.
 const CONDITION_BOUNDARIES: [&str; 9] = ["block", "statements", "statement_list", "body", "argument", "arm", "case", "entry", "declaration"];
 
@@ -269,6 +271,20 @@ fn pure(node: Node, src: &[u8]) -> bool {
     let mut cursor = node.walk();
     let children: Vec<Node> = node.children(&mut cursor).collect();
     children.into_iter().all(|c| pure(c, src))
+}
+
+/// First named child that is code, skipping comments (`else /* note */ if ...`).
+fn first_code_child(node: Node) -> Option<Node> {
+    let mut cursor = node.walk();
+    let found = node.named_children(&mut cursor).find(|c| !c.kind().contains("comment"));
+    found
+}
+
+/// True when the line names a float, NaN or infinity.
+fn float_line(line: &str) -> bool {
+    line.to_lowercase()
+        .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .any(|word| FLOAT_WORDS.contains(&word) || FLOAT_FRAGMENTS.iter().any(|f| word.contains(f)))
 }
 
 fn word_present(haystack: &str, word: &str) -> bool {
@@ -622,7 +638,7 @@ impl<'a> Walker<'a> {
     /// The `if` that an `else` continues with, when this `if` has one.
     fn else_if(&self, node: Node<'a>) -> Option<Node<'a>> {
         let next = match self.lang {
-            Lang::Rust | Lang::TypeScript | Lang::Tsx => node.child_by_field_name("alternative")?.named_child(0)?,
+            Lang::Rust | Lang::TypeScript | Lang::Tsx => first_code_child(node.child_by_field_name("alternative")?)?,
             Lang::Java | Lang::Go => node.child_by_field_name("alternative")?,
             Lang::Swift => {
                 let mut cursor = node.walk();
@@ -716,6 +732,12 @@ impl<'a> Walker<'a> {
     /// The nodes that make up an `if` condition, in source order.
     fn condition_parts(&self, node: Node<'a>) -> Vec<Node<'a>> {
         let mut cursor = node.walk();
+        if self.lang == Lang::Go {
+            // `if v, ok := m["a"]; ok` : the initializer is part of what the branch tests.
+            let mut parts: Vec<Node> = node.children_by_field_name("initializer", &mut cursor).collect();
+            parts.extend(node.children_by_field_name("condition", &mut node.walk()));
+            return parts;
+        }
         if self.lang != Lang::Swift {
             return node.children_by_field_name("condition", &mut cursor).collect();
         }
@@ -768,8 +790,7 @@ impl<'a> Walker<'a> {
         };
         let equality = matches!(op, "==" | "!=" | "===" | "!==");
         let nan_test = equality && {
-            let line = String::from_utf8_lossy(src).lines().nth(node.start_position().row).unwrap_or("").to_lowercase();
-            FLOAT_WORDS.iter().any(|w| line.contains(w))
+            float_line(String::from_utf8_lossy(src).lines().nth(node.start_position().row).unwrap_or(""))
         };
         if !continues && !nan_test && self.same(left, right) {
             let note = if equality { "; a deliberate NaN test is the one valid use" } else { "" };
@@ -808,7 +829,7 @@ impl<'a> Walker<'a> {
                 (bodies.len() == 2 && self.else_if(node).is_none()).then(|| (bodies[0], bodies[1]))
             }
             (Lang::Rust | Lang::TypeScript | Lang::Tsx, k) if k == self.if_kind() => {
-                node.child_by_field_name("consequence").zip(node.child_by_field_name("alternative").and_then(|a| a.named_child(0)))
+                node.child_by_field_name("consequence").zip(node.child_by_field_name("alternative").and_then(first_code_child))
             }
             (Lang::Java | Lang::Go, "if_statement") => Self::fields(node, "consequence", "alternative"),
             _ => None,

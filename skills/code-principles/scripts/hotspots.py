@@ -41,14 +41,29 @@ def window_start(root, since):
 
 
 def churn(root, since):
-    """Counter of non-merge commits per root-relative path in the window, or None when history cannot be read."""
-    log = gitsafe.run(root, "log", *gitsafe.NO_DRIVERS, f"--since={since}", "--no-merges", "--format=%x00", "--name-only", "-z", "--relative", timeout=120)
+    """Counter of non-merge commits per present-day root-relative path in the window, or None when history cannot be read.
+
+    A commit that touched a file under an earlier name counts for the name it has now, as far as Git's rename
+    detection links the two.
+    """
+    log = gitsafe.run(root, "log", *gitsafe.NO_DRIVERS, f"--since={since}", "--no-merges", "--format=%x01", "--name-status", "-M", "-z", "--relative", timeout=120)
     if log is None:
         return None
-    commits = collections.Counter()
-    # Each commit is a NUL-terminated empty subject followed by its NUL-separated paths.
-    for commit in log.decode("utf-8", "surrogateescape").split("\0\0"):
-        commits.update({path.strip("\n") for path in commit.split("\0") if path.strip("\n")})
+    commits, present = collections.Counter(), {}
+    # Newest first. Each commit is \x01 then NUL-separated fields: a status, then one path (two for a rename or copy).
+    for commit in log.decode("utf-8", "surrogateescape").split("\x01")[1:]:
+        fields = [field for field in commit.split("\0") if field.strip("\n")]
+        touched, index = set(), 0
+        while index < len(fields):
+            status, path = fields[index].strip("\n"), fields[index + 1]
+            index += 2
+            if status[:1] in ("R", "C"):
+                old, path = path, fields[index]
+                index += 1
+                if status[:1] == "R":
+                    present[old] = present.get(path, path)
+            touched.add(present.get(path, path))
+        commits.update(touched)
     return commits
 
 
@@ -110,7 +125,7 @@ def main(argv=None):
     parser.add_argument("--since", default=SINCE, help=f"history window passed to git log --since (default: {SINCE!r})")
     parser.add_argument("--paths", nargs="+", help="explicit root-relative files/directories (default: tracked source files)")
     parser.add_argument("--top", type=int, default=TOP, help=f"files to list (default: {TOP})")
-    parser.add_argument("--threshold", type=int, default=10, help="CC hotspot boundary passed to complexity.py (default: 10)")
+    parser.add_argument("--threshold", type=int, default=complexity.CC_THRESHOLD, help=f"CC hotspot boundary passed to complexity.py (default: {complexity.CC_THRESHOLD})")
     parser.add_argument("--structure", nargs="+", metavar="NAME=N", help="structural-signal thresholds passed to complexity.py")
     args = parser.parse_args(argv)
     try:

@@ -44,9 +44,11 @@ def recon(root, base=None, paths=None):
     files, walk_errors = all_files(root)
     scope = "diff" if base or paths else "repo"
     if base:
-        paths = git(root, "diff", *gitsafe.NO_DRIVERS, "--name-only", "--relative", base)
-        if paths is None:
+        # Tracked paths that differ from base, like `git diff --name-only`, without letting Git read the working tree.
+        states = gitsafe.changed_paths(root, base)
+        if states is None:
             raise SystemExit(f"recon.py: cannot diff against {base!r}")
+        paths = sorted(p for p, state in states.items() if state != "untracked")
     targets, inaccessible = [], []
     for p in (paths if scope == "diff" else files):
         if set(p.split("/")) & SKIP:

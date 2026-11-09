@@ -51,6 +51,7 @@ import math
 import os
 from pathlib import Path
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -66,6 +67,7 @@ NATIVE_SUFFIXES = {".rs", ".ts", ".mts", ".cts", ".tsx", ".js", ".jsx", ".mjs", 
 NATIVE_MANIFEST = Path(__file__).resolve().parents[3] / "runtime" / "complexity" / "Cargo.toml"
 PYTHON_ANALYZER = {"name": "python-ast", "version": sys.version.split()[0], "method": "python-ast-decisions-v1",
                    "structure_method": "python-ast-structure-v1", "languages": ["python"]}
+CC_THRESHOLD = 10  # inclusive CC hotspot boundary; the one default for every script that scores
 STRUCTURE_FIELDS = ("max_nesting", "bumps", "condition_operators", "params")
 # Inclusive reading-order thresholds. Sources and the two unsourced defaults: references/measurement.md.
 STRUCTURE_THRESHOLDS = {"max_nesting": 3, "lines": 50, "params": 6, "bumps": 2, "condition_operators": 3}
@@ -281,9 +283,13 @@ def unique_sources(root, selected, gaps):
             gaps.append({"path": str(path), "reason": "outside source root"})
             continue
         try:
-            identity = (path.stat().st_dev, path.stat().st_ino)
+            status = path.stat()
+            identity = (status.st_dev, status.st_ino)
         except OSError:
-            identity = name
+            status, identity = None, name
+        if status is not None and not stat.S_ISREG(status.st_mode):
+            gaps.append({"path": name, "reason": "not a regular file; not read"})
+            continue
         # Case-insensitive volumes can spell one file two ways; dedupe by file identity.
         if name in names or identity in identities:
             continue
@@ -346,7 +352,7 @@ def label_patterns(patterns, rows):
     patterns.sort(key=lambda lead: (lead["kind"] != "production", lead["path"], lead["line"], lead["rule"]))
 
 
-def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, similarity=0.8, structure=None):
+def measure(root, paths=None, coverage=None, threshold=CC_THRESHOLD, duplicates=False, similarity=0.8, structure=None):
     root = Path(root).resolve()
     if not root.is_dir():
         raise ValueError(f"source root is not a directory: {root}")
@@ -460,7 +466,7 @@ def main(argv=None):
     parser.add_argument("root", help="source root")
     parser.add_argument("--paths", nargs="+", help="explicit root-relative files/directories (default: tracked source files, walk fallback)")
     parser.add_argument("--coverage", help="source-digest-bound function-coverage JSON; absent coverage remains unknown")
-    parser.add_argument("--threshold", type=int, default=10, help="CC hotspot boundary, inclusive (default: 10)")
+    parser.add_argument("--threshold", type=int, default=CC_THRESHOLD, help=f"CC hotspot boundary, inclusive (default: {CC_THRESHOLD})")
     parser.add_argument("--fail-on-hotspots", action="store_true", help="exit 1 for measured hotspots; never establishes a defect")
     parser.add_argument("--duplicates", action="store_true", help="add structural duplicate candidates (tree-sitter languages only)")
     parser.add_argument("--similarity", type=float, default=0.8, help="duplicate candidate similarity, inclusive (default: 0.8)")
