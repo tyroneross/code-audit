@@ -230,8 +230,32 @@ class StructureDeltaTests(unittest.TestCase):
         _, report = self.flags()
         # Git does not list a FIFO as untracked; links are listed and reported unreadable without being opened.
         self.assertEqual(report["binary_or_unreadable_files"], ["link.txt", "zero.py"])
-        self.assertEqual((report["changed_files"], report["measured_source_files"], report["status"]), (2, 1, "clear"))
-        self.assertEqual(report["structure"]["after"]["functions"], 0)
+        self.assertEqual((report["changed_files"], report["measured_source_files"]), (2, 1))
+        # A source file that could not be read was not measured: a gap, never a clean result.
+        self.assertEqual(report["status"], "incomplete")
+        self.assertEqual([(g["side"], g["path"]) for g in report["gaps"]], [("working tree", "zero.py")])
+
+    def test_partial_clone_does_not_fetch_a_missing_object(self):
+        top = self.root.parent / (self.root.name + "-partial")
+        self.addCleanup(lambda: shutil.rmtree(top, ignore_errors=True))
+        source, clone, marker, hook = top / "source", top / "clone", top / "ran", top / "hook"
+        source.mkdir(parents=True)
+        def git(where, *args):
+            subprocess.run(["git", "-C", str(where), "-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false", *args], check=True, capture_output=True)
+        git(source, "init", "-q", "-b", "main")
+        (source / "app.py").write_text(NESTED)
+        git(source, "add", "-A")
+        git(source, "commit", "-q", "-m", "base")
+        git(source, "config", "uploadpack.allowFilter", "true")
+        subprocess.run(["git", "clone", "-q", "--filter=blob:none", "--no-checkout", f"file://{source}", str(clone)], check=True, capture_output=True)
+        hook.write_text('#!/bin/sh\n: > "' + str(marker) + '"\nexit 1\n')
+        hook.chmod(0o700)
+        git(clone, "config", "remote.origin.url", "ssh://example.invalid/repository")
+        git(clone, "config", "core.sshCommand", str(hook))
+        (clone / "app.py").write_text(FLAT)
+        report = structure_delta.delta(clone, base="HEAD")
+        self.assertFalse(marker.exists(), "a Git read fetched a missing object through the repository's remote command")
+        self.assertEqual((report["status"], [(g["side"], g["path"]) for g in report["gaps"]]), ("incomplete", [("base", "app.py")]))
 
     def test_whitespace_only_edit_inside_a_protected_region_is_flagged(self):
         self.write("fast.py", PROTECTED.replace("a = buf[0] ^ key[0]\n", "a = buf[0] ^ key[0]  \n"))

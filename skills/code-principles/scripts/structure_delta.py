@@ -265,6 +265,11 @@ def delta(root, base=None, max_changed_lines=MAX_CHANGED_LINES, threshold=comple
     section, structure_flags = compare(before, after)
     flags = hygiene_flags(changed, contents, lines, max_changed_lines) + structure_flags
     gaps = [{"side": side, **gap} for side, report in (("base", before), ("working tree", after)) for gap in report["gaps"]]
+    # A source file whose bytes could not be read on one side was not measured; that is a gap, not a clean result.
+    for path, sides in sorted(contents.items()):
+        if Path(path).suffix in complexity.SOURCE_SUFFIXES:
+            gaps += [{"side": side, "path": path, "reason": "source file could not be read (not a regular file, or the object is unavailable); not measured"}
+                     for side, data in zip(("base", "working tree"), sides) if data is None]
     return {"schema": "code-audit.structure-delta.v1", "root": str(root), "base": commit, "base_chosen_by": chosen,
             "changed_files": len(changed), "changed_lines": lines, "max_changed_lines": max_changed_lines,
             "binary_or_unreadable_files": sorted(p for p, counts in changed.items() if counts is None),

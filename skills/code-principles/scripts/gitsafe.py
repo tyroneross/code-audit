@@ -2,8 +2,9 @@
 
 A reviewed repository's own configuration can name programs that Git runs during read commands:
 `core.fsmonitor` on status, diff and ls-files; `gpg.program` on log and show when `log.showSignature` is set;
-external diff and textconv drivers on diff, log and show; and clean or process filters whenever Git compares
-with the working tree. Every script reads Git through `run`, which overrides the first two. Pass NO_DRIVERS to
+external diff and textconv drivers on diff, log and show; clean or process filters whenever Git compares
+with the working tree; and the remote command when a partial clone fetches a missing object. Every script reads
+Git through `run`, which overrides the first two and turns lazy fetching off. Pass NO_DRIVERS to
 log and show to disable the third. Nothing here asks Git to compare with the working tree: `changed_paths`
 hashes working files itself with filters off, and `numstat` compares two scratch copies outside the repository.
 """
@@ -16,12 +17,16 @@ import tempfile
 NO_DRIVERS = ("--no-ext-diff", "--no-textconv")
 # Command-line configuration outranks the repository's own.
 OVERRIDES = ("-c", "core.fsmonitor=false", "-c", "log.showSignature=false")
+# In a partial clone a read of a missing object fetches it, which runs the repository's remote command
+# (core.sshCommand, a remote helper) and writes objects. A missing object is reported as missing instead.
+ENVIRONMENT = {"GIT_NO_LAZY_FETCH": "1"}
 
 
 def run(root, *args, timeout=20, stdin=None, ok=(0,)):
     """stdout bytes of `git -C root args`, or None when Git is missing, times out or exits with a status outside ok."""
     try:
-        result = subprocess.run(["git", *OVERRIDES, "-C", str(root), *args], capture_output=True, timeout=timeout, input=stdin)
+        result = subprocess.run(["git", *OVERRIDES, "-C", str(root), *args], capture_output=True, timeout=timeout, input=stdin,
+                                env={**os.environ, **ENVIRONMENT})
     except (OSError, subprocess.TimeoutExpired):
         return None
     return result.stdout if result.returncode in ok else None

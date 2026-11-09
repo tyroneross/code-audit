@@ -248,13 +248,14 @@ impl S {
         else { let g = |x: u8, y: u8| x + y; g(0, 0) }                          // closure 2
     }
     fn flat(a: bool, b: bool, c: bool, d: bool) -> bool { a && b || c && d }
+    fn siblings(a: bool, b: bool, c: bool, d: bool) -> bool { check(a && b, c || d); (a && b) == (c || d) }
     fn bumpy(v: &[u8]) {
         for x in v { if *x > 1 { } }
         while true { if v.len() > 1 { } }
         if v.is_empty() { }
     }
 }
-""", {"S.deep": (3, 1, 0, 2), "S.flat": (0, 0, 3, 4), "S.bumpy": (2, 2, 0, 1)}),
+""", {"S.deep": (3, 1, 0, 2), "S.flat": (0, 0, 3, 4), "S.siblings": (0, 0, 2, 4), "S.bumpy": (2, 2, 0, 1)}),
     "s.ts": ("""function deep(a: number, b?: string, ...rest: any[]) {
   if (a) { x(); }                               // 1
   else if (b) { try { y(); } catch (e) { for (const r of rest) { switch (r) { case 1: break; } } } }  // catch 2, for 3, switch 4
@@ -335,10 +336,15 @@ PATTERNS = [
   if (a == a) return 5; // info
   if (a) { return 6; } else // same
   { return 6; }
+  if (raw == "a b") { g(); } else if (raw == "ab") { h(); }
+  const w = a ? "a b" : "ab";
+  if (a) { return f( 1 ); /* note */ } else { return f(1); }
+  if (b > 1) { g(); } else if (advance(b)) { h(); } else if (b > 1) { k(); }
   return a - a;
 }
 """, [("self_assignment", 2), ("identical_operands", 3), ("duplicate_branches", 4), ("duplicate_branches", 5),
-      ("repeated_condition", 6), ("identical_operands", 12), ("duplicate_branches", 13), ("identical_operands", 15)]),
+      ("repeated_condition", 6), ("identical_operands", 12), ("duplicate_branches", 13), ("duplicate_branches", 17),
+      ("identical_operands", 19)]),
     ("P.java", """class P {
   int f(int a, int b, Object o) {
     int x = a; x = x; this.y = this.y;

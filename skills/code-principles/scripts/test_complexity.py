@@ -193,6 +193,9 @@ class ComplexityTests(unittest.TestCase):
 def flat(a, b, c, d):
     return a and b or c and d
 
+def siblings(a, b, c, d):
+    return (a and b) == (c or d), check(a and b, c or d)
+
 def bumpy(v):
     for x in v:
         if x:
@@ -210,7 +213,7 @@ def outer(self):
     return inner
 """)
         rows = {r["name"]: r for r in self.report()["functions"]}
-        expected = {"K.deep": (4, 2, 0, 5), "K.make": (0, 0, 0, 3), "flat": (0, 0, 3, 4), "bumpy": (2, 2, 0, 1),
+        expected = {"K.deep": (4, 2, 0, 5), "K.make": (0, 0, 0, 3), "flat": (0, 0, 3, 4), "siblings": (0, 0, 2, 4), "bumpy": (2, 2, 0, 1),
                     "outer": (0, 0, 0, 1), "outer.inner": (0, 0, 0, 2)}
         for name, counts in expected.items():
             with self.subTest(function=name):
@@ -248,6 +251,18 @@ def pats(a, b, value):
         return 4
     if b == b:  # info
         return 5
+    if value.ready and advance(value) and value.ready:
+        return 6
+    if a == "x y":
+        return 7
+    elif a == "xy":
+        return 8
+    if value.ready:
+        return 9
+    elif advance(value):
+        return 10
+    elif value.ready:
+        return 11
     seen = {1} & {1}
     if a > 1:
         pass
@@ -258,7 +273,7 @@ def pats(a, b, value):
         report = self.report()
         self.assertEqual([(p["rule"], p["line"]) for p in report["patterns"]],
                          [("self_assignment", 7), ("identical_operands", 8), ("duplicate_branches", 10), ("repeated_condition", 18),
-                          ("duplicate_branches", 20), ("identical_operands", 23), ("identical_operands", 27), ("identical_operands", 34)])
+                          ("duplicate_branches", 20), ("identical_operands", 23), ("identical_operands", 27), ("identical_operands", 46)])
         self.assertTrue(all(p["function_id"] == "pats:5" and p["kind"] == "production" for p in report["patterns"]))
         self.assertEqual(report["production_pattern_count"], 8)
 

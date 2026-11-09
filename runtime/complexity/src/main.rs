@@ -58,9 +58,9 @@
 //! - `params`: declared parameters, without a Rust `self` or Java receiver. A Go
 //!   declaration `a, b int` counts 2.
 //!
-//! Pattern leads per file (`patterns`), each compared as source text with
-//! whitespace removed and reported only when no operand calls a function,
-//! awaits, allocates or mutates:
+//! Pattern leads per file (`patterns`), each compared token by token (spacing
+//! and comments ignored, string contents exact) and reported only when no
+//! operand calls a function, awaits, allocates or mutates:
 //! - `identical_operands`: comparisons, `&&`, `||`, `-`, `/` and `%` whose two
 //!   sides are the same expression, so the result is fixed. Bitwise `&`, `|` and
 //!   `^` are left out (`x & x` coerces to a 32-bit integer in JavaScript). An
@@ -87,6 +87,8 @@ use tree_sitter::{Node, Parser};
 
 const LOCKFILE: &str = include_str!("../Cargo.lock");
 const SHINGLE: usize = 5;
+/// Separates leaf tokens in a compared fragment; cannot occur in source text that parses.
+const TOKEN_BREAK: char = '\u{1}';
 /// A line longer than this marks a minified or generated file; its pattern leads are withheld.
 const GENERATED_LINE_BYTES: usize = 2000;
 /// Upper bound on MinHash functions; banding is derived from the threshold.
@@ -256,9 +258,27 @@ fn bare_type(raw: &str) -> String {
     head.split_whitespace().collect::<Vec<_>>().join("")
 }
 
-/// Source text with all whitespace removed, for comparing two fragments.
+/// The node's leaf tokens in order, for comparing two fragments. Whitespace between tokens and
+/// comments are ignored; whitespace inside a string token is kept, so `"a b"` differs from `"ab"`.
 fn squeezed(node: Node, src: &[u8]) -> String {
-    text(node, src).split_whitespace().collect()
+    fn collect(node: Node, src: &[u8], out: &mut String) {
+        if node.kind().contains("comment") {
+            return;
+        }
+        if node.child_count() == 0 {
+            out.push_str(text(node, src));
+            out.push(TOKEN_BREAK);
+            return;
+        }
+        let mut cursor = node.walk();
+        let children: Vec<Node> = node.children(&mut cursor).collect();
+        for child in children {
+            collect(child, src, out);
+        }
+    }
+    let mut out = String::new();
+    collect(node, src, &mut out);
+    out
 }
 
 /// False when the expression calls, awaits, allocates or mutates, so evaluating
@@ -788,11 +808,13 @@ impl<'a> Walker<'a> {
             Some(b'.' | b'(' | b'[') => true,
             _ => false,
         };
+        if continues || !self.same(left, right) {
+            return;
+        }
+        // Only now read the line, so a file full of comparisons is not rescanned for each one.
         let equality = matches!(op, "==" | "!=" | "===" | "!==");
-        let nan_test = equality && {
-            float_line(String::from_utf8_lossy(src).lines().nth(node.start_position().row).unwrap_or(""))
-        };
-        if !continues && !nan_test && self.same(left, right) {
+        let nan_test = equality && float_line(String::from_utf8_lossy(src).lines().nth(node.start_position().row).unwrap_or(""));
+        if !nan_test {
             let note = if equality { "; a deliberate NaN test is the one valid use" } else { "" };
             self.pattern("identical_operands", node, row, format!("both sides of `{op}` are `{}`{note}", text(left, src).trim()));
         }
@@ -841,7 +863,7 @@ impl<'a> Walker<'a> {
     fn duplicate_branches(&mut self, node: Node<'a>, row: Option<usize>) {
         let src = self.src;
         let Some((first, second)) = self.branches(node) else { return };
-        let empty = squeezed(first, src).trim_matches(['{', '}']).is_empty();
+        let empty = squeezed(first, src).trim_matches(['{', '}', TOKEN_BREAK]).is_empty();
         let binds = node.kind() == self.if_kind() && self.condition_binds(node);
         if !binds && !empty && second.kind() != self.if_kind() && squeezed(first, src) == squeezed(second, src) {
             self.pattern("duplicate_branches", node, row, "both branches are the same code".into());
@@ -858,12 +880,14 @@ impl<'a> Walker<'a> {
         let mut link = Some(node);
         while let Some(current) = link {
             let parts = self.condition_parts(current);
-            let condition = parts.iter().all(|p| pure(*p, src)).then(|| parts.iter().map(|p| squeezed(*p, src)).collect::<Vec<_>>().join(" "));
-            if let Some(text) = condition.filter(|t| !t.is_empty()) {
-                if seen.contains(&text) {
+            if parts.iter().all(|p| pure(*p, src)) {
+                let text = parts.iter().map(|p| squeezed(*p, src)).collect::<Vec<_>>().join(" ");
+                if !text.is_empty() && seen.contains(&text) {
                     self.pattern("repeated_condition", current, row, "this condition repeats an earlier one in the same else-if chain".into());
                 }
                 seen.push(text);
+            } else {
+                seen.clear(); // a condition with an effect can change what an earlier condition tested
             }
             link = self.else_if(current);
         }
@@ -991,19 +1015,15 @@ impl<'a> Walker<'a> {
     fn account(&mut self, node: Node<'a>, i: usize, at: Position) -> (Position, bool) {
         let nests = self.nests(node);
         let mut at = at;
-        if nests || CONDITION_BOUNDARIES.iter().any(|k| node.kind().contains(k)) || node.kind().ends_with("_statement") {
-            at.condition = None;
+        // One count per expression, so `(a && b) == (c || d)` combines two operators: a new count
+        // starts at every statement, block, argument list and nesting construct.
+        if at.condition.is_none() || nests || CONDITION_BOUNDARIES.iter().any(|k| node.kind().contains(k)) || node.kind().ends_with("_statement") {
+            self.conditions.push(0);
+            at.condition = Some(self.conditions.len() - 1);
         }
-        let ops = self.logical_ops(node);
-        if ops > 0 {
-            let index = at.condition.unwrap_or_else(|| {
-                self.conditions.push(0);
-                self.conditions.len() - 1
-            });
-            self.conditions[index] += ops;
-            at.condition = Some(index);
-        }
-        let combined = at.condition.map_or(0, |c| self.conditions[c]);
+        let index = at.condition.unwrap_or_default();
+        self.conditions[index] += self.logical_ops(node);
+        let combined = self.conditions[index];
         let add = self.decision(node);
         let row = &mut self.rows[i];
         row.condition_operators = row.condition_operators.max(combined);

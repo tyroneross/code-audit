@@ -32,16 +32,15 @@ class Shape:
     def __init__(self, body):
         self.max_nesting = self.bumps = self.condition_operators = self.chunk_depth = 0
         for statement in body:
-            self.walk(statement, 0, None, False)
+            self.walk(statement, 0, [0], False)
 
     def walk(self, node, depth, combined, chained):
         if isinstance(node, SCOPES):
             return
         nests = isinstance(node, NESTS) and not chained
         if nests or isinstance(node, CONDITION_BOUNDARIES):
-            combined = None
+            combined = [0]  # one count per expression: `(a and b) == (c or d)` combines two operators
         if isinstance(node, ast.BoolOp):
-            combined = combined if combined is not None else [0]
             combined[0] += len(node.values) - 1
             self.condition_operators = max(self.condition_operators, combined[0])
         if nests:
@@ -88,14 +87,19 @@ def arithmetic_lead(node):
 
 
 def boolean_lead(node):
-    """`a and a`: a pure operand that repeats inside one and/or."""
+    """`a and a`: a pure operand that repeats inside one and/or with nothing between that could change it."""
     if not isinstance(node, ast.BoolOp):
         return None
-    texts = [ast.unparse(value) for value in node.values if pure(value)]
-    repeated = next((text for index, text in enumerate(texts) if text in texts[:index]), None)
-    if repeated is None:
-        return None
-    return "identical_operands", f"both sides of `{'and' if isinstance(node.op, ast.And) else 'or'}` are `{repeated}`"
+    seen = []
+    for value in node.values:
+        if not pure(value):
+            seen = []  # `a.ready and advance(a) and a.ready` rechecks after an effect
+            continue
+        text = ast.unparse(value)
+        if text in seen:
+            return "identical_operands", f"both sides of `{'and' if isinstance(node.op, ast.And) else 'or'}` are `{text}`"
+        seen.append(text)
+    return None
 
 
 def assignment_lead(node, in_function):
@@ -134,6 +138,8 @@ def repeated_condition_leads(head):
             if text in seen:
                 leads.append(("repeated_condition", link.lineno, "this condition repeats an earlier one in the same else-if chain"))
             seen.append(text)
+        else:
+            seen = []  # a condition with an effect can change what an earlier condition tested
         link = elif_of(link)
     return leads
 
