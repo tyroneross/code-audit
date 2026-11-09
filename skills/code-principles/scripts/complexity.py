@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Measure named functions without executing project code.
 
-Python is parsed with the stdlib AST. Rust, TypeScript/TSX, Java, Go and Swift
-are parsed by the bundled tree-sitter analyzer in runtime/complexity (see its
-src/main.rs for per-language counting rules). Build it once, offline:
+Python is parsed with the stdlib AST. Rust, TypeScript/TSX, JavaScript/JSX, Java,
+Go and Swift are parsed by the bundled tree-sitter analyzer in runtime/complexity
+(see its src/main.rs for per-language counting rules; JavaScript is read with the
+TSX grammar). Build it once, offline:
   cargo build --release --offline --manifest-path <plugin>/runtime/complexity/Cargo.toml
 or point CODE_AUDIT_COMPLEXITY_BIN at a built binary. A missing analyzer is a
 reported gap for those files, never a clean result.
@@ -61,7 +62,7 @@ from scan import TEST_PATH  # noqa: E402  shared test-path convention
 SKIP = {".git", "node_modules", "dist", "build", "vendor", "target", "__pycache__", ".venv"}
 SOURCE_SUFFIXES = {".py", ".ts", ".mts", ".cts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".rs", ".go", ".swift", ".java", ".kt", ".rb", ".cs", ".c", ".cpp", ".h", ".hpp"}
 COVERAGE_SCHEMA = "code-audit.function-coverage.v1"
-NATIVE_SUFFIXES = {".rs", ".ts", ".mts", ".cts", ".tsx", ".java", ".go", ".swift"}
+NATIVE_SUFFIXES = {".rs", ".ts", ".mts", ".cts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".java", ".go", ".swift"}
 NATIVE_MANIFEST = Path(__file__).resolve().parents[3] / "runtime" / "complexity" / "Cargo.toml"
 PYTHON_ANALYZER = {"name": "python-ast", "version": sys.version.split()[0], "method": "python-ast-decisions-v1",
                    "structure_method": "python-ast-structure-v1", "languages": ["python"]}
@@ -258,7 +259,7 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
     coverage = coverage_document(coverage)
     limits = structure_thresholds(structure)
     selected, selection, gaps = select(root, paths)
-    rows, digests, patterns = [], {}, []
+    rows, digests, patterns, withheld = [], {}, [], {}
     selected_names = set()
     seen_files = set()
     native_names = []
@@ -281,7 +282,7 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
             native_names.append(name)
             continue
         if path.suffix != ".py":
-            gaps.append({"path": name, "reason": "unsupported language; analyzers cover Python, Rust, TypeScript, Java, Go and Swift"})
+            gaps.append({"path": name, "reason": "unsupported language; analyzers cover Python, Rust, TypeScript, JavaScript, Java, Go and Swift"})
             continue
         try:
             raw = path.read_bytes()
@@ -334,6 +335,8 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
             reason = function["test_reason"] or test_modules.get(name)
             add_row(rows, row, name, entry["language"], reason, supplied if compatible else None, threshold, limits)
         patterns.extend({**lead, "path": name, "language": entry["language"]} for lead in entry.get("patterns", []))
+        if entry.get("patterns_withheld"):
+            withheld[name] = entry["patterns_withheld"]
     if not rows:
         gaps.append({"path": ".", "reason": "no named functions measured; no clean-review conclusion"})
     analyzers = [PYTHON_ANALYZER] if any(r["language"] == "python" for r in rows) or not native else []
@@ -368,6 +371,7 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
             "pattern_count": len(patterns),
             "production_pattern_count": sum(lead["kind"] == "production" for lead in patterns),
             "patterns": patterns,
+            "patterns_withheld": {"reason": "a line longer than 2000 bytes marks the file as minified or generated", "files": withheld},
             **({"duplicates": duplicate_report} if duplicate_report else {}),
             "functions": sorted(rows, key=lambda r: (-r["cc"], r["path"], r["line"]))}
 

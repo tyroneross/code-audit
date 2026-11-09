@@ -424,6 +424,22 @@ class StructureAndPatternTests(unittest.TestCase):
         self.assertEqual(raised["structure_thresholds"]["max_nesting"], 4)
         self.assertEqual(complexity.main([str(self.root), "--paths", "s.rs"]), 0)
 
+    def test_javascript_is_measured_with_its_own_language_name(self):
+        source = "export function pick(a, b) {\n  if (a) { for (const x of b) { if (x) { return x; } } }\n  return a ? b : b;\n}\n"
+        for name in ("m.js", "m.mjs", "m.cjs", "m.jsx"):
+            with self.subTest(file=name):
+                report = self.measure(name, source)
+                self.assertEqual((report["status"], report["languages"]), ("measured", {"javascript": 1}))
+                row = report["functions"][0]
+                self.assertEqual((row["cc"], row["max_nesting"], row["params"]), (5, 3, 2))
+                self.assertEqual([(p["rule"], p["line"]) for p in report["patterns"]], [("duplicate_branches", 3)])
+        self.assertEqual(self.measure("m.tsx", source)["languages"], {"typescript": 1})
+
+    def test_minified_file_keeps_its_rows_and_withholds_pattern_leads(self):
+        report = self.measure("bundle.js", "function f(a){" + "if(a){g()}else{g()};" * 150 + "}\n")
+        self.assertEqual(report["function_count"], 1)
+        self.assertEqual((report["patterns"], report["patterns_withheld"]["files"]), ([], {"bundle.js": 150}))
+
     def test_patterns_in_test_code_are_labelled_test(self):
         (self.root / "tests").mkdir()
         report = self.measure("tests/t.go", "package p\nfunc F(a int) int { if a > 1 { f() } else { f() }; return 0 }\n")

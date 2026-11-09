@@ -1,5 +1,6 @@
 //! Parser-backed per-function cyclomatic complexity (CC) and structural
-//! duplicate leads for Rust, TypeScript/TSX, Java, Go and Swift.
+//! duplicate leads for Rust, TypeScript/TSX, JavaScript/JSX, Java, Go and Swift.
+//! JavaScript files are parsed with the TSX grammar and follow the TypeScript rules.
 //!
 //! The analyzer reads the named source files and parses them with pinned
 //! tree-sitter grammars. It never builds, imports or runs the measured
@@ -74,6 +75,9 @@
 //!   different variables in each branch.
 //! - `repeated_condition`: a condition that repeats an earlier one in the same
 //!   `else if` chain, so its branch cannot run.
+//!
+//! A file with a line longer than 2000 bytes is treated as minified or
+//! generated: its leads are withheld and counted in `patterns_withheld`.
 
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
@@ -82,6 +86,8 @@ use tree_sitter::{Node, Parser};
 
 const LOCKFILE: &str = include_str!("../Cargo.lock");
 const SHINGLE: usize = 5;
+/// A line longer than this marks a minified or generated file; its pattern leads are withheld.
+const GENERATED_LINE_BYTES: usize = 2000;
 /// Upper bound on MinHash functions; banding is derived from the threshold.
 const MAX_MINHASHES: usize = 128;
 /// Target probability that a pair exactly at the threshold becomes a candidate.
@@ -113,7 +119,8 @@ impl Lang {
         Some(match ext {
             "rs" => Lang::Rust,
             "ts" | "mts" | "cts" => Lang::TypeScript,
-            "tsx" => Lang::Tsx,
+            // JavaScript is read with the TSX grammar, which extends the JavaScript grammar.
+            "tsx" | "js" | "jsx" | "mjs" | "cjs" => Lang::Tsx,
             "java" => Lang::Java,
             "go" => Lang::Go,
             "swift" => Lang::Swift,
@@ -121,9 +128,11 @@ impl Lang {
         })
     }
 
-    fn name(self) -> &'static str {
+    /// Reported language; JavaScript shares the TypeScript grammar but keeps its own name.
+    fn name(self, path: &str) -> &'static str {
         match self {
             Lang::Rust => "rust",
+            Lang::Tsx if !path.ends_with(".tsx") => "javascript",
             Lang::TypeScript | Lang::Tsx => "typescript",
             Lang::Java => "java",
             Lang::Go => "go",
@@ -1255,7 +1264,7 @@ fn main() {
                 let mut shingles: Vec<u64> = row.kinds.windows(SHINGLE).map(fnv).collect();
                 shingles.sort_unstable();
                 shingles.dedup();
-                candidates.push(Candidate { lang: lang.name(), path: rel.clone(), function_id: function_id.clone(), shingles });
+                candidates.push(Candidate { lang: lang.name(rel), path: rel.clone(), function_id: function_id.clone(), shingles });
             }
             functions.push(serde_json::json!({
                 "name": row.name,
@@ -1271,9 +1280,11 @@ fn main() {
                 "params": row.params,
             }));
         }
+        let generated = raw.split(|b| *b == b'\n').any(|line| line.len() > GENERATED_LINE_BYTES);
         let patterns: Vec<serde_json::Value> = walker
             .patterns
             .iter()
+            .filter(|_| !generated)
             .map(|p| {
                 let function_id = p.row.map(|i| format!("{}:{}", walker.rows[i].name, walker.rows[i].line));
                 serde_json::json!({"rule": p.rule, "line": p.line, "function_id": function_id, "detail": p.detail})
@@ -1281,13 +1292,14 @@ fn main() {
             .collect();
         files.push(serde_json::json!({
             "path": rel,
-            "language": lang.name(),
+            "language": lang.name(rel),
             "grammar": format!("{} {}", lang.grammar_crate(), versions.get(lang.grammar_crate()).map(String::as_str).unwrap_or("unknown")),
             "sha256": format!("{:x}", Sha256::digest(&raw)),
             "parse_errors": root.has_error(),
             "functions": functions,
             "unowned_decisions": walker.unowned,
             "patterns": patterns,
+            "patterns_withheld": if generated { walker.patterns.len() } else { 0 },
             "modules": walker.modules.iter().map(|(files, test)| serde_json::json!({"candidates": files, "under_test": test})).collect::<Vec<_>>(),
         }));
     }
