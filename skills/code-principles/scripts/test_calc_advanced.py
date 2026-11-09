@@ -441,6 +441,27 @@ class FinanceTests(unittest.TestCase):
             self.assertIn("small difference of large amounts", report["error"])
         self.assertTrue(math.isclose(value("fv(0.05, 2.5, -100, 1000)"), -(1000 * 1.05 ** 2.5 - 100 * (1.05 ** 2.5 - 1) / 0.05), rel_tol=1e-12))
 
+    def test_npv_is_exact_inside_even_at_a_float_rate(self):
+        # -1e17 now and 1e17 a period later at a rate of 1e-17: the present value is about -1, not 0.0.
+        self.assertEqual(value("npv(1e-17, -1e17, 1e17)"), float(-10 ** 17 + 10 ** 17 / (1 + Fraction(1e-17))))
+        rng = random.Random(101)
+        for _ in range(60):
+            rate = rng.choice([1e-12, 0.01, 0.08, -0.04])
+            flows = [rng.choice([-1, 1]) * rng.randint(1, 10 ** 15) for _ in range(rng.randint(2, 12))]
+            expected = sum(Fraction(flow) / (1 + Fraction(rate)) ** period for period, flow in enumerate(flows))
+            self.assertEqual(value(f"npv({rate!r}, {', '.join(map(str, flows))})"), float(expected), (rate, flows))  # correctly rounded
+        self.assertTrue(math.isclose(value("mirr(0.10, 0.12, -100, 50, -60, 70)"), -0.03909366594356467, rel_tol=1e-13))
+        self.assertTrue(math.isclose(value("mirr(0.0, 0.0, -1.0, 1.0000000000000002)"), 2.220446049250313e-16, rel_tol=1e-12))
+
+    def test_a_fractional_term_step_outside_float_range_is_refused(self):
+        # (1/2)**(2201/2) underflows to zero, but times 10**300 the answer is an ordinary 5.2e-32; one step earlier
+        # the float kept only a few digits and the answer was off by 2.8 percent.
+        for expression in ("fv(-1/2, 2201/2, 0, -10**300)", "fv(-1/2, 2141/2, 0, -10**300)", "pv(-1/2, -2201/2, 0, -10**300)"):
+            code, report = calc(expression)
+            self.assertEqual((code, report["status"]), (2, "invalid"), (expression, report))
+        self.assertEqual(value("fv(-1/2, 1100, 0, -2**1200)"), 2 ** 100)  # a whole number of periods is exact
+        self.assertTrue(math.isclose(value("fv(-1/2, 21/2, 0, -10**10)"), 10 ** 10 * 0.5 ** 10.5, rel_tol=1e-12))
+
     def test_bad_arguments_are_refused(self):
         for expression in ("irr(100, 110)", "irr(-100)", "fv(0.05, 10)", "pv(0.05, 10, -100, 0, 2)", "mirr(0.1, 0.1, 100, 50)", "npv(-1, 100, 100)",
                            "nper(0.05, 10, -1000)", "npv(0.05)", "rate(10, 100, 1000, 5000)"):

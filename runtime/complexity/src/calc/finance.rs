@@ -125,29 +125,60 @@ fn time_value(wanted: Wanted, rate: &Value, nper: &Value, pmt: &Value, pv: &Valu
         let lead = as_float(&add(&whole(1)?, &mul(rate, when)?)?)?;
         (log_growth.exp(), log_growth.exp_m1(), lead * log_growth.exp_m1() / r)
     };
+    // Every float on the way must be a normal one. (1 + rate)**nper can underflow to zero or to
+    // a float with few digits left while the answer, after multiplying by a large amount,
+    // is an ordinary number; such a step is refused, not carried on.
+    let out_of_range = || Err("a step of this calculation is too small or too large for a float with a fractional number of periods; use a whole number of periods (computed exactly) or rescale".to_string());
+    if !(grown.is_normal() && factor.is_normal() && (less_one.is_normal() || r == 0.0)) {
+        return out_of_range();
+    }
+    let product = |a: f64, b: f64| Some(a * b).filter(|value| value.is_normal() || (*value == 0.0 && (a == 0.0 || b == 0.0)));
     // The answer is minus a sum of two amounts over a divisor. For pmt the sum is written as
     // (fv + pv) + pv*(grown - 1), with fv + pv taken exactly, so opposite fv and pv do not cancel.
     let (terms, divisor) = match wanted {
-        Wanted::Future => ([x * grown, p * factor], 1.0),
-        Wanted::Present => ([y, p * factor], grown),
-        Wanted::Payment => ([as_float(&add(fv, pv)?)?, x * less_one], factor),
+        Wanted::Future => ([product(x, grown), product(p, factor)], 1.0),
+        Wanted::Present => ([Some(y), product(p, factor)], grown),
+        Wanted::Payment => ([Some(as_float(&add(fv, pv)?)?), product(x, less_one)], factor),
     };
+    let [Some(first), Some(second)] = terms else { return out_of_range() };
+    let terms = [first, second];
     let sum = terms[0] + terms[1];
     if terms[0].abs().max(terms[1].abs()) * FLOAT_NOISE > super::SENSITIVE * sum.abs() {
         return Err("the result is a small difference of large amounts, which floats cannot hold for a fractional number of periods; use a whole number of periods (computed exactly) or smaller amounts".into());
     }
-    if divisor == 0.0 {
-        return Err("division by zero".into());
+    let result = -sum / divisor;
+    if !(result.is_normal() || sum == 0.0) {
+        return out_of_range();
     }
-    float(-sum / divisor)
+    float(result)
 }
 
-/// The net present value of flows at times 0, 1, 2, ...
-fn present(rate: &Value, flows: &[Value]) -> Outcome<Value> {
-    let base = add(&whole(1)?, rate)?;
-    if is_zero(&base) {
+/// The present value of flows at times 0, 1, 2, ... in exact rationals, on the inputs' own
+/// values (a float input is the exact number that float is); `None` when (1 + rate)**n would
+/// be too large to hold. Summed from the last flow back, dividing by 1 + rate at each step.
+fn exact_present(rate: &Value, flows: &[Value]) -> Outcome<Option<BigRational>> {
+    let base = BigRational::one() + as_exact(rate)?;
+    if base.is_zero() {
         return Err("a rate of -1 loses everything each period: the present value is undefined".into());
     }
+    if flows.len() as u64 * base.numer().bits().max(base.denom().bits()) > MAX_EXACT_GROWTH_BITS {
+        return Ok(None);
+    }
+    let mut total = BigRational::zero();
+    for flow in flows.iter().rev() {
+        total = as_exact(flow)? + total / &base;
+    }
+    Ok(Some(total))
+}
+
+/// The net present value of flows at times 0, 1, 2, ... Exact inside and rounded once when
+/// any input was a float, so offsetting flows at a small float rate do not cancel to zero.
+fn present(rate: &Value, flows: &[Value]) -> Outcome<Value> {
+    let approximate = matches!(rate, Value::Float(_)) || flows.iter().any(|flow| matches!(flow, Value::Float(_)));
+    if let Some(total) = exact_present(rate, flows)? {
+        return if approximate { float(super::nearest(&total)?) } else { super::exact(total) };
+    }
+    let base = add(&whole(1)?, rate)?;
     let mut total = whole(0)?;
     for (period, flow) in flows.iter().enumerate() {
         total = add(&total, &div(flow, &power(base.clone(), whole(period as i64)?)?)?)?;
@@ -212,6 +243,9 @@ fn rate(nper: &Value, pmt: &Value, pv: &Value, fv: &Value, when: &Value) -> Outc
         }
         // The equation's left side is only known to float noise times the amounts in it. That
         // noise over the slope is how far the rate could be off; it must be below one part in 10**9.
+        if !(r + 1.0).powf(n).is_normal() {
+            return Err("rate: a step of this calculation is too small or too large for a float with a fractional number of periods".into());
+        }
         if FLOAT_NOISE * scale / rate_slope(r, inputs).abs() > super::SENSITIVE * r.abs() {
             return Err("rate: the amounts are too large beside their difference for floats to fix the rate with a fractional number of periods; use a whole number of periods".into());
         }
@@ -298,9 +332,16 @@ fn mirr(finance: &Value, reinvest: &Value, flows: &[Value]) -> Outcome<Value> {
     // (received / paid)**(1/(n - 1)) * (1 + reinvest) - 1, taken through logarithms: the
     // ratio stays exact until its logarithm, and expm1 gives the final "minus one" without
     // subtracting two numbers that may both be near 1.
-    let sized = |value: Value| if matches!(&value, Value::Exact(r) if r.is_negative()) || matches!(&value, Value::Float(f) if *f < 0.0) { negate(value) } else { value };
-    let ratio = div(&sized(present(reinvest, &received)?), &sized(present(finance, &paid)?))?;
-    let carried = super::natural_log(&add(&whole(1)?, reinvest)?).map_err(|_| "mirr: the reinvestment rate must be above -100%".to_string())?;
+    // The ratio is formed from exact present values where they can be held, so two present
+    // values that agree to sixteen digits still give the right logarithm.
+    let ratio = match (exact_present(reinvest, &received)?, exact_present(finance, &paid)?) {
+        (Some(top), Some(bottom)) => Value::Exact((top / bottom).abs()),
+        _ => {
+            let sized = |value: Value| if matches!(&value, Value::Exact(r) if r.is_negative()) || matches!(&value, Value::Float(f) if *f < 0.0) { negate(value) } else { value };
+            div(&sized(present(reinvest, &received)?), &sized(present(finance, &paid)?))?
+        }
+    };
+    let carried = log_one_plus(reinvest).map_err(|_| "mirr: the reinvestment rate must be above -100%".to_string())?;
     float((super::natural_log(&ratio)? / (flows.len() as f64 - 1.0) + carried).exp_m1())
 }
 
