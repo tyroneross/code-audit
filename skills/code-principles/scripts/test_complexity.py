@@ -169,6 +169,106 @@ class ComplexityTests(unittest.TestCase):
         self.assertEqual(report["selected_files"], ["module.py"])
         self.assertFalse(marker.exists(), "source inventory executed repository fsmonitor")
 
+    def test_python_structure_matches_hand_counts(self):
+        self.source("""class K:
+    def deep(self, a, b, *rest, flag=False, **kw):
+        if a > 1:                       # 1
+            x()
+        elif a > 0:                     # elif stays 1
+            for r in rest:              # 2
+                try:
+                    y()
+                except ValueError:      # 3
+                    while b:            # 4
+                        z()
+        else:
+            if b:                       # 2
+                w()
+        return 1 if a else 2 if b else 3   # chained conditional expression: 2
+
+    @classmethod
+    def make(cls, x, /, y, *, z):
+        return cls()
+
+def flat(a, b, c, d):
+    return a and b or c and d
+
+def bumpy(v):
+    for x in v:
+        if x:
+            pass
+    with open(v) as f:
+        for line in f:
+            if line:
+                pass
+    if v:
+        pass
+
+def outer(self):
+    def inner(self, q):
+        return lambda: q if q else (q and q)
+    return inner
+""")
+        rows = {r["name"]: r for r in self.report()["functions"]}
+        expected = {"K.deep": (4, 2, 0, 5), "K.make": (0, 0, 0, 3), "flat": (0, 0, 3, 4), "bumpy": (2, 2, 0, 1),
+                    "outer": (0, 0, 0, 1), "outer.inner": (0, 0, 0, 2)}
+        for name, counts in expected.items():
+            with self.subTest(function=name):
+                row = rows[name]
+                self.assertEqual((row["max_nesting"], row["bumps"], row["condition_operators"], row["params"]), counts)
+        self.assertEqual(rows["K.deep"]["signals"], ["max_nesting", "bumps"])
+        self.assertEqual(rows["K.deep"]["lines"], 14)  # def on line 2 through the return on line 15
+
+    def test_python_patterns_report_planted_cases_and_no_clean_line(self):
+        self.source("""import math
+from other import NAME
+NAME = NAME  # re-export: not a lead outside a function
+
+def pats(a, b, value):
+    x = a
+    x = x
+    if a == a:
+        return 1
+    if a > 1:
+        f()
+    else:
+        f()
+    if a > 1:
+        g()
+    elif b > 1:
+        h()
+    elif a > 1:
+        k()
+    v = b if a else b
+    if nxt() == nxt():
+        return 2
+    if a and a:
+        return 3
+    if value != value or value in (float("inf"),):
+        return 4
+    seen = {1} & {1}
+    if a > 1:
+        pass
+    else:
+        pass
+    return a - a
+""")
+        report = self.report()
+        self.assertEqual([(p["rule"], p["line"]) for p in report["patterns"]],
+                         [("self_assignment", 7), ("identical_operands", 8), ("duplicate_branches", 10), ("repeated_condition", 18),
+                          ("duplicate_branches", 20), ("identical_operands", 23), ("identical_operands", 32)])
+        self.assertTrue(all(p["function_id"] == "pats:5" and p["kind"] == "production" for p in report["patterns"]))
+        self.assertEqual(report["production_pattern_count"], 7)
+
+    def test_structure_threshold_overrides_are_validated(self):
+        self.source("def f(a):\n    return a\n")
+        for bad in (["depth=3"], ["params=0"], ["params"], ["params=x"]):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                complexity.measure(self.root, ["module.py"], structure=bad)
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(complexity.main([str(self.root), "--paths", "module.py", "--structure", "params=0"]), 2)
+        self.assertEqual(complexity.measure(self.root, ["module.py"], structure=["params=1"])["functions"][0]["signals"], ["params"])
+
     def test_invalid_threshold_is_rejected(self):
         self.source("def f(): return 1\n")
         for threshold in [0, -1, True, 2.5]:

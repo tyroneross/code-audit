@@ -238,6 +238,213 @@ class ReviewRegressionTests(unittest.TestCase):
                 self.assertEqual(duplicates["gaps"][0]["language"], "python")
 
 
+# Hand-counted structure: name -> (max_nesting, bumps, condition_operators, params). Depth comments mark each level.
+STRUCTURE = {
+    "s.rs": ("""struct S;
+impl S {
+    fn deep(&self, a: u8, b: &str) -> u8 {
+        if a > 1 { 1 }                          // 1
+        else if a > 0 { loop { match b { "x" => return 2, _ => return 3 } } }   // else-if stays 1; loop 2; match 3
+        else { let g = |x: u8, y: u8| x + y; g(0, 0) }                          // closure 2
+    }
+    fn flat(a: bool, b: bool, c: bool, d: bool) -> bool { a && b || c && d }
+    fn bumpy(v: &[u8]) {
+        for x in v { if *x > 1 { } }
+        while true { if v.len() > 1 { } }
+        if v.is_empty() { }
+    }
+}
+""", {"S.deep": (3, 1, 0, 2), "S.flat": (0, 0, 3, 4), "S.bumpy": (2, 2, 0, 1)}),
+    "s.ts": ("""function deep(a: number, b?: string, ...rest: any[]) {
+  if (a) { x(); }                               // 1
+  else if (b) { try { y(); } catch (e) { for (const r of rest) { switch (r) { case 1: break; } } } }  // catch 2, for 3, switch 4
+  const t = a ? 1 : b ? 2 : 3;                  // chained ternary 2
+}
+const one = x => x;
+const cb = async (p, {q, r}) => { items.map(i => { if (i && p || q && r) { z(); } }); };
+""", {"deep": (4, 2, 0, 3), "one": (0, 0, 0, 1), "cb": (2, 1, 3, 2)}),
+    "S.java": ("""class S {
+  int deep(int a, String... b) {
+    if (a > 1) { x(); }                         // 1
+    else if (a > 0) { try { y(); } catch (Exception e) { for (String s : b) { switch (a) { case 1: break; default: } } } }  // 2, 3, 4
+    if (a > 5) if (a > 6) z();                  // unbraced nested if: 2
+    Runnable r = () -> { if (a > 0) {} };       // lambda 1, if 2
+    return a > 0 ? 1 : 2;
+  }
+  S(int z, int y, int w, int v, int u, int t) {}
+  void one() { java.util.function.Function<Integer, Integer> f = q -> q; }
+}
+""", {"S.deep": (4, 3, 0, 2), "S.S": (0, 0, 0, 6), "S.one": (1, 0, 0, 0)}),
+    "s.go": ("""package p
+func (s *S) Deep(a, b int, c string, rest ...int) int {
+	if a > 1 { x() } else if a > 0 {            // 1, else-if stays 1
+		for i := range rest { switch i { case 1: select { case <-ch: } } }   // 2, 3, 4
+	}
+	g := func(z int) { if z > 0 {} }            // func literal 1, if 2
+	_ = g
+	return 0
+}
+func G(int, string) {}
+func Cond(a, b int) bool { return a == b && b > 1 || b < 0 && a < 0 }
+""", {"S.Deep": (4, 2, 0, 4), "G": (0, 0, 0, 2), "Cond": (0, 0, 3, 2)}),
+    "s.swift": ("""struct V {
+  func deep(_ a: Int, label b: String, c: Bool = true) -> Int {
+    if a > 1 { x() }                            // 1
+    else if a > 0 { for i in r { switch i { case 1: y()
+      default: break } } }                      // for 2, switch 3
+    else { while a > 0 { do { try z() } catch { w() } } }   // while 2, catch 3
+    guard a > 0 else { return 0 }               // early exit: no level
+    let g = { (p: Int, q: Int) -> Int in if p > 0 { return 1 }
+      return q }                                // closure 1, if 2
+    return 0
+  }
+  init(x: Int, y: Int) {}
+  var body: Int { if true { return 1 }
+    return 2 }
+  func cond(a: Int, b: Bool) { if a > 1 && b || a < 0 && b { } }
+}
+""", {"V.deep": (3, 2, 0, 3), "V.init": (0, 0, 0, 2), "V.body": (1, 0, 0, 0), "V.cond": (1, 0, 3, 2)}),
+}
+
+# One line per case: (file, source, expected [(rule, line)]). Lines with no expectation are the clean cases.
+PATTERNS = [
+    ("p.rs", """fn f(a: u8, b: u8, size: Option<(u8, u8)>, w: u8, h: u8) -> u8 {
+    let mut x = a;
+    x = x;
+    if a == a { return 1 }
+    if a > 1 { 2 } else { 2 };
+    if a > 1 { 1 } else if b > 1 { 2 } else if a > 1 { 3 } else { 4 };
+    if let Some((w, h)) = size { g(w, h) } else { g(w, h) };
+    if next() == next() { return 5 }
+    if a != a { return f64::NAN as u8 }
+    x += x;
+    a & a
+}
+""", [("self_assignment", 3), ("identical_operands", 4), ("duplicate_branches", 5), ("repeated_condition", 6)]),
+    ("p.ts", """function f(a: number, b: number, raw: string | null) {
+  let x = a; x = x;
+  if (a === a) return 1;
+  const v = a ? b : b;
+  if (a > 1) { g(); } else { g(); }
+  if (a > 1) { g(); } else if (b > 1) { h(); } else if (a > 1) { k(); }
+  if (next() == next()) return 2;
+  if (raw!.length > 0 && raw !== raw!.trimStart()) return 3;
+  const isNaNish = a !== a;
+  let hash = a; hash = hash & hash;
+  return a - a;
+}
+""", [("self_assignment", 2), ("identical_operands", 3), ("duplicate_branches", 4), ("duplicate_branches", 5),
+      ("repeated_condition", 6), ("identical_operands", 11)]),
+    ("P.java", """class P {
+  int f(int a, int b, Object o) {
+    int x = a; x = x; this.y = this.y;
+    if (a == a) return 1;
+    int v = a > 1 ? b : b;
+    if (a > 1) { g(); } else { g(); }
+    if (a > 1) { g(); } else if (b > 1) { h(); } else if (a > 1) { k(); }
+    x += x;
+    if (o instanceof String s) { use(s); } else { use(s); }
+    return 0;
+  }
+}
+""", [("self_assignment", 3), ("self_assignment", 3), ("identical_operands", 4), ("duplicate_branches", 5),
+      ("duplicate_branches", 6), ("repeated_condition", 7)]),
+    ("p.go", """package p
+func F(a, b int) int {
+	x := a
+	x = x
+	s.y = s.y
+	x := x
+	if a == a { return 1 }
+	if a > 1 { f() } else { f() }
+	if a > 1 { g() } else if b > 1 { h() } else if a > 1 { k() }
+	x += x
+	if <-ch == <-ch { return 2 }
+	return 0
+}
+""", [("self_assignment", 4), ("self_assignment", 5), ("identical_operands", 7), ("duplicate_branches", 8), ("repeated_condition", 9)]),
+    ("p.swift", """struct P {
+  func f(a: Int, b: Bool) {
+    x = x
+    self.y = self.y
+    let t = b ? a : a
+    if b { g() } else { g() }
+    if a > 1 { g() } else if b { h() } else if a > 1 { k() }
+    x += x
+    if let first { g() } else if let second { h() }
+    if let v = opt { use(v) } else { use(v) }
+    if a == a { }
+  }
+}
+""", [("self_assignment", 3), ("self_assignment", 4), ("duplicate_branches", 5), ("duplicate_branches", 6), ("repeated_condition", 7)]),
+]
+
+
+@unittest.skipUnless(NATIVE, SKIP_REASON)
+class StructureAndPatternTests(unittest.TestCase):
+    """Nesting, bumps, combined conditions, parameters and pattern leads against hand counts."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+
+    def measure(self, name, source, **kwargs):
+        (self.root / name).write_text(source)
+        return complexity.measure(self.root, [name], **kwargs)
+
+    def test_structure_matches_hand_counts_in_every_language(self):
+        for name, (source, expected) in STRUCTURE.items():
+            report = self.measure(name, source)
+            self.assertEqual(report["status"], "measured", report["gaps"])
+            rows = {r["name"]: r for r in report["functions"]}
+            for function, counts in expected.items():
+                with self.subTest(file=name, function=function):
+                    row = rows[function]
+                    self.assertEqual((row["max_nesting"], row["bumps"], row["condition_operators"], row["params"]), counts)
+                    self.assertEqual(row["lines"], row["end_line"] - row["line"] + 1)
+
+    def test_patterns_report_planted_cases_and_no_clean_line(self):
+        for name, source, expected in PATTERNS:
+            with self.subTest(file=name):
+                report = self.measure(name, source)
+                self.assertEqual(sorted((p["rule"], p["line"]) for p in report["patterns"]), sorted(expected))
+                self.assertEqual({p["tier"] for p in report["patterns"] if p["rule"] == "duplicate_branches"}, {"measured"})
+                self.assertEqual({p["tier"] for p in report["patterns"] if p["rule"] != "duplicate_branches"}, {"experimental"})
+                self.assertEqual(report["pattern_count"], len(expected))
+
+    def test_signals_follow_inclusive_thresholds_and_never_change_exit_status(self):
+        source, _ = STRUCTURE["s.rs"]
+        rows = {r["name"]: r for r in self.measure("s.rs", source)["functions"]}
+        self.assertEqual(rows["S.deep"]["signals"], ["max_nesting"])
+        self.assertEqual(rows["S.flat"]["signals"], ["condition_operators"])
+        self.assertEqual(rows["S.bumpy"]["signals"], ["bumps"])
+        raised = self.measure("s.rs", source, structure=["max_nesting=4", "bumps=3", "condition_operators=4"])
+        self.assertEqual(raised["structure_signal_count"], 0)
+        self.assertEqual(raised["structure_thresholds"]["max_nesting"], 4)
+        self.assertEqual(complexity.main([str(self.root), "--paths", "s.rs"]), 0)
+
+    def test_patterns_in_test_code_are_labelled_test(self):
+        (self.root / "tests").mkdir()
+        report = self.measure("tests/t.go", "package p\nfunc F(a int) int { if a > 1 { f() } else { f() }; return 0 }\n")
+        self.assertEqual([(p["rule"], p["kind"]) for p in report["patterns"]], [("duplicate_branches", "test")])
+        self.assertEqual(report["production_pattern_count"], 0)
+
+    def test_analyzer_without_structure_fields_is_a_gap_with_null_values(self):
+        old = {"schema": "code-audit.complexity-native.v1", "status": "measured",
+               "analyzer": {"name": "code-audit-complexity", "version": "0.1.0", "method": "tree-sitter-decisions-v1"},
+               "files": [{"path": "m.go", "language": "go", "sha256": "0" * 64, "parse_errors": False, "unowned_decisions": 0, "modules": [],
+                          "functions": [{"name": "F", "line": 2, "end_line": 2, "function_id": "F:2", "cc": 1, "nodes": 3, "test_reason": None}]}]}
+        (self.root / "m.go").write_text("package m\nfunc F() {}\n")
+        with mock.patch.object(complexity, "run_native", return_value=old):
+            report = complexity.measure(self.root, ["m.go"])
+        self.assertEqual(report["status"], "incomplete")
+        self.assertIn("predates structural signals", report["gaps"][0]["reason"])
+        row = report["functions"][0]
+        self.assertEqual([row[k] for k in complexity.STRUCTURE_FIELDS], [None] * 4)
+        self.assertEqual((row["lines"], row["signals"]), (1, []))
+
+
 class MissingAnalyzerTests(unittest.TestCase):
     def test_missing_analyzer_is_a_gap_with_build_instructions(self):
         with tempfile.TemporaryDirectory() as folder, mock.patch.dict(os.environ, {"CODE_AUDIT_COMPLEXITY_BIN": str(Path(folder) / "absent")}):
