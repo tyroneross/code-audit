@@ -43,6 +43,11 @@ fn exact(value: BigRational) -> Outcome<Value> {
     Ok(Value::Exact(value))
 }
 
+/// The only way a float value is made, so infinity and not-a-number never reach an operation.
+fn float(value: f64) -> Outcome<Value> {
+    if value.is_finite() { Ok(Value::Float(value)) } else { Err("result is not a finite real number".into()) }
+}
+
 fn integer(value: BigInt) -> Outcome<Value> {
     exact(BigRational::from_integer(value))
 }
@@ -122,7 +127,7 @@ fn binary(op: &str, a: Value, b: Value) -> Outcome<Value> {
         };
     }
     let (x, y) = (as_float(&a)?, as_float(&b)?);
-    Ok(Value::Float(match op {
+    float(match op {
         "+" => x + y,
         "-" => x - y,
         "*" => x * y,
@@ -130,7 +135,7 @@ fn binary(op: &str, a: Value, b: Value) -> Outcome<Value> {
         "//" => floor_div_float(x, y).0,
         "%" => floor_div_float(x, y).1,
         _ => return Err(format!("unknown operator {op}")),
-    }))
+    })
 }
 
 /// log2 of a positive integer of any size.
@@ -175,7 +180,7 @@ fn power(base: Value, exponent: Value) -> Outcome<Value> {
     if result.is_infinite() && b.is_finite() && e.is_finite() {
         return Err(if b == 0.0 { "division by zero".into() } else { "result is outside float range".to_string() });
     }
-    Ok(Value::Float(result))
+    float(result)
 }
 
 fn negate(value: Value) -> Value {
@@ -210,7 +215,7 @@ fn round(arguments: &[Value]) -> Outcome<Value> {
     let result = if digits >= 0 { rounded / scale } else { rounded * scale };
     match value {
         Value::Exact(_) => exact(result),
-        Value::Float(_) => Ok(Value::Float(to_float(&result)?)),
+        Value::Float(_) => float(to_float(&result)?),
     }
 }
 
@@ -233,18 +238,45 @@ fn sorted(values: &[Value]) -> Outcome<Vec<Value>> {
     failure.map_or(Ok(ordered), Err)
 }
 
-/// Standard deviation from the exact variance, like Python's statistics module.
+/// The float nearest the square root of n/d, for positive n and d. CPython's
+/// `statistics._float_sqrt_of_frac`: an integer square root kept to 109 bits and rounded to odd,
+/// so the one final rounding is correct and a tiny or huge ratio never passes through a float.
+fn float_sqrt_of_ratio(n: &BigInt, d: &BigInt) -> Outcome<f64> {
+    const WIDTH: i64 = 2 * 53 + 3;
+    let q = (n.bits() as i64 - d.bits() as i64 - WIDTH).div_euclid(2);
+    let rounded_to_odd = |n: BigInt, d: BigInt| {
+        let root = (&n / &d).sqrt();
+        let inexact = &root * &root * &d != n;
+        root | BigInt::from(inexact as u8)
+    };
+    let ratio = if q >= 0 {
+        BigRational::from_integer(rounded_to_odd(n.clone(), d << (2 * q) as usize) << q as usize)
+    } else {
+        BigRational::new(rounded_to_odd(n << (-2 * q) as usize, d.clone()), BigInt::one() << (-q) as usize)
+    };
+    to_float(&ratio)
+}
+
+/// Standard deviation from the exact variance, like Python's statistics module. Each exact
+/// step is held to the size budget, so many large fractions cannot build a huge denominator.
 fn deviation(values: &[Value], sample: bool) -> Outcome<Value> {
     let needed = if sample { 2 } else { 1 };
     if values.len() < needed {
         return Err(format!("needs at least {needed} values"));
     }
-    let data = values.iter().map(as_exact).collect::<Outcome<Vec<_>>>()?;
-    let n = BigRational::from_integer(BigInt::from(data.len()));
-    let mean = data.iter().fold(BigRational::zero(), |sum, x| sum + x) / &n;
-    let squares = data.iter().fold(BigRational::zero(), |sum, x| sum + (x - &mean) * (x - &mean));
-    let divisor = if sample { n - BigRational::one() } else { n };
-    Ok(Value::Float(to_float(&(squares / divisor))?.sqrt()))
+    let data = values.iter().map(|value| as_exact(value).and_then(exact)).collect::<Outcome<Vec<_>>>()?;
+    let mean = binary("/", total(&data)?, count(&data))?;
+    let mut squares = Value::Exact(BigRational::zero());
+    for value in &data {
+        let distance = binary("-", value.clone(), mean.clone())?;
+        squares = binary("+", squares, binary("*", distance.clone(), distance)?)?;
+    }
+    let divisor = integer(BigInt::from(data.len() - sample as usize))?;
+    let Value::Exact(variance) = binary("/", squares, divisor)? else { return Err("variance is not exact".into()) };
+    if variance.is_zero() {
+        return float(0.0);
+    }
+    float(float_sqrt_of_ratio(variance.numer(), variance.denom())?)
 }
 
 fn real(name: &str, arguments: &[Value], f: impl Fn(f64) -> f64, domain: impl Fn(f64) -> bool) -> Outcome<Value> {
@@ -253,7 +285,7 @@ fn real(name: &str, arguments: &[Value], f: impl Fn(f64) -> f64, domain: impl Fn
     if !domain(x) {
         return Err(format!("{name} is not defined for this value"));
     }
-    Ok(Value::Float(f(x)))
+    float(f(x))
 }
 
 fn call(name: &str, arguments: Vec<Value>) -> Outcome<Value> {
@@ -303,7 +335,7 @@ fn call(name: &str, arguments: Vec<Value>) -> Outcome<Value> {
                 if x <= 0.0 || b <= 0.0 || b == 1.0 {
                     return Err("log is not defined for these values".into());
                 }
-                Ok(Value::Float(x.ln() / b.ln()))
+                float(x.ln() / b.ln())
             }
             _ => Err("log takes a value and an optional base".into()),
         },
@@ -381,7 +413,7 @@ fn literal(text: &str) -> Outcome<Value> {
         return integer(BigInt::parse_bytes(lower.as_bytes(), 10).ok_or_else(invalid)?);
     }
     if lower.bytes().all(|b| b.is_ascii_digit() || matches!(b, b'.' | b'e' | b'+' | b'-')) {
-        return lower.parse::<f64>().map(Value::Float).map_err(|_| invalid());
+        return float(lower.parse::<f64>().map_err(|_| invalid())?);
     }
     Err(invalid())
 }

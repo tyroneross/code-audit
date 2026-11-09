@@ -5,7 +5,7 @@
 
 Read-only: lists files with `git ls-files` (os.walk fallback) and reads them with Python regex.
 """
-import argparse, collections, json, os, re, stat, sys
+import argparse, collections, json, os, re, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import gitsafe  # noqa: E402
@@ -53,15 +53,18 @@ def recon(root, base=None, paths=None):
     for p in (paths if scope == "diff" else files):
         if set(p.split("/")) & SKIP:
             continue
-        try:
-            st = os.stat(os.path.join(root, p))
-        except FileNotFoundError:
-            continue  # deleted in the diff, or listed but gone
-        except OSError:
-            inaccessible.append(p)  # exists but cannot be checked: coverage gap, not absence
-            continue
-        if stat.S_ISREG(st.st_mode):
+        # Only a regular file inside the root is read. A link, or a path whose directory was replaced by a link
+        # to somewhere else, is never followed, so nothing outside the source root is opened.
+        state = gitsafe.kind(root, p)
+        if state == "file":
             targets.append(p)
+        elif state == "missing":
+            try:
+                os.lstat(os.path.join(root, p))
+            except FileNotFoundError:
+                continue  # deleted in the diff, or listed but gone
+            except OSError:
+                inaccessible.append(p)  # exists but cannot be checked: coverage gap, not absence
     langs = collections.Counter(LANG[os.path.splitext(p)[1]] for p in targets if os.path.splitext(p)[1] in LANG)
     total = sum(langs.values()) or 1
     hits = {k: 0 for k in PATTERNS}

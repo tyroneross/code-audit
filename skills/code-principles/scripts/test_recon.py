@@ -51,6 +51,22 @@ class ReconTest(unittest.TestCase):
             self.assertEqual(r["signals"]["incomplete"]["unreadable"], ["locked/a.py"])
             self.assertIn("R5b", r["route"]["recipes"])
 
+    def test_nothing_outside_the_root_is_read_through_a_link(self):
+        with tempfile.TemporaryDirectory() as root, tempfile.TemporaryDirectory() as outside:
+            write(outside, {"mod.py": "x = retry()\n", "one.py": "x = retry()\n"})
+            write(root, {"pkg/mod.py": "y = 1\n", "b.py": "y = 1\n"})
+            git(root, "init", "-q")
+            git(root, "add", "-A")
+            # A tracked directory replaced by a link that leaves the root, and a tracked link to an outside file.
+            os.remove(os.path.join(root, "pkg", "mod.py"))
+            os.rmdir(os.path.join(root, "pkg"))
+            os.symlink(outside, os.path.join(root, "pkg"))
+            os.symlink(os.path.join(outside, "one.py"), os.path.join(root, "alias.py"))
+            git(root, "add", "alias.py")
+            r = recon.recon(root)
+            self.assertEqual(r["signals"]["files"], 1)  # b.py only
+            self.assertNotIn("R5b", r["route"]["recipes"])  # the retry text lives outside the root
+
     def test_unlistable_directories_without_git_count_as_incomplete(self):
         with tempfile.TemporaryDirectory() as root:
             write(root, {"locked/a.py": "x = retry()\n", "b.py": "y = 1\n"})
