@@ -75,6 +75,18 @@ class NamesAndFunctionsTests(unittest.TestCase):
         self.assertTrue(math.isclose(value("tiny * 1e300", "--set", "tiny=1/2**2000"), 8.709809816217217e-303, rel_tol=1e-15))
         self.assertEqual(value("(1 + 1/2**60) - 1.0"), 2.0 ** -60)
 
+    def test_a_result_that_depends_on_digits_a_float_cannot_hold_is_refused(self):
+        # 10**30 + 1 lies between two floats 1.4e14 apart, so its sine is not known from either of them
+        # (it is -0.8867...; the nearest float gives 0.0093...).
+        for expression in ("sin(10**30 + 1)", "cos(10**40 + 1/3)", "(1 + 1/2**60) ** (2**60 + 1/2)", "exp(10**18 + 1/3)"):
+            code, report = calc(expression)
+            self.assertEqual((code, report["status"]), (2, "invalid"), (expression, report))
+        # An exact value a float holds, or one the function is not sensitive to, is fine.
+        self.assertTrue(close(value("sin(1/3)"), math.sin(1 / 3), 1e-15))
+        self.assertTrue(close(value("exp(1/3)"), math.exp(1 / 3), 1e-15))
+        self.assertTrue(close(value("2 ** (1/3)"), 2 ** (1 / 3), 1e-15))
+        self.assertTrue(close(value("sin(2**70)"), math.sin(2.0 ** 70), 1e-15))  # 2**70 is itself a float
+
     def test_added_functions(self):
         for expression, expected in (("exp(1)", math.e), ("sin(pi/2)", 1.0), ("cos(0)", 1.0), ("tan(pi/4)", 1.0), ("exp(0)", 1.0)):
             self.assertTrue(close(value(expression), expected), expression)
@@ -390,6 +402,17 @@ class FinanceTests(unittest.TestCase):
         self.assertTrue(math.isclose(value("rate(1, 0, -1, 1 + 1/2**60)"), 2.0 ** -60, rel_tol=1e-12))
         self.assertTrue(math.isclose(value("rate(10, 0, -3500, 10000)"), (10000 / 3500) ** 0.1 - 1, rel_tol=1e-13))
         self.assertTrue(math.isclose(value("rate(2, 0, -100, 121)"), 0.1, rel_tol=1e-13))  # 100 * 1.1**2
+
+    def test_mirr_and_a_fractional_term_rate_keep_or_refuse_small_differences(self):
+        # One period from -1 to 1 + 2**-60 with nothing financed or reinvested: the modified rate is 2**-60.
+        self.assertTrue(math.isclose(value("mirr(0, 0, -1, 1 + 1/2**60)"), 2.0 ** -60, rel_tol=1e-12))
+        # Half a period has no exact form; the float answer moves with digits of the future value a float cannot hold.
+        code, report = calc("rate(1/2, 0, -1, 1 + 1/2**60)")
+        if code == 0:
+            self.assertTrue(math.isclose(number(report["results"][0]["value"]), 1.734723475976807e-18, rel_tol=1e-9))
+        else:
+            self.assertIn("digits", report["error"])
+        self.assertTrue(math.isclose(value("rate(1/2, 0, -100, 105)"), 1.05 ** 2 - 1, rel_tol=1e-12))
 
     def test_bad_arguments_are_refused(self):
         for expression in ("irr(100, 110)", "irr(-100)", "fv(0.05, 10)", "pv(0.05, 10, -100, 0, 2)", "mirr(0.1, 0.1, 100, 50)", "npv(-1, 100, 100)",

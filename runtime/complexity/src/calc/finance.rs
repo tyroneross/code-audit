@@ -12,7 +12,7 @@
 
 use super::poly::Poly;
 use super::solve::{real_roots, single_root_above, Root, Span};
-use super::{as_exact, as_float, binary, float, integer, is_zero, negate, power, Outcome, Value};
+use super::{as_exact, as_float, binary, float, integer, is_zero, negate, other_side, power, steady, Outcome, Value};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Signed, ToPrimitive, Zero};
@@ -89,48 +89,70 @@ fn present(rate: &Value, flows: &[Value]) -> Outcome<Value> {
     Ok(total)
 }
 
-/// The rate per period, by the Newton iteration numpy-financial uses, started at 10%.
+/// The time-value equation's left side at rate r, and its slope, in floats (n periods,
+/// payment p, present value x, future value y, timing w).
+fn rate_residual(r: f64, [n, p, x, y, w]: [f64; 5]) -> f64 {
+    y + (r + 1.0).powf(n) * x + p * ((r + 1.0).powf(n) - 1.0) * (r * w + 1.0) / r
+}
+
+fn rate_slope(r: f64, [n, p, x, _, w]: [f64; 5]) -> f64 {
+    let (t1, t2) = ((r + 1.0).powf(n), (r + 1.0).powf(n - 1.0));
+    n * t2 * x - p * (t1 - 1.0) * (r * w + 1.0) / (r * r) + n * p * t2 * (r * w + 1.0) / r + p * (t1 - 1.0) * w / r
+}
+
+/// numpy-financial's Newton iteration, started at 10%; `None` when it does not settle.
+fn newton_rate(inputs: [f64; 5]) -> Option<f64> {
+    let mut r: f64 = 0.1;
+    for _ in 0..RATE_STEPS {
+        let next = r - rate_residual(r, inputs) / rate_slope(r, inputs);
+        if !next.is_finite() {
+            return None;
+        }
+        let settled = (next - r).abs() < RATE_TOLERANCE;
+        r = next;
+        if settled {
+            return Some(r);
+        }
+    }
+    None
+}
+
+/// The rate per period.
 fn rate(nper: &Value, pmt: &Value, pv: &Value, fv: &Value, when: &Value) -> Outcome<Value> {
     // A rate of zero satisfies the equation exactly when fv + pv + pmt*nper is zero, and the
-    // iteration below divides by the rate, so it is decided first.
+    // iteration divides by the rate, so it is decided first.
     if is_zero(&add(&add(fv, pv)?, &mul(pmt, nper)?)?) {
         return whole(0);
     }
-    let (n, p, x, y, w) = (as_float(nper)?, as_float(pmt)?, as_float(pv)?, as_float(fv)?, as_float(when)?);
-    let g = |r: f64| y + (r + 1.0).powf(n) * x + p * ((r + 1.0).powf(n) - 1.0) * (r * w + 1.0) / r;
-    let slope = |r: f64| {
-        let (t1, t2) = ((r + 1.0).powf(n), (r + 1.0).powf(n - 1.0));
-        n * t2 * x - p * (t1 - 1.0) * (r * w + 1.0) / (r * r) + n * p * t2 * (r * w + 1.0) / r + p * (t1 - 1.0) * w / r
-    };
+    let inputs = [as_float(nper)?, as_float(pmt)?, as_float(pv)?, as_float(fv)?, as_float(when)?];
     let unsettled = || Err("rate: the iteration did not settle on a rate; check the signs (cash paid out is negative)".to_string());
-    let mut r: f64 = 0.1;
-    let mut settled = false;
-    for _ in 0..RATE_STEPS {
-        let next = r - g(r) / slope(r);
-        if !next.is_finite() {
-            break;
-        }
-        settled = (next - r).abs() < RATE_TOLERANCE;
-        r = next;
-        if settled {
-            break;
-        }
-    }
-    if !settled {
-        return unsettled();
-    }
-    // The floats above may have rounded the inputs (a future value of 1 + 2**-60 is 1.0), so
-    // the rate is polished and confirmed with the equation evaluated exactly: each step
-    // moves by the exact residual over the slope, and the rate is accepted once that step is
-    // below one part in 10**12.
+    let Some(mut r) = newton_rate(inputs) else { return unsettled() };
+    // The floats may have rounded the inputs (a future value of 1 + 2**-60 is 1.0). With a
+    // whole number of periods the equation can be evaluated exactly, so the rate is polished
+    // and confirmed there: each step moves by the exact residual over the slope, and the
+    // rate is accepted once that step is below one part in 10**12.
     let periods = match nper {
         Value::Exact(count) if count.is_integer() => count.to_integer().to_i32().filter(|count| count.abs() <= MAX_EXACT_RATE_PERIODS),
         _ => None,
     };
     let Some(periods) = periods else {
-        // No exact form (a fractional or very long term): accept on the float residual alone.
+        // A fractional or very long term has no exact form. The float answer is accepted when
+        // it satisfies the float equation and does not move when an input that is not itself
+        // a float is replaced by the float on its other side.
+        let [n, p, x, y, _] = inputs;
         let scale = y.abs().max(x.abs()).max((p * n).abs()).max(1.0);
-        return if g(r).abs() <= 1e-7 * scale { float(r) } else { unsettled() };
+        if rate_residual(r, inputs).abs() > 1e-7 * scale {
+            return unsettled();
+        }
+        for (index, value) in [nper, pmt, pv, fv].into_iter().enumerate() {
+            if let Some(nearby) = other_side(value, inputs[index]) {
+                let mut moved = inputs;
+                moved[index] = nearby;
+                let Some(other) = newton_rate(moved) else { return unsettled() };
+                steady("rate", r, other)?;
+            }
+        }
+        return float(r);
     };
     let (exact_pmt, exact_pv, exact_fv, exact_when) = (as_exact(pmt)?, as_exact(pv)?, as_exact(fv)?, as_exact(when)?);
     let one = BigRational::one();
@@ -138,7 +160,7 @@ fn rate(nper: &Value, pmt: &Value, pv: &Value, fv: &Value, when: &Value) -> Outc
         let Some(rate) = BigRational::from_float(r).filter(|rate| !rate.is_zero() && *rate > -one.clone()) else { return unsettled() };
         let grown = (&one + &rate).pow(periods);
         let residual = &exact_fv + &exact_pv * &grown + &exact_pmt * (&one + &rate * &exact_when) / &rate * (&grown - &one);
-        let step = super::to_float(&residual)? / slope(r);
+        let step = super::to_float(&residual)? / rate_slope(r, inputs);
         if !step.is_finite() {
             return unsettled();
         }
@@ -202,9 +224,13 @@ fn mirr(finance: &Value, reinvest: &Value, flows: &[Value]) -> Outcome<Value> {
     if received.iter().all(is_zero) || paid.iter().all(is_zero) {
         return Err("mirr needs at least one cash flow paid out (negative) and one received (positive)".into());
     }
-    let top = as_float(&present(reinvest, &received)?)?.abs();
-    let bottom = as_float(&present(finance, &paid)?)?.abs();
-    float((top / bottom).powf(1.0 / (flows.len() as f64 - 1.0)) * (1.0 + as_float(reinvest)?) - 1.0)
+    // (received / paid)**(1/(n - 1)) * (1 + reinvest) - 1, taken through logarithms: the
+    // ratio stays exact until its logarithm, and expm1 gives the final "minus one" without
+    // subtracting two numbers that may both be near 1.
+    let sized = |value: Value| if matches!(&value, Value::Exact(r) if r.is_negative()) || matches!(&value, Value::Float(f) if *f < 0.0) { negate(value) } else { value };
+    let ratio = div(&sized(present(reinvest, &received)?), &sized(present(finance, &paid)?))?;
+    let carried = super::natural_log(&add(&whole(1)?, reinvest)?).map_err(|_| "mirr: the reinvestment rate must be above -100%".to_string())?;
+    float((super::natural_log(&ratio)? / (flows.len() as f64 - 1.0) + carried).exp_m1())
 }
 
 /// A finance function by name, or `None` when the name is not one.

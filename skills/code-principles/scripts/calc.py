@@ -49,6 +49,8 @@ MAX_ROUND_DIGITS = 60
 MAX_CHARS = 2000
 MAX_NODES = 256
 TOLERANCE = 1e-9
+# How far apart the results at the two floats around an exact operand may be before the result is refused.
+SENSITIVE = 1e-9
 # This script is the arithmetic fallback. Names, equations, calculus, finance functions and linear programs exist
 # only in the analyzer binary, which is built on exact rationals and checked against independent methods.
 BINARY_ONLY = {"--set", "--solve", "--between", "--derivative", "--at", "--integral", "--from", "--to", "--expand", "--maximize", "--minimize",
@@ -89,13 +91,6 @@ def approximate(value):
     return result
 
 
-def paired(left, right):
-    """Two operands of a power: a float beside an exact value makes both floats, by the strict rule."""
-    if isinstance(left, float) != isinstance(right, float):
-        return approximate(left), approximate(right)
-    return left, right
-
-
 def combined(operation, left, right):
     """left operation right. An exact value beside a float is combined exactly, on the float's own value, and
     rounded once at the end. Rounding the exact operand first loses what a later subtraction needs:
@@ -105,14 +100,41 @@ def combined(operation, left, right):
     return operation(left, right)
 
 
+def other_side(value, nearest):
+    """The float on the other side of an exact value from its nearest float; None when the value is that float
+    (or was a float to begin with)."""
+    if isinstance(value, float) or Fraction(nearest) == value:
+        return None
+    return math.nextafter(nearest, math.inf if Fraction(nearest) < value else -math.inf)
+
+
+def steady(result, other):
+    """An exact operand that is not itself a float lies between two floats. When the operation gives those two
+    materially different results, its value at the exact operand is not known from floats at all (a base next to
+    1 raised to a huge power), and it is refused instead of reporting the result at one of them."""
+    if not (isinstance(other, float) and abs(result - other) <= SENSITIVE * max(abs(result), abs(other))):
+        raise ValueError("this power depends on digits of an exact value that a float cannot hold; rescale, or keep the arithmetic exact")
+
+
 def power(left, right):
     if isinstance(left, Fraction) and isinstance(right, Fraction):
-        if right.denominator != 1:
-            left, right = approximate(left), approximate(right)  # a fractional power is not exact
-        # Checked before computing: the result has about exponent x log2(base) bits.
-        elif abs(right.numerator) * math.log2(max(abs(left.numerator), left.denominator)) + 1 > MAX_BITS:
-            raise ValueError(f"exact power would exceed {MAX_BITS} bits; use a float base (write 2.0 for 2) or a smaller exponent")
-    return operator.pow(*paired(left, right))
+        if right.denominator == 1:
+            # Checked before computing: the result has about exponent x log2(base) bits.
+            if abs(right.numerator) * math.log2(max(abs(left.numerator), left.denominator)) + 1 > MAX_BITS:
+                raise ValueError(f"exact power would exceed {MAX_BITS} bits; use a float base (write 2.0 for 2) or a smaller exponent")
+            return operator.pow(left, right)
+    elif isinstance(left, float) and isinstance(right, float):
+        return operator.pow(left, right)
+    base, exponent = approximate(left), approximate(right)  # a fractional power, or one float operand: not exact
+    result = operator.pow(base, exponent)
+    if isinstance(result, float):
+        for moved in ((other_side(left, base), exponent), (base, other_side(right, exponent))):
+            if None not in moved:
+                try:
+                    steady(result, operator.pow(*moved))
+                except (OverflowError, ZeroDivisionError):
+                    steady(result, None)
+    return result
 
 
 def total(*values):
@@ -142,8 +164,10 @@ def median(*values):
 def square_root(value):
     """An exact argument goes straight to the correctly rounded square root of the ratio, so its size never passes
     through a float first: sqrt(1/2**2000) is 2**-1000, not 0.0."""
-    if isinstance(value, Fraction) and value > 0:
-        return root_of_ratio(value.numerator, value.denominator)
+    if isinstance(value, Fraction):
+        if value < 0:
+            raise ValueError("sqrt is not defined for a negative value")
+        return root_of_ratio(value.numerator, value.denominator) if value else 0.0
     return math.sqrt(value)
 
 

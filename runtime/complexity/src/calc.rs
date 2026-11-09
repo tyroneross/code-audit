@@ -89,6 +89,32 @@ fn nearest(value: &BigRational) -> Outcome<f64> {
     }
 }
 
+/// How far apart the results at the two floats around an exact value may be, relative to
+/// their size, before the result is taken to depend on digits a float cannot hold.
+const SENSITIVE: f64 = 1e-9;
+
+/// The float on the other side of an exact value from its nearest float `float`; `None` when
+/// the value is itself that float (or was a float to begin with).
+fn other_side(value: &Value, float: f64) -> Option<f64> {
+    let Value::Exact(exact) = value else { return None };
+    match BigRational::from_float(float)?.cmp(exact) {
+        Ordering::Equal => None,
+        Ordering::Less => Some(float.next_up()),
+        Ordering::Greater => Some(float.next_down()),
+    }
+}
+
+/// An exact argument that is not itself a float lies between two floats. When a function
+/// gives those two materially different results, its value at the exact argument is not
+/// known from floats at all (sin(10**30 + 1), or a base next to 1 raised to a huge power),
+/// and it is refused instead of reporting the result at one of them.
+fn steady(what: &str, result: f64, other: f64) -> Outcome<()> {
+    if (result - other).abs() <= SENSITIVE * result.abs().max(other.abs()) {
+        return Ok(());
+    }
+    Err(format!("{what} depends on digits of an exact value that a float cannot hold (the two nearest floats give {result:?} and {other:?}); rescale, or keep the arithmetic exact"))
+}
+
 fn as_float(value: &Value) -> Outcome<f64> {
     match value {
         Value::Exact(r) => nearest(r),
@@ -224,6 +250,12 @@ fn power(base: Value, exponent: Value) -> Outcome<Value> {
     if result.is_infinite() && b.is_finite() && e.is_finite() {
         return Err(if b == 0.0 { "division by zero".into() } else { "result is outside float range".to_string() });
     }
+    if let Some(nearby) = other_side(&base, b) {
+        steady("this power", result, nearby.powf(e))?;
+    }
+    if let Some(nearby) = other_side(&exponent, e) {
+        steady("this power", result, b.powf(nearby))?;
+    }
     float(result)
 }
 
@@ -347,7 +379,11 @@ fn real(name: &str, arguments: &[Value], f: impl Fn(f64) -> f64, domain: impl Fn
     if !domain(x) {
         return Err(format!("{name} is not defined for this value"));
     }
-    float(f(x))
+    let result = f(x);
+    if let Some(nearby) = other_side(value, x).filter(|nearby| domain(*nearby)) {
+        steady(name, result, f(nearby))?;
+    }
+    float(result)
 }
 
 fn call(name: &str, arguments: Vec<Value>) -> Outcome<Value> {
