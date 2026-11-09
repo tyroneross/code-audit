@@ -69,6 +69,7 @@ A value is a lead when it has a live source of truth or varies by context but is
 - **F5 Model ids, prices, regions, account/project/tenant ids and dates have an owner.** Read the catalog, config or clock; check the live source before calling a recent-looking value wrong.
 - **F6 Feature toggles read their flag.** A toggle fixed to a constant may be dead code, a hidden switch or a deliberate kill switch; check [removal evidence](removal-evidence.md) before calling it unused.
 - **F7 One owner per shared identifier.** File names, schema ids, env-var names, wire names and URLs used by several modules or languages come from one definition, are generated from it, or are checked for drift.
+- **F8 Nothing private leaves the machine.** Before a push or publish, run `python3 <cp>/scripts/publish_check.py --range <upstream>..HEAD --from-gh <owner>` (whole tree: drop `--range`). It reads every tracked text file, including data, docs, test fixtures and commit messages, for private repository names (kept in `~/.code-audit/private-names.txt`, never in the repo) and machine-specific paths. Generated records are the usual source: a script that writes `repo/path:line` keys or quotes source lines publishes whatever repositories it measured, so label a private repository (`private-desktop-app`) before recording. Exit 1 blocks the push; a private name already pushed needs a history rewrite, not a new commit.
 
 ## G. Path length and brittle structure
 

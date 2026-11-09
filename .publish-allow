@@ -1,0 +1,2 @@
+# Path globs whose home paths are intentional fixtures. Private names cannot be allowed here.
+skills/code-principles/scripts/test_*.py
