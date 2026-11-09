@@ -175,12 +175,16 @@ class SolveTests(unittest.TestCase):
         # A jump stays a jump when the equation is scaled down or up; floor(x) is never 1/2.
         for equation in ("(floor(x) - 1/2)/10**12 == 0", "floor(x) == 1/2", "(floor(x) - 1/2)*10**12 == 0", "round(x)/10**30 == 1/(2*10**30)",
                          "floor(x) - 1 + 1/10**6 + (x - 1)/10**9 == 0",  # from far below zero to just above it
-                         "10**6*floor(x) - 1 == 0"):  # from just below zero (-1) to far above it (999999)
+                         "10**6*floor(x) - 1 == 0",  # from just below zero (-1) to far above it (999999)
+                         "(x - 1) + (floor(x) - 1/2)/10**9 == 0"):  # a jump of one part in a billion across zero
             code, report = calc("--solve", equation, "--between", "0", "2")
             self.assertEqual((code, report["status"]), (2, "invalid"), (equation, report))
         # A real crossing passes at any scale, including a flat one and one at the end of the bracket.
         for equation, low, high, root in (("(cos(x) - x)/10**12 == 0", "0", "1", 0.7390851332151607), ("(cos(x) - x)*10**12 == 0", "0", "1", 0.7390851332151607),
-                                          ("sin(x)**3 == 0", "-1", "2", 0.0), ("exp(x) == 2", "0", "1", math.log(2)), ("sin(x) == 0", "0", "1", 0.0)):
+                                          ("sin(x)**3 == 0", "-1", "2", 0.0), ("exp(x) == 2", "0", "1", math.log(2)), ("sin(x) == 0", "0", "1", 0.0),
+                                          ("x**x == 2", "1", "2", 1.5596104694623694), ("log(x) == -30", "1/10**20", "1", math.exp(-30)),
+                                          ("exp(x) == 10**200", "400", "500", 200 * math.log(10)), ("tan(x) == 10**6", "1", "15707955/10000000", math.atan(1e6)),
+                                          ("abs(x - 1/3) - 1/7 == 0", "1/3", "1", 1 / 3 + 1 / 7), ("sqrt(x) == 10**-8", "0", "1", 1e-16)):
             code, report = calc("--solve", equation, "--between", low, high)
             self.assertEqual(code, 0, (equation, report))
             self.assertTrue(math.isclose(report["solve"]["solutions"][0]["values"]["x"], root, rel_tol=1e-9, abs_tol=1e-5), (equation, report))
@@ -241,6 +245,16 @@ class CalculusTests(unittest.TestCase):
         self.assertIsInstance(report["derivative"]["value"], float)
         code, report = calc("--derivative", "sin(x)*0 + x", "--at", "2")
         self.assertIsInstance(report["derivative"]["value"], int)
+
+    def test_no_derivative_where_the_expression_has_no_value(self):
+        # The rule gives 1/x for log(x), which has a value at -1 though log(-1) does not.
+        for expression, at in (("log(x)", "-1"), ("sqrt(x)", "-4"), ("log(x)*0 + sin(x)", "-1"), ("x**(1/2)", "-1")):
+            code, report = calc("--derivative", expression, "--at", at)
+            self.assertEqual((code, report["status"]), (2, "invalid"), (expression, report))
+        # At the edge of a domain the value is reported and the missing cross-check is stated.
+        code, report = calc("--derivative", "x**(3/2) + sin(x)", "--at", "0")
+        self.assertEqual((code, report["derivative"]["value"], report["derivative"]["agrees"]), (0, 1.0, None), report)
+        self.assertIn("without the cross-check", report["derivative"]["note"])
 
     def test_printed_derivative_parses_back_to_the_same_value(self):
         for expression in ("sin(x)*exp(2*x)", "(x**2 + 1)/(x - 3)", "sqrt(1 + x**2)", "x**x", "log(x)**3 - 2**x", "-(x - 1)**-2"):

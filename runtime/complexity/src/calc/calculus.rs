@@ -362,6 +362,10 @@ pub(super) fn derivative(expression: &str, wanted: Option<&str>, at: Option<&str
     fields.push(("method", quoted("differentiation rules")));
     if let Some(at) = &at {
         let x = as_float(at)?;
+        // The rules can give a formula defined where the expression is not (1/x for log(x) at
+        // -1), so the expression itself must have a value at the point.
+        eval(&node, &|found| if found == name { Some(at.clone()) } else { names(found) })
+            .map_err(|error| format!("the expression has no value at {name} = {}, so it has no derivative there: {error}", text(&Node::Number(at.clone()))))?;
         let value = eval(&slope, &|found| if found == name { Some(at.clone()) } else { names(found) })?;
         // The rules drop terms such as 0 * f, so a float in the expression may not reach the value: mark it here.
         let value = if matches!(value, Value::Exact(_)) && approximate(&node, names) { float(as_float(&value)?)? } else { value };
@@ -378,6 +382,10 @@ pub(super) fn derivative(expression: &str, wanted: Option<&str>, at: Option<&str
             let agrees = (exact_slope - nearby).abs() <= DERIVATIVE_AGREEMENT * exact_slope.abs().max(nearby.abs()).max(1.0);
             fields.push(("central_difference", format!("{nearby:?}")));
             fields.push(("agrees", agrees.to_string()));
+        } else {
+            fields.push(("central_difference", "null".into()));
+            fields.push(("agrees", "null".into()));
+            fields.push(("note", quoted("the expression has no value just to one side of this point (the edge of its domain), so the value is the rules' result without the cross-check")));
         }
     }
     Ok(object(&fields))

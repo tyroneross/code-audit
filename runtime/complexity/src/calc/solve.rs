@@ -27,8 +27,10 @@ const MAX_ROOT_WORK: u64 = 200_000;
 const MAX_EQUATIONS: usize = 32;
 /// Enough for bisection alone to walk from 1 down to the smallest float, as a flat root at zero needs.
 const BRENT_STEPS: usize = 2200;
-/// At a crossing, the value at the root is at most this fraction of the value a step away on either side.
-const CROSSING: f64 = 1e-3;
+/// At a crossing, the value at the root is at most this fraction of the value a step away on
+/// either side. A smooth function gives about 1e-9 (the root is found to a few parts in
+/// 10**16 and a step is a millionth), so real roots pass with room and a small jump does not.
+const CROSSING: f64 = 1e-7;
 /// Bisection steps for a single root of a long polynomial; enough for a rate as small as 2**-300.
 const MAX_SINGLE_STEPS: u64 = 480;
 
@@ -436,7 +438,10 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
     } else if (at_low < 0.0) == (at_high < 0.0) {
         return Err(format!("left minus right is {at_low:?} at {low:?} and {at_high:?} at {high:?}: the same sign, so --between does not bracket a root"));
     } else {
-        let found = find_root_brent(low, high, &f, &mut Narrow);
+        // Brent's method multiplies function values together, which overflows when they are
+        // around 1e200; divided by the larger end value they stay near 1 and the root is the same.
+        let scale = at_low.abs().max(at_high.abs());
+        let found = find_root_brent(low, high, |x| f(x) / scale, &mut Narrow);
         if let Some(error) = failure.borrow_mut().take() {
             return Err(format!("cannot evaluate the equation {error}"));
         }
