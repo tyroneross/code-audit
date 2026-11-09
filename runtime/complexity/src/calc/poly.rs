@@ -18,10 +18,22 @@ pub(super) fn held(value: BigRational) -> Outcome<BigRational> {
     Ok(value)
 }
 
+/// The float nearest an exact value, refused when no float is near: a value too small or too
+/// large would round to 0.0 or infinity, and the report would state a number that is wrong.
+pub(super) fn nearest(value: &BigRational) -> Outcome<f64> {
+    if value.is_zero() {
+        return Ok(0.0);
+    }
+    match to_float(value) {
+        Ok(float) if float.is_normal() => Ok(float),
+        _ => Err(format!("a value is outside the range of floats (its size is about 2**{}); rescale the problem", value.numer().bits() as i64 - value.denom().bits() as i64)),
+    }
+}
+
 /// An exact value for a report: a float when any input was a float, so a float is never
 /// presented as an exact fraction.
 pub(super) fn reported(value: &BigRational, inexact: bool) -> Outcome<Value> {
-    if inexact { super::float(to_float(value)?) } else { super::exact(value.clone()) }
+    if inexact { super::float(nearest(value)?) } else { super::exact(value.clone()) }
 }
 
 /// `c[i]` is the coefficient of the i-th power; the highest coefficient is not zero.
@@ -84,7 +96,7 @@ impl Poly {
         if power > MAX_DEGREE {
             return Err(format!("a power above {MAX_DEGREE} is not expanded"));
         }
-        let mut result = Poly::new(vec![BigRational::one()], false);
+        let mut result = Poly::new(vec![BigRational::one()], self.inexact);
         for _ in 0..power {
             result = result.times(self)?;
         }

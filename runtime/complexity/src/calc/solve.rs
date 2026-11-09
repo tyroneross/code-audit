@@ -9,7 +9,7 @@
 //! so they are not used. Its bracketed Brent solver is used for equations that are not
 //! polynomials.)
 
-use super::poly::{eliminate, linear, polynomial, reported, unknowns, Poly, Solution};
+use super::poly::{eliminate, linear, nearest, polynomial, reported, unknowns, Poly, Solution};
 use super::{as_exact, as_float, eval, list, object, parse, quoted, relation, shown, to_float, Names, Node, Outcome, Value};
 use num_bigint::BigInt;
 use num_integer::Integer;
@@ -150,6 +150,12 @@ pub(super) enum Root {
     Near(f64),
 }
 
+/// The float nearest an exact root. A root too small or too large for a float is refused:
+/// rounding it to 0.0 or infinity would report a number that is not a root.
+fn near(value: &BigRational) -> Outcome<f64> {
+    nearest(value).map_err(|error| format!("a root cannot be written as a float: {error}"))
+}
+
 impl Root {
     fn float(&self) -> f64 {
         match self {
@@ -171,6 +177,7 @@ fn refine(q: &Ints, mut a: BigRational, mut b: BigRational, steps: u64) -> Outco
     let two = BigRational::from_integer(BigInt::from(2));
     let precision = BigRational::from_integer(BigInt::one() << 62);
     let low_sign = sign_at(q, &a);
+    let mut narrowed = false;
     for _ in 0..steps {
         let middle = (&a + &b) / &two;
         match sign_at(q, &middle) {
@@ -180,8 +187,12 @@ fn refine(q: &Ints, mut a: BigRational, mut b: BigRational, steps: u64) -> Outco
         }
         // Zero is never a root here, so both ends end up on one side of it and relative width is defined.
         if a.is_positive() == b.is_positive() && !a.is_zero() && !b.is_zero() && (&b - &a) * &precision <= a.abs().min(b.abs()) {
+            narrowed = true;
             break;
         }
+    }
+    if !narrowed {
+        return Err("a root could not be narrowed to float precision within the step budget".into());
     }
     let middle = (&a + &b) / &two;
     // A rational root has a denominator that divides the leading coefficient, so it is the
@@ -192,7 +203,7 @@ fn refine(q: &Ints, mut a: BigRational, mut b: BigRational, steps: u64) -> Outco
             return Ok(Root::Exact(candidate));
         }
     }
-    Ok(Root::Near(to_float(&middle)?))
+    Ok(Root::Near(near(&middle)?))
 }
 
 /// Every distinct real root of p in ascending order (only those above zero when `positive`).
@@ -244,9 +255,18 @@ pub(super) fn real_roots(p: &Poly, positive: bool) -> Outcome<Vec<Root>> {
     }
     if p.inexact {
         // Coefficients came from floats, so an exact-looking root would overstate what is known.
-        found = found.iter().map(|root| Root::Near(root.float())).collect();
+        found = found.into_iter().map(|root| match root { Root::Exact(value) => near(&value).map(Root::Near), other => Ok(other) }).collect::<Outcome<Vec<_>>>()?;
     }
-    found.sort_by(|a, b| a.float().total_cmp(&b.float()));
+    // Ordered by exact value: two exact roots may share one float.
+    let place = |root: &Root| match root {
+        Root::Exact(value) => value.clone(),
+        Root::Near(value) => BigRational::from_float(*value).unwrap_or_default(),
+    };
+    found.sort_by_cached_key(place);
+    // Distinct roots that round to one float would read as a single root, or as a repeated one.
+    if let Some(pair) = found.windows(2).find(|pair| pair[0].float() == pair[1].float() && !matches!((&pair[0], &pair[1]), (Root::Exact(_), Root::Exact(_)))) {
+        return Err(format!("two distinct roots near {:?} are closer together than floats can tell apart; rescale the equation", pair[0].float()));
+    }
     Ok(found)
 }
 

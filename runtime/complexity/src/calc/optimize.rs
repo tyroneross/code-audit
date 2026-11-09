@@ -9,11 +9,13 @@
 //! constraints that bind). An answer that passes is reported as exact and proved; any other
 //! is reported as the solver's float answer and marked as such.
 
-use super::poly::{eliminate, linear, reported, Linear, Solution};
+use super::poly::{eliminate, linear, nearest, reported, Linear, Solution};
 use super::{list, object, quoted, relation, shown, to_float, Names, Outcome, Value};
 use microlp::{ComparisonOp, Error, OptimizationDirection, Problem};
 use num_rational::BigRational;
-use num_traits::{Signed, Zero};
+use num_bigint::BigInt;
+use num_integer::Integer;
+use num_traits::{One, Signed, Zero};
 use std::collections::BTreeSet;
 use std::time::Duration;
 
@@ -24,6 +26,10 @@ const TIME_LIMIT: Duration = Duration::from_secs(5);
 const BINDING: f64 = 1e-7;
 /// Choices of binding constraints tried when more bind than there are names.
 const MAX_PROOF_ATTEMPTS: usize = 2000;
+const ROUNDED: &str = "a coefficient does not fit a float exactly, so the solver worked on a slightly different program, and its answer could not be proved optimal; use smaller or simpler numbers";
+/// The whole numbers the solver can search: comfortably inside 32 bits.
+const WHOLE_LOW: f64 = -2_000_000_000.0;
+const WHOLE_HIGH: f64 = 2_000_000_000.0;
 
 struct Constraint {
     source: String,
@@ -48,8 +54,15 @@ impl Constraint {
     }
 }
 
+/// Coefficients as the solver takes them. One too small or too large for a float is refused,
+/// because the solver would otherwise be given a different problem.
 fn floats(values: &[BigRational]) -> Outcome<Vec<f64>> {
-    values.iter().map(to_float).collect()
+    values.iter().map(nearest).collect()
+}
+
+/// Whether the solver sees this number exactly.
+fn kept(value: &BigRational) -> bool {
+    nearest(value).is_ok_and(|float| BigRational::from_float(float).as_ref() == Some(value))
 }
 
 /// The exact point where the binding constraints meet, when they pin down every name.
@@ -132,33 +145,75 @@ pub(super) fn optimize(maximize: bool, objective: &str, subjects: &[String], int
         return Err(format!("--integer names {stray}, which is not in the objective or a constraint"));
     }
     let row = |form: &Linear| -> Vec<BigRational> { free.iter().map(|name| form.terms.get(name).cloned().unwrap_or_default()).collect() };
-    let constraints: Vec<Constraint> = forms.iter().map(|(source, form, op)| Constraint { source: source.clone(), row: row(form), op, bound: -form.constant.clone() }).collect();
+    // Each constraint is multiplied through by the common denominator of its numbers (a positive
+    // factor, so it is the same constraint): whole-number coefficients reach the solver's floats
+    // exactly where a third or a seventh would not.
+    let whole = |values: &[BigRational]| BigRational::from_integer(values.iter().fold(BigInt::one(), |multiple, value| multiple.lcm(value.denom())));
+    let constraints: Vec<Constraint> = forms
+        .iter()
+        .map(|(source, form, op)| {
+            let (row, bound) = (row(form), -form.constant.clone());
+            let factor = whole(&[row.as_slice(), std::slice::from_ref(&bound)].concat());
+            Constraint { source: source.clone(), row: row.iter().map(|value| value * &factor).collect(), op, bound: bound * &factor }
+        })
+        .collect();
     let weights = row(&goal);
+    // The objective is scaled the same way for the solver only; reported values use `weights`.
+    let goal_factor = whole(&weights);
+    let solver_weights: Vec<BigRational> = weights.iter().map(|weight| weight * &goal_factor).collect();
 
-    let mut problem = Problem::new(if maximize { OptimizationDirection::Maximize } else { OptimizationDirection::Minimize });
-    problem.set_time_limit(TIME_LIMIT);
-    let mut variables = Vec::new();
-    for (name, weight) in free.iter().zip(floats(&weights)?) {
-        variables.push(if integers.contains(name) { problem.add_integer_var(weight, (i32::MIN, i32::MAX)) } else { problem.add_var(weight, (f64::NEG_INFINITY, f64::INFINITY)) });
-    }
-    for constraint in &constraints {
-        let terms: Vec<_> = variables.iter().cloned().zip(floats(&constraint.row)?).filter(|(_, coefficient)| *coefficient != 0.0).collect();
-        let op = match constraint.op {
-            "<=" => ComparisonOp::Le,
-            ">=" => ComparisonOp::Ge,
-            _ => ComparisonOp::Eq,
-        };
-        problem.add_constraint(terms, op, to_float(&constraint.bound)?);
-    }
+    // The program in the solver's terms: `limits` holds the range of each whole-number name.
+    let build = |direction: OptimizationDirection, weights: &[f64], limits: &[Option<(i32, i32)>]| -> Outcome<(Problem, Vec<microlp::Variable>)> {
+        let mut problem = Problem::new(direction);
+        problem.set_time_limit(TIME_LIMIT);
+        let variables: Vec<_> = weights.iter().zip(limits).map(|(weight, limit)| match limit {
+            Some(range) => problem.add_integer_var(*weight, *range),
+            None => problem.add_var(*weight, (f64::NEG_INFINITY, f64::INFINITY)),
+        }).collect();
+        for constraint in &constraints {
+            let terms: Vec<_> = variables.iter().cloned().zip(floats(&constraint.row)?).filter(|(_, coefficient)| *coefficient != 0.0).collect();
+            let op = match constraint.op {
+                "<=" => ComparisonOp::Le,
+                ">=" => ComparisonOp::Ge,
+                _ => ComparisonOp::Eq,
+            };
+            problem.add_constraint(terms, op, nearest(&constraint.bound)?);
+        }
+        Ok((problem, variables))
+    };
     let direction = ("direction", quoted(if maximize { "maximize" } else { "minimize" }));
     let listed = ("names", list(&free.iter().map(|name| quoted(name)).collect::<Vec<_>>()));
     let without = |outcome: &str, note: &str| Ok(object(&[direction.clone(), listed.clone(), ("outcome", quoted(outcome)), ("note", quoted(note))]));
     if let Some(subject) = impossible {
         return without("infeasible", &format!("the constraint {subject:?} is false whatever the names are"));
     }
+
+    // The solver searches a whole-number name only inside 32-bit limits. Rather than apply
+    // limits the caller never wrote, find the range the constraints allow each such name
+    // (two small programs per name, without the whole-number rule) and refuse a name the
+    // constraints leave open or let pass those limits.
+    let mut limits: Vec<Option<(i32, i32)>> = vec![None; free.len()];
+    for (index, name) in free.iter().enumerate().filter(|(_, name)| integers.contains(name)) {
+        let mut ends = [0.0; 2];
+        for (end, direction) in ends.iter_mut().zip([OptimizationDirection::Minimize, OptimizationDirection::Maximize]) {
+            let only: Vec<f64> = (0..free.len()).map(|other| (other == index) as u8 as f64).collect();
+            let (range, variables) = build(direction, &only, &vec![None; free.len()])?;
+            *end = match range.solve() {
+                Err(Error::Infeasible) => return without("infeasible", "no values satisfy every constraint"),
+                Err(Error::Unbounded) => return Err(format!("the constraints leave the whole-number name {name} without a limit on one side; add one (for example \"{name} >= 0\" and \"{name} <= 1000\")")),
+                Err(error) => return Err(format!("the solver failed: {error}")),
+                Ok(outcome) => outcome.into_solution().map_err(|_| format!("no answer within {} seconds", TIME_LIMIT.as_secs()))?.var_value(variables[index]),
+            };
+        }
+        let (low, high) = ((ends[0] - 1e-6).floor(), (ends[1] + 1e-6).ceil());
+        if !(low >= WHOLE_LOW && high <= WHOLE_HIGH) {
+            return Err(format!("the whole-number name {name} can reach {low:?} to {high:?}; the solver handles whole numbers between {WHOLE_LOW:?} and {WHOLE_HIGH:?}"));
+        }
+        limits[index] = Some((low as i32, high as i32));
+    }
+    let (problem, variables) = build(if maximize { OptimizationDirection::Maximize } else { OptimizationDirection::Minimize }, &floats(&solver_weights)?, &limits)?;
     let solved = match problem.solve() {
-        Err(Error::Infeasible) if integers.is_empty() => return without("infeasible", "no values satisfy every constraint"),
-        Err(Error::Infeasible) => return without("infeasible", "no values satisfy every constraint with the whole-number names between -2147483648 and 2147483647"),
+        Err(Error::Infeasible) => return without("infeasible", "no values satisfy every constraint"),
         Err(Error::Unbounded) => return without("unbounded", "the objective improves without limit; a name is unbounded unless a constraint bounds it, so add \"x >= 0\" when a quantity cannot be negative"),
         Err(error) => return Err(format!("the solver failed: {error}")),
         Ok(outcome) => outcome.into_solution().map_err(|_| format!("no answer within {} seconds", TIME_LIMIT.as_secs()))?,
@@ -192,13 +247,16 @@ pub(super) fn optimize(maximize: bool, objective: &str, subjects: &[String], int
         None
     };
     let integral = |point: &[BigRational]| free.iter().zip(point).all(|(name, value)| !integers.contains(name) || value.is_integer());
-    let float_goal = solved.objective() + to_float(&goal.constant)?;
+    let float_goal = solved.objective() / nearest(&goal_factor)? + to_float(&goal.constant)?;
     let exact_point = candidate.filter(|point| {
         let goal_value = weights.iter().zip(point).fold(goal.constant.clone(), |sum, (weight, x)| sum + weight * x);
         let near = to_float(&goal_value).is_ok_and(|value| (value - float_goal).abs() <= 1e-6 * float_goal.abs().max(1.0));
         near && integral(point) && constraints.iter().all(|constraint| constraint.holds(point))
     });
 
+    // The solver works in floats. When a coefficient does not fit one exactly it solved a
+    // slightly different program, so its answer stands only if it is then proved exactly.
+    let rounded = !solver_weights.iter().chain(constraints.iter().flat_map(|constraint| constraint.row.iter().chain([&constraint.bound]))).all(kept);
     let binding_sources: Vec<String> = binding.iter().map(|constraint| quoted(&constraint.source)).collect();
     let mut fields = vec![direction, listed, ("outcome", quoted("optimal"))];
     match exact_point {
@@ -210,12 +268,16 @@ pub(super) fn optimize(maximize: bool, objective: &str, subjects: &[String], int
             fields.push(("values", object(&values)));
             fields.push(("exact", "true".into()));
             fields.push(("proved_optimal", is_proved.to_string()));
+            if rounded && !is_proved {
+                return Err(ROUNDED.into());
+            }
             fields.push(("note", quoted(if is_proved {
                 "values satisfy every constraint exactly, and the optimality conditions hold exactly"
             } else {
                 "values satisfy every constraint exactly; that no better point exists rests on the solver"
             })));
         }
+        None if rounded => return Err(ROUNDED.into()),
         None => {
             let values: Vec<(&str, String)> = free.iter().zip(&found).map(|(name, value)| (name.as_str(), shown(&Value::Float(*value)))).collect();
             fields.push(("objective", shown(&super::float(float_goal)?)));
@@ -232,7 +294,6 @@ pub(super) fn optimize(maximize: bool, objective: &str, subjects: &[String], int
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num_bigint::BigInt;
 
     fn whole(value: i64) -> BigRational {
         BigRational::from_integer(BigInt::from(value))

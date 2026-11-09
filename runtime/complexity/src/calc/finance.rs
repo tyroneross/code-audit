@@ -211,5 +211,11 @@ pub(super) fn call(name: &str, values: &[Value]) -> Option<Outcome<Value>> {
         ("fv" | "pv" | "pmt" | "nper" | "rate" | "npv" | "mirr", _) => Err(format!("{name}: wrong number of values; see --help for its arguments")),
         _ => return None,
     };
-    Some(result)
+    // One rule for every function here: a float among the arguments makes the result a float,
+    // whichever branch or shortcut produced it.
+    let approximate = values.iter().any(|value| matches!(value, Value::Float(_)));
+    Some(result.and_then(|value| match value {
+        Value::Exact(exact) if approximate => float(super::to_float(&exact)?),
+        other => Ok(other),
+    }))
 }

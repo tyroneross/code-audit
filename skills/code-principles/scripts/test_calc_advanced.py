@@ -103,6 +103,25 @@ class SolveTests(unittest.TestCase):
         (root, exact), = self.roots("0.5*x == 1")
         self.assertEqual((root, exact), (2.0, False))
 
+    def test_a_root_floats_cannot_hold_or_tell_apart_is_refused_not_rounded(self):
+        # The roots are +-sqrt(2) * 2**-1100: rounding them to 0.0 would report a number that is not a root.
+        code, report = calc("--solve", "x**2 == 2/2**2200")
+        self.assertEqual(code, 2, report)
+        self.assertIn("outside the range of floats", report["error"])
+        # Two irrational roots 2**-80 apart share one float.
+        code, report = calc("--solve", "(x**2 - 2)*(x**2 - 2 - 1/2**80) == 0")
+        self.assertEqual(code, 2, report)
+        self.assertIn("closer together than floats", report["error"])
+        # Two rational roots that close are both reported, exactly.
+        found = self.roots("(x - 1)*(x - 1 - 1/2**70) == 0")
+        self.assertEqual(found, [(1, True), (1 + Fraction(1, 2**70), True)])
+
+    def test_a_float_anywhere_in_the_equation_keeps_the_answer_inexact(self):
+        for equation in ("(x + 0.0)**0 + x == 1", "x == rate(10.0, -10, 100, 0)", "x + 0.5 - 0.5 == 3", "x*(1 + 0.0) == 3"):
+            (root, exact), = self.roots(equation)
+            self.assertFalse(exact, equation)
+            self.assertIsInstance(root, float, equation)
+
     def test_linear_systems_are_exact_and_singular_ones_are_named(self):
         solved = self.solutions("--solve", "2*x + 3*y == 7", "--solve", "x - y == 1")
         self.assertEqual({k: number(v) for k, v in solved["solutions"][0]["values"].items()}, {"x": 2, "y": 1})
@@ -113,6 +132,11 @@ class SolveTests(unittest.TestCase):
         self.assertIn("contradict", self.solutions("--solve", "x + y == 1", "--solve", "x + y == 2")["note"])
         self.assertIn("infinitely many", self.solutions("--solve", "x + y == 1", "--solve", "2*x + 2*y == 2")["note"])
         self.assertEqual(calc("--solve", "x*y == 1", "--solve", "x + y == 2")[0], 2)  # not linear
+
+    def test_a_float_answer_too_small_for_a_float_is_refused(self):
+        code, report = calc("--solve", "1e200*x + y == 1e-200", "--solve", "y == 0")  # x is 1e-400
+        self.assertEqual(code, 2, report)
+        self.assertIn("outside the range of floats", report["error"])
 
     def test_other_equations_need_a_bracket_and_a_jump_is_not_a_root(self):
         solved = self.solutions("--solve", "cos(x) == x", "--between", "0", "1")
@@ -150,6 +174,13 @@ class CalculusTests(unittest.TestCase):
             self.assertEqual(code, 0, report)
             self.assertTrue(close(number(report["derivative"]["value"]), expected), (expression, report))
             self.assertTrue(report["derivative"]["agrees"], (expression, report))
+
+    def test_a_float_dropped_by_a_rule_still_marks_the_value(self):
+        code, report = calc("--derivative", "0*exp(0.5*x) + sin(x)*0 + x", "--at", "2")  # the rules reduce this to 1
+        self.assertEqual(report["derivative"]["expression"], "1")
+        self.assertIsInstance(report["derivative"]["value"], float)
+        code, report = calc("--derivative", "sin(x)*0 + x", "--at", "2")
+        self.assertIsInstance(report["derivative"]["value"], int)
 
     def test_printed_derivative_parses_back_to_the_same_value(self):
         for expression in ("sin(x)*exp(2*x)", "(x**2 + 1)/(x - 3)", "sqrt(1 + x**2)", "x**x", "log(x)**3 - 2**x", "-(x - 1)**-2"):
@@ -216,6 +247,13 @@ class FinanceTests(unittest.TestCase):
         self.assertEqual(value("pv(1/10, 1, 0, 110)"), -100)
         self.assertEqual(value("pmt(0, 10, 100, -20)"), -8)
         self.assertEqual(value("rate(10, -10, 100, 0)"), 0)  # ten payments of 10 repay 100 at no interest
+
+    def test_a_float_argument_always_gives_a_float_result(self):
+        for exact, approximate in (("nper(0, -10, 100)", "nper(0.0, -10, 100)"), ("rate(10, -10, 100, 0)", "rate(10.0, -10, 100, 0)"),
+                                   ("fv(0, 3, -10, 0)", "fv(0, 3, -10.0, 0)"), ("npv(0, 1, 2)", "npv(0, 1.0, 2)"), ("irr(-100, 110)", "irr(-100.0, 110)")):
+            self.assertNotIsInstance(value(exact), float, exact)
+            self.assertIsInstance(value(approximate), float, approximate)
+            self.assertTrue(close(value(exact), value(approximate)))
 
     def test_future_value_matches_a_period_by_period_simulation(self):
         rng = random.Random(41)
@@ -307,6 +345,38 @@ class OptimizeTests(unittest.TestCase):
         self.assertEqual(({k: number(v) for k, v in relaxed["values"].items()}, relaxed["objective"]), ({"x": 3, "y": Fraction(3, 2)}, 21))
         whole = calc(*arguments, "--integer", "x,y")[1]["optimize"]
         self.assertEqual((whole["values"], whole["objective"], whole["exact"], whole["proved_optimal"]), ({"x": 4, "y": 0}, 20, True, False))
+
+    def test_a_whole_number_name_must_be_limited_by_the_constraints(self):
+        # The solver searches whole numbers inside 32 bits; a limit the caller did not write is never applied silently.
+        for arguments in (["--maximize", "x", "--subject", "x <= 3000000000", "--integer", "x"],  # no lower limit
+                          ["--maximize", "x", "--subject", "x >= 0", "--integer", "x"],  # no upper limit: the true answer is unbounded
+                          ["--maximize", "x", "--subject", "x >= 0", "--subject", "x <= 3000000000", "--integer", "x"],  # beyond the solver's range
+                          ["--minimize", "0 - x", "--subject", "x >= 0", "--integer", "x"]):
+            code, report = calc(*arguments)
+            self.assertEqual((code, report["status"]), (2, "invalid"), arguments)
+            self.assertIn("whole-number name x", report["error"])
+        code, report = calc("--maximize", "x", "--subject", "x >= 0", "--subject", "2*x <= 7", "--integer", "x")
+        self.assertEqual((report["optimize"]["objective"], report["optimize"]["values"]), (3, {"x": 3}))
+        code, report = calc("--maximize", "x", "--subject", "x >= 0", "--subject", "x <= 1999999999", "--integer", "x")
+        self.assertEqual(report["optimize"]["objective"], 1999999999)
+
+    def test_fractions_reach_the_solver_exactly_and_numbers_too_large_for_it_are_refused(self):
+        # A third is not a float; each constraint is scaled to whole numbers first, so the answer is still exact and proved.
+        code, report = calc("--maximize", "x/3 + y/7", "--subject", "x/3 + y/5 <= 4/7", "--subject", "x >= 0", "--subject", "y >= 0")
+        answer = report["optimize"]
+        self.assertEqual((number(answer["objective"]), number(answer["values"]["x"]), answer["proved_optimal"]), (Fraction(4, 7), Fraction(12, 7), True))
+        code, report = calc("--maximize", "x/3 + y", "--subject", "x + y <= 4", "--subject", "x >= 0", "--subject", "y >= 0", "--subject", "x <= 3", "--integer", "x,y")
+        self.assertEqual((report["optimize"]["objective"], report["optimize"]["values"]), (4, {"x": 0, "y": 4}))
+        # 2**60 + 1 and 2**60 are the same float, so the solver cannot see that x is worth more than y. The true optimum is
+        # x = 3, y = 1; an answer that cannot be proved is refused, with or without whole numbers.
+        big = ["--maximize", "(2**60 + 1)*x + 2**60*y", "--subject", "x + y <= 4", "--subject", "x >= 0", "--subject", "y >= 0", "--subject", "x <= 3"]
+        for arguments in (big, big + ["--integer", "x,y"]):
+            code, report = calc(*arguments)
+            if code == 0:  # accepted only when proved, and then it must be the true optimum
+                self.assertEqual((report["optimize"]["proved_optimal"], report["optimize"]["values"]), (True, {"x": 3, "y": 1}))
+            else:
+                self.assertIn("does not fit a float exactly", report["error"])
+        self.assertEqual(calc("--maximize", "x/2**1100", "--subject", "x <= 4", "--subject", "x >= 0")[0], 2)
 
     def test_random_programs_match_corner_enumeration(self):
         rng = random.Random(53)

@@ -146,6 +146,17 @@ fn size(node: &Node, limit: usize) -> usize {
     }
 }
 
+/// Whether a float enters the expression, as a literal or through a name (pi and e are floats).
+fn approximate(node: &Node, names: Names) -> bool {
+    match node {
+        Node::Number(value) => matches!(value, Value::Float(_)),
+        Node::Name(name) => matches!(names(name), Some(Value::Float(_))),
+        Node::Negate(inner) => approximate(inner, names),
+        Node::Binary(_, left, right) => approximate(left, names) || approximate(right, names),
+        Node::Call(_, arguments) => arguments.iter().any(|argument| approximate(argument, names)),
+    }
+}
+
 fn point(source: &str, names: Names) -> Outcome<Value> {
     eval(&*parse(source)?, names)
 }
@@ -172,6 +183,8 @@ pub(super) fn derivative(expression: &str, wanted: Option<&str>, at: Option<&str
     if let Some(at) = &at {
         let x = as_float(at)?;
         let value = eval(&slope, &|found| if found == name { Some(at.clone()) } else { names(found) })?;
+        // The rules drop terms such as 0 * f, so a float in the expression may not reach the value: mark it here.
+        let value = if matches!(value, Value::Exact(_)) && approximate(&node, names) { float(as_float(&value)?)? } else { value };
         fields.push(("at", shown(at)));
         fields.push(("value", shown(&value)));
         // An independent check: the slope between two nearby points. It is skipped where the
