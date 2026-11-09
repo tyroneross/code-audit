@@ -38,7 +38,7 @@ FUNCTIONS = {"abs": abs, "round": lambda *arguments: rounded(*arguments), "min":
              "max": lambda *values: extreme(max, values), "sum": lambda *values: total(*values), "sqrt": math.sqrt,
              "floor": math.floor, "ceil": math.ceil, "log": math.log, "log2": math.log2, "log10": math.log10,
              "mean": lambda *values: mean(*values), "median": lambda *values: statistics.median(values),
-             "stdev": lambda *values: deviation(statistics.stdev, values), "pstdev": lambda *values: deviation(statistics.pstdev, values)}
+             "stdev": lambda *values: deviation(True, values), "pstdev": lambda *values: deviation(False, values)}
 # Size budget for every exact value, so 9**9**9 or a nested power cannot exhaust memory. 4096 bits is about 1,230
 # digits: far beyond any review arithmetic, and below the 4,300 digits at which Python refuses to print an integer,
 # so every permitted result can be written and read back as JSON.
@@ -95,19 +95,32 @@ def mean(*values):
     return bounded(total(*values) / len(values))
 
 
-def deviation(spread, values):
-    """Standard deviation from the standard library, after its exact steps (mean, squared distances, variance)
-    are shown to stay inside the size budget; the analyzer binary's calc takes the same steps."""
-    if len(values) < (2 if spread is statistics.stdev else 1):
-        raise ValueError(f"needs at least {2 if spread is statistics.stdev else 1} values")
+def root_of_ratio(n, d):
+    """The float nearest the square root of n/d. CPython's statistics._float_sqrt_of_frac: an integer square root
+    kept to 109 bits and rounded to odd, so the single final rounding is correct and a tiny or huge ratio never
+    passes through a float."""
+    def rounded_to_odd(n, d):
+        root = math.isqrt(n // d)
+        return root | (root * root * d != n)
+    q = (n.bit_length() - d.bit_length() - 109) // 2
+    if q >= 0:
+        return float(rounded_to_odd(n, d << 2 * q) << q)
+    return rounded_to_odd(n << -2 * q, d) / (1 << -q)
+
+
+def deviation(sample, values):
+    """Standard deviation with every exact step (mean, squared distances, variance) inside the size budget;
+    the analyzer binary's calc takes the same steps, so both refuse the same inputs."""
+    if len(values) < 1 + sample:
+        raise ValueError(f"needs at least {1 + sample} values")
     data = [bounded(Fraction(value)) for value in values]
     centre = mean(*data)
     squares = Fraction(0)
     for value in data:
         distance = bounded(value - centre)
         squares = bounded(squares + bounded(distance * distance))
-    bounded(squares / (len(data) - (spread is statistics.stdev)))
-    return spread(data)
+    variance = bounded(squares / (len(data) - sample))
+    return root_of_ratio(variance.numerator, variance.denominator) if variance else 0.0
 
 
 def rounded(value, digits=None):
