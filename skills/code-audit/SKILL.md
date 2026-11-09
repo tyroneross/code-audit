@@ -23,6 +23,7 @@ if affected Cargo manifests or source identify GPUI: read ../code-principles/ref
 if agent dependencies or handoffs: read ../code-principles/references/challenge-guidance.md#agent-communication-and-dependency-handoffs
 if unused code, stale experiments or constant flags: read ../code-principles/references/removal-evidence.md
 if literals with a source of truth, environment-specific values, or extra layers/services: read ../code-principles/references/frozen-values-and-path-length.md; compare each version, path, id, name table and copied list with its source in every supplied file
+if guarded equations, simultaneous equations or numeric algorithm output are in scope: use ../code-principles/references/measurement.md#check-equations-and-algorithms-against-independent-expectations for reference inputs and expected results
 run recon, follow the starting route in references/audit-methods.md, adapt per its rules and end with its coverage matrix
 probe before concluding: when execution is authorized, run the cheapest discriminating check outside the repo; label each finding probed or read
 compute, do not estimate: every number you report (totals, percentages, ratios, deltas) comes from a tool's output or the calculator (the analyzer binary's calc when built, else ../code-principles/scripts/calc.py); check arithmetic in reviewed code by evaluating it on concrete inputs, never by reasoning alone

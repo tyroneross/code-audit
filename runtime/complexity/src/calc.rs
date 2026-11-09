@@ -22,7 +22,9 @@
 
 mod calculus;
 mod finance;
+mod nonlinear;
 mod optimize;
+mod piecewise;
 mod poly;
 mod solve;
 
@@ -845,6 +847,8 @@ fn list(items: &[String]) -> String {
 
 const HELP: &str = "usage: code-audit-complexity calc EXPRESSION ... [--check \"LEFT == RIGHT\" ...] [--set NAME=VALUE ...] [--tolerance 1e-9]
        code-audit-complexity calc --solve \"EQUATION\" [--solve \"EQUATION\" ...] [--between LOW HIGH]
+       code-audit-complexity calc --solve \"EQUATION\" ... --start NAME=VALUE ... [--tolerance 1e-9]
+       code-audit-complexity calc --piece \"GUARD: EXPRESSION\" ... --target \">= VALUE\" --between LOW HIGH
        code-audit-complexity calc --derivative EXPRESSION [--at VALUE] [--var NAME]
        code-audit-complexity calc --integral EXPRESSION [--from LOW --to HIGH] [--var NAME]
        code-audit-complexity calc --expand EXPRESSION [--var NAME]
@@ -859,6 +863,9 @@ Finance (cash paid out is negative; `when` is 0 for payments at the end of a per
   irr(v0, v1, ...)        mirr(finance_rate, reinvest_rate, v0, v1, ...)
 --solve      one equation in one name (every real root of a polynomial; other equations need --between), or
              several linear equations in several names, solved exactly.
+--start      a named starting value for a local numerical solve of simultaneous rational equations.
+--piece      an ordered guarded expression. First matching guard wins. Use \"else: EXPRESSION\" for a fallback.
+--target     compare piece outputs with a constant over the exact interval given by --between.
 --derivative the derivative by the differentiation rules; a polynomial is exact.
 --integral   a polynomial exactly; anything else numerically between --from and --to.
 --maximize / --minimize  a linear objective under linear constraints. A name is unbounded unless a constraint
@@ -873,6 +880,9 @@ struct Request {
     checks: Vec<String>,
     sets: Vec<String>,
     equations: Vec<String>,
+    starts: Vec<String>,
+    pieces: Vec<String>,
+    target: Option<String>,
     between: Option<(String, String)>,
     derivative: Option<String>,
     at: Option<String>,
@@ -897,6 +907,9 @@ fn request(arguments: &[String]) -> Outcome<Option<Request>> {
             "--check" => wanted.checks.push(value("a comparison")?),
             "--set" => wanted.sets.push(value("NAME=VALUE")?),
             "--solve" => wanted.equations.push(value("an equation")?),
+            "--start" => wanted.starts.push(value("NAME=VALUE")?),
+            "--piece" => wanted.pieces.push(value("GUARD: EXPRESSION")?),
+            "--target" => wanted.target = Some(value("an operator and value")?),
             "--between" => wanted.between = Some((value("two bounds")?, value("two bounds")?)),
             "--derivative" => wanted.derivative = Some(value("an expression")?),
             "--at" => wanted.at = Some(value("a value")?),
@@ -923,6 +936,15 @@ fn request(arguments: &[String]) -> Outcome<Option<Request>> {
 
 /// The report's fields and the exit status for one request.
 fn answer(wanted: &Request) -> Outcome<(Vec<(&'static str, String)>, i32)> {
+    if !wanted.starts.is_empty() && (wanted.equations.is_empty() || wanted.between.is_some()) {
+        return Err("--start requires --solve and cannot be combined with --between".into());
+    }
+    if wanted.target.is_some() && wanted.pieces.is_empty() {
+        return Err("--target requires --piece".into());
+    }
+    if !wanted.pieces.is_empty() && !wanted.equations.is_empty() {
+        return Err("--piece and --solve require separate invocations".into());
+    }
     let mut scope = Scope::default();
     for assignment in &wanted.sets {
         scope.define(assignment)?;
@@ -941,8 +963,17 @@ fn answer(wanted: &Request) -> Outcome<(Vec<(&'static str, String)>, i32)> {
     }
     fields.push(("results", list(&results)));
     fields.push(("checks", list(&verdicts)));
-    if !wanted.equations.is_empty() {
+    if !wanted.starts.is_empty() {
+        let (report, converged) = nonlinear::solve(&wanted.equations, &wanted.starts, wanted.tolerance.unwrap_or(TOLERANCE), names)?;
+        fields.push(("solve", report));
+        status = status.max(!converged as i32);
+    } else if !wanted.equations.is_empty() {
         fields.push(("solve", solve::solve(&wanted.equations, wanted.between.as_ref(), names)?));
+    }
+    if !wanted.pieces.is_empty() {
+        let target = wanted.target.as_deref().ok_or("--piece requires --target")?;
+        let bounds = wanted.between.as_ref().ok_or("--piece requires --between LOW HIGH")?;
+        fields.push(("piecewise", piecewise::solve(&wanted.pieces, target, bounds, names)?));
     }
     if let Some(expression) = &wanted.derivative {
         fields.push(("derivative", calculus::derivative(expression, wanted.var.as_deref(), wanted.at.as_deref(), names)?));
@@ -976,9 +1007,10 @@ pub fn run(arguments: &[String]) -> i32 {
         Err(error) => return invalid(error),
     };
     let asks = !wanted.expressions.is_empty() || !wanted.checks.is_empty() || !wanted.equations.is_empty()
+        || !wanted.starts.is_empty() || !wanted.pieces.is_empty() || wanted.target.is_some()
         || wanted.derivative.is_some() || wanted.integral.is_some() || wanted.expand.is_some() || wanted.objective.is_some();
     if !asks {
-        return invalid("give at least one expression, --check, --solve, --derivative, --integral, --expand, --maximize or --minimize".into());
+        return invalid("give at least one expression, --check, --solve, --piece, --derivative, --integral, --expand, --maximize or --minimize".into());
     }
     // A fault inside this module or a numeric library becomes a stated refusal, never a crash:
     // the caller always gets one JSON report and exit 0, 1 or 2.

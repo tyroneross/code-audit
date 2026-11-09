@@ -40,6 +40,37 @@ Limits: `--solve` finds all real roots only for polynomials up to degree 32, and
 
 The binary uses exact big rationals (`num-rational`); `calc.py` uses the Python standard library (`fractions`, `math`, `statistics`) and needs no install. The choice was measured, and the libraries behind each command were tested against independent methods before being adopted; both are recorded in [code health sources](../../../research/code-health-sources.md#calculation-engine). For statistics over measurement samples (comparing two timing runs, quantiles, a significance test) use R or another statistics tool when it is installed; do not use base R for exact integer arithmetic, where it loses precision above 2^53.
 
+### Check equations and algorithms against independent expectations
+
+Use one of these checks to produce an expected result or a test input. Compare it with the implementation's observed behavior when execution is authorized. Record the source line, input domain, arithmetic semantics and oracle. A model quality claim still needs suitable evaluation data.
+
+**Piecewise boundaries.** Give ordered branches, a comparison against a constant, and a closed input range.
+
+```sh
+calc --piece 'x < 4: 3' --piece 'else: 4' --target '== 3' --between 2 5
+calc --piece 'else: floor(x)' --target '== 3' --between 2 5
+```
+
+The first example returns `[2, 4)` and the second returns `[3, 4)`. Each result reports matching `solutions`, uncovered `gaps`, and input, branch and value witnesses. A singleton has equal closed endpoints. The exact probes beside a boundary are interior rationals. Each boundary's `f64_inputs` suggests representable inputs to replay in floating-point code. An exact boundary without a float representation has no `at` input. Replay each input through the target to establish its actual branch and value.
+
+Conditions and formulas use one unknown and exact affine pieces. Multiplication and division require a constant operand where needed to stay affine. Supported operators include `abs`, `min`, `max`, `floor`, `ceil`, one-argument ties-to-even `round`, and Python-style `//` and `%` with a constant divisor on each piece. A reachable unsupported expression or exceeded split limit refuses the request. Use fractions for exact decimal values. Confirm the target language's remainder and rounding rules before treating a witness as a defect.
+
+**Local systems.** Give as many rational equations as unknowns and one starting value per name. Use rational arithmetic and fixed integer powers, with finite values where the solver samples. For example:
+
+```sh
+calc --solve 'x*x + y == 6' --solve 'x == y' --start x=1 --start y=1
+```
+
+The `solve` report labels the search as local. It includes raw and scaled residuals, exact-rational substitution at the candidate's represented coordinates, numerical Jacobian diagnostics, tolerance, evaluations and termination reason. Supply fractions for mathematical constants that require exact decimal values. A reported candidate is approximate and its existence is uncertified. A failed search returns exit 1 and an empty solution list. A starting point can select a different candidate, and a failure does not establish that there are no solutions. Use the original `--solve` without `--start` for exact linear systems and supported single-equation searches.
+
+**Algorithm fixtures.** Run `python3 <cp>/scripts/algorithm_fixture.py fixture.json` against recorded observations. The script reads JSON and computes an independent expectation without running the audited code. Choose the fixture that matches the documented stage:
+
+- `kmeans_step` takes `points`, initial `centroids` and `observed`. It checks labels, updated centroids and `assignment_inertia` at the original centroids for one unweighted squared-Euclidean Lloyd step. Ties go to the lowest centroid index. A fixture with an empty cluster is refused.
+- `dbscan` takes a symmetric `distances` matrix, `eps`, `min_samples` and `observed`. It checks inclusive neighborhoods, core point indexes and components of the core graph. The point itself counts. Border assignments are outside this check.
+- `observations` takes explicit `expected` and `observed` values. Use it for token lists, intermediate scores or label decisions recorded from a documented reference. For example, compare `{"kind":"observations","expected":{"tokens":["not","good"],"score":-0.5},"observed":{"tokens":["good"],"score":0.5}}`.
+
+Optional `tolerance` contains `abs` and `rel` for computed numeric fields and decimal expectations in `observations`. Generic integer expectations, labels, indexes, shapes and text remain exact. The receipt identifies mismatches by path and returns exit 0 for a match, 1 for mismatches, or 2 for invalid input.
+
 ## Numerical evidence
 
 Record revision, source digests, analyzer/version, exact command, selection, exclusions, languages and parse gaps. Separate production and test functions. Empty scope, unsupported languages and missing coverage never establish a clean review.
