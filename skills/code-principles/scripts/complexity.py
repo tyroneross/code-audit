@@ -248,21 +248,32 @@ def structure_thresholds(overrides):
     return thresholds
 
 
-def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, similarity=0.8, structure=None):
-    root = Path(root).resolve()
-    if not root.is_dir():
-        raise ValueError(f"source root is not a directory: {root}")
-    if not isinstance(threshold, int) or isinstance(threshold, bool) or threshold < 1:
-        raise ValueError("threshold must be a positive integer")
-    if isinstance(similarity, bool) or not isinstance(similarity, (int, float)) or not 0 <= similarity <= 1:
-        raise ValueError("similarity must be a number in [0,1]")
-    coverage = coverage_document(coverage)
-    limits = structure_thresholds(structure)
-    selected, selection, gaps = select(root, paths)
-    rows, digests, patterns, withheld = [], {}, [], {}
-    selected_names = set()
-    seen_files = set()
-    native_names = []
+class Collected:
+    """Rows, pattern leads, source digests and gaps gathered from both analyzers."""
+
+    def __init__(self, coverage, threshold, limits, gaps):
+        self.coverage, self.threshold, self.limits, self.gaps = coverage, threshold, limits, gaps
+        self.rows, self.patterns, self.digests, self.withheld = [], [], {}, {}
+
+    def gap(self, path, reason):
+        self.gaps.append({"path": path, "reason": reason})
+
+    def add_file(self, name, language, digest, rows, patterns):
+        """Record one measured file; rows is [(row, analyzer test reason)]. Coverage applies only when its digest matches."""
+        self.digests[name] = digest
+        supplied = self.coverage.get(name)
+        if supplied is not None and supplied["sha256"] != digest:
+            self.gap(name, "coverage source digest mismatch; CRAP unavailable")
+            supplied = None
+        for row, test_reason in rows:
+            row.update(path=name, language=language)
+            self.rows.append(finish_row(row, test_reason, supplied, self.threshold, self.limits))
+        self.patterns.extend({**lead, "path": name, "language": language} for lead in patterns)
+
+
+def unique_sources(root, selected, gaps):
+    """Yield (path, root-relative name) once per file; a path outside root becomes a gap."""
+    names, identities = set(), set()
     for path in selected:
         try:
             name = path.resolve().relative_to(root).as_posix()
@@ -274,71 +285,94 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
         except OSError:
             identity = name
         # Case-insensitive volumes can spell one file two ways; dedupe by file identity.
-        if name in selected_names or identity in seen_files:
+        if name in names or identity in identities:
             continue
-        seen_files.add(identity)
-        selected_names.add(name)
-        if path.suffix in NATIVE_SUFFIXES:
-            native_names.append(name)
-            continue
-        if path.suffix != ".py":
-            gaps.append({"path": name, "reason": "unsupported language; analyzers cover Python, Rust, TypeScript, JavaScript, Java, Go and Swift"})
-            continue
-        try:
-            raw = path.read_bytes()
-            tree = ast.parse(raw, filename=name)
-        except (OSError, SyntaxError, ValueError) as error:
-            gaps.append({"path": name, "reason": f"cannot parse source: {error}"})
-            continue
-        digest = hashlib.sha256(raw).hexdigest()
-        digests[name] = digest
-        supplied = coverage.get(name)
-        compatible = supplied is not None and supplied["sha256"] == digest
-        if supplied is not None and not compatible:
-            gaps.append({"path": name, "reason": "coverage source digest mismatch; CRAP unavailable"})
-        visitor = Functions()
-        try:
-            visitor.visit(tree)
-            leads = python_structure.patterns(tree, raw.decode("utf-8", "replace").splitlines())
-        except RecursionError:
-            gaps.append({"path": name, "reason": "expression nesting exceeds the interpreter recursion limit; file not measured"})
-            continue
-        for row in visitor.rows:
-            add_row(rows, row, name, "python", None, supplied if compatible else None, threshold, limits)
-        for rule, line, detail in leads:
-            owner = max((r for r in visitor.rows if r["line"] <= line <= r["end_line"]), key=lambda r: r["line"], default=None)
-            patterns.append({"rule": rule, "path": name, "line": line, "language": "python",
-                             "function_id": owner and owner["function_id"], "detail": detail})
-    native = run_native(root, native_names, duplicates, similarity, gaps)
-    if native and "structure_method" not in native["analyzer"]:
-        gaps.append({"path": ".", "reason": "tree-sitter analyzer predates structural signals and pattern leads; "
-                                            f"those fields are null for its files. Rebuild: {native_build_hint()}"})
-    test_modules = rust_test_module_files((native or {}).get("files", []))
-    for entry in (native or {}).get("files", []):
+        identities.add(identity)
+        names.add(name)
+        yield path, name
+
+
+def python_file(path, name, collected):
+    """Measure one Python file into collected; an unreadable or unparsable file becomes a gap."""
+    try:
+        raw = path.read_bytes()
+        tree = ast.parse(raw, filename=name)
+    except (OSError, SyntaxError, ValueError) as error:
+        return collected.gap(name, f"cannot parse source: {error}")
+    visitor = Functions()
+    try:
+        visitor.visit(tree)
+        leads = python_structure.patterns(tree, raw.decode("utf-8", "replace").splitlines())
+    except RecursionError:
+        return collected.gap(name, "expression nesting exceeds the interpreter recursion limit; file not measured")
+
+    def owner(line):
+        row = max((r for r in visitor.rows if r["line"] <= line <= r["end_line"]), key=lambda r: r["line"], default=None)
+        return row and row["function_id"]
+    patterns = [{"rule": rule, "line": line, "function_id": owner(line), "detail": detail} for rule, line, detail in leads]
+    collected.add_file(name, "python", hashlib.sha256(raw).hexdigest(), [(row, None) for row in visitor.rows], patterns)
+
+
+def native_files(native, collected):
+    """Fold the tree-sitter analyzer's per-file results into collected."""
+    if "structure_method" not in native["analyzer"]:
+        collected.gap(".", "tree-sitter analyzer predates structural signals and pattern leads; "
+                           f"those fields are null for its files. Rebuild: {native_build_hint()}")
+    test_modules = rust_test_module_files(native["files"])
+    for entry in native["files"]:
         name = entry["path"]
         if "error" in entry:
-            gaps.append({"path": name, "reason": entry["error"]})
+            collected.gap(name, entry["error"])
             continue
-        digests[name] = entry["sha256"]
         if entry["parse_errors"]:
-            gaps.append({"path": name, "reason": "source has parse errors; affected functions may be missing or miscounted"})
+            collected.gap(name, "source has parse errors; affected functions may be missing or miscounted")
         if entry.get("unowned_decisions", 0) > 0:
-            gaps.append({"path": name, "reason": f"{entry['unowned_decisions']} decision points outside any measured function "
-                                                 "(top-level statements or initializers) are not attributed to a row"})
-        supplied = coverage.get(name)
-        compatible = supplied is not None and supplied["sha256"] == entry["sha256"]
-        if supplied is not None and not compatible:
-            gaps.append({"path": name, "reason": "coverage source digest mismatch; CRAP unavailable"})
-        for function in entry["functions"]:
-            row = {key: function[key] for key in ("name", "line", "end_line", "function_id", "cc")}
-            row.update({key: function.get(key) for key in STRUCTURE_FIELDS})
-            reason = function["test_reason"] or test_modules.get(name)
-            add_row(rows, row, name, entry["language"], reason, supplied if compatible else None, threshold, limits)
-        patterns.extend({**lead, "path": name, "language": entry["language"]} for lead in entry.get("patterns", []))
+            collected.gap(name, f"{entry['unowned_decisions']} decision points outside any measured function "
+                                "(top-level statements or initializers) are not attributed to a row")
+        rows = [({**{key: function[key] for key in ("name", "line", "end_line", "function_id", "cc")},
+                  **{key: function.get(key) for key in STRUCTURE_FIELDS}},
+                 function["test_reason"] or test_modules.get(name)) for function in entry["functions"]]
+        collected.add_file(name, entry["language"], entry["sha256"], rows, entry.get("patterns", []))
         if entry.get("patterns_withheld"):
-            withheld[name] = entry["patterns_withheld"]
+            collected.withheld[name] = entry["patterns_withheld"]
+
+
+def label_patterns(patterns, rows):
+    """Give each lead its production/test kind and precision tier, production first."""
+    kinds = {(r["path"], r["function_id"]): r["kind"] for r in rows}
+    for lead in patterns:
+        lead["kind"] = kinds.get((lead["path"], lead["function_id"])) or classify(lead["path"])[0]
+        lead["tier"] = "measured" if lead["rule"] in MEASURED_PATTERNS else "experimental"
+    patterns.sort(key=lambda lead: (lead["kind"] != "production", lead["path"], lead["line"], lead["rule"]))
+
+
+def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, similarity=0.8, structure=None):
+    root = Path(root).resolve()
+    if not root.is_dir():
+        raise ValueError(f"source root is not a directory: {root}")
+    if not isinstance(threshold, int) or isinstance(threshold, bool) or threshold < 1:
+        raise ValueError("threshold must be a positive integer")
+    if isinstance(similarity, bool) or not isinstance(similarity, (int, float)) or not 0 <= similarity <= 1:
+        raise ValueError("similarity must be a number in [0,1]")
+    coverage = coverage_document(coverage)
+    limits = structure_thresholds(structure)
+    selected, selection, gaps = select(root, paths)
+    collected = Collected(coverage, threshold, limits, gaps)
+    selected_names, native_names = [], []
+    for path, name in unique_sources(root, selected, gaps):
+        selected_names.append(name)
+        if path.suffix in NATIVE_SUFFIXES:
+            native_names.append(name)
+        elif path.suffix == ".py":
+            python_file(path, name, collected)
+        else:
+            collected.gap(name, "unsupported language; analyzers cover Python, Rust, TypeScript, JavaScript, Java, Go and Swift")
+    native = run_native(root, native_names, duplicates, similarity, gaps)
+    if native:
+        native_files(native, collected)
+    rows, patterns = collected.rows, collected.patterns
     if not rows:
-        gaps.append({"path": ".", "reason": "no named functions measured; no clean-review conclusion"})
+        collected.gap(".", "no named functions measured; no clean-review conclusion")
     analyzers = [PYTHON_ANALYZER] if any(r["language"] == "python" for r in rows) or not native else []
     if native:
         analyzers.append({**native["analyzer"], "languages": sorted({e["language"] for e in native["files"] if "language" in e})})
@@ -346,17 +380,13 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
     for row in rows:
         languages[row["language"]] = languages.get(row["language"], 0) + 1
     duplicate_report = label_duplicates(native.get("duplicates"), rows) if duplicates and native else None
-    kinds = {(r["path"], r["function_id"]): r["kind"] for r in rows}
-    for lead in patterns:
-        lead["kind"] = kinds.get((lead["path"], lead["function_id"])) or classify(lead["path"])[0]
-        lead["tier"] = "measured" if lead["rule"] in MEASURED_PATTERNS else "experimental"
-    patterns.sort(key=lambda lead: (lead["kind"] != "production", lead["path"], lead["line"], lead["rule"]))
+    label_patterns(patterns, rows)
     revision = git(root, "rev-parse", "HEAD")
     return {"schema": "code-audit.complexity.v1", "root": str(root),
             "revision": revision.decode().strip() if revision else None,
             "selection": selection, "selected_files": sorted(selected_names),
             "directory_walk_exclusions": sorted(SKIP), "follow_directory_symlinks": False,
-            "source_sha256": digests, "threshold": threshold, "hotspot_rule": "cc >= threshold",
+            "source_sha256": collected.digests, "threshold": threshold, "hotspot_rule": "cc >= threshold",
             "method": "named functions; python-ast-decisions-v1 and tree-sitter-decisions-v1; see --help for counted decisions",
             "analyzers": analyzers, "languages": languages,
             "status": "incomplete" if gaps else "measured", "gaps": gaps,
@@ -371,7 +401,7 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
             "pattern_count": len(patterns),
             "production_pattern_count": sum(lead["kind"] == "production" for lead in patterns),
             "patterns": patterns,
-            "patterns_withheld": {"reason": "a line longer than 2000 bytes marks the file as minified or generated", "files": withheld},
+            "patterns_withheld": {"reason": "a line longer than 2000 bytes marks the file as minified or generated", "files": collected.withheld},
             **({"duplicates": duplicate_report} if duplicate_report else {}),
             "functions": sorted(rows, key=lambda r: (-r["cc"], r["path"], r["line"]))}
 
@@ -412,16 +442,16 @@ def label_duplicates(report, rows):
     return report
 
 
-def add_row(rows, row, path, language, test_reason, supplied, threshold, limits):
-    """Attach path, language, test split, coverage, CRAP and structural signals to one function row."""
+def finish_row(row, test_reason, supplied, threshold, limits):
+    """Attach the test split, coverage, CRAP and structural signals to a row that already names its path and language."""
     percent = supplied["functions"].get(row["function_id"]) if supplied else None
-    kind, reason = classify(path, test_reason)
+    kind, reason = classify(row["path"], test_reason)
     row["lines"] = row["end_line"] - row["line"] + 1
-    row.update(path=path, language=language, kind=kind, test_reason=reason, coverage_percent=percent,
+    row.update(kind=kind, test_reason=reason, coverage_percent=percent,
                crap=None if percent is None else round(row["cc"] ** 2 * (1 - percent / 100) ** 3 + row["cc"], 6),
                hotspot=row["cc"] >= threshold,
                signals=[name for name, limit in limits.items() if row.get(name) is not None and row[name] >= limit])
-    rows.append(row)
+    return row
 
 
 def main(argv=None):

@@ -1982,7 +1982,7 @@
       "source": "addyosmani/agent-skills",
       "source_path": "skills/code-simplification/SKILL.md",
       "source_sha256": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
-      "current_sha256": "8e48fe97693706def8b0b9831646647b0a05ae5c8ad6ee7a978b8e74ca2bf279",
+      "current_sha256": "68bcb2fa9a78a68c96fa96e6239d5b9e46c25b321ab2bdea5a788c408e2e712f",
       "modified_from_import": true,
       "adaptation": "Rewritten as a conditional Code Audit reference: process and signal table adapted from this source, behaviour and scope rules shared with anthropics/claude-plugins-official code-simplifier.md, the protected-region marker from dvy1987/agent-loom. Examples, rationalization table and host-specific wording dropped; measured signals and structure_delta.py checks added."
     }
