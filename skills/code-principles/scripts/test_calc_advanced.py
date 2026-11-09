@@ -184,6 +184,11 @@ class SolveTests(unittest.TestCase):
         for slope in ("10**14", "10**13", "10**12", "10**6", "1"):
             code, report = calc("--solve", f"(x - 1)*{slope} + floor(x) - 1/2 == 0", "--between", "0", "2")
             self.assertEqual((code, report["status"]), (2, "invalid"), (slope, report))
+        # The same jump behind a cubic, whose curvature makes the change over several floats large while the change to
+        # the very next float stays a hundredth of the jump.
+        for equation in ("(x - 1)**3*10**45 + floor(x) - 1/2 == 0", "(x - 1)**5*10**77 + floor(x) - 1/2 == 0", "(x - 1)**3*10**44 + (x - 1)*10**12 + floor(x) - 1/2 == 0"):
+            code, report = calc("--solve", equation, "--between", "0", "2")
+            self.assertEqual((code, report["status"]), (2, "invalid"), (equation, report))
         # The width of the bracket must not matter: this has no root (below -1/2 before 1, at least 1/2 from 1 on).
         for low, high in (("0", "2"), ("-10**14", "10**14"), ("-10**300", "10**300")):
             code, report = calc("--solve", "x - 1 + floor(x) - 1/2 == 0", "--between", low, high)
