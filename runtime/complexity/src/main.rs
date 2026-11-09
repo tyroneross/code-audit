@@ -45,7 +45,8 @@
 //! Structural signals per function row (method `tree-sitter-structure-v1`):
 //! - `max_nesting`: deepest level of nested control flow. Conditionals, loops,
 //!   `match`/`switch`, `catch`, conditional expressions and anonymous functions
-//!   that add to the row each open one level. An `else if` continues its chain
+//!   with a block body each open one level. A single-expression closure
+//!   (`.filter(|x| x.ok())`, `x => x.id`) opens none. An `else if` continues its chain
 //!   at the same level; a conditional expression inside another opens a new one,
 //!   so a chained ternary reads as nested. Swift `guard` and Rust `let ... else`
 //!   are early exits and open no level.
@@ -644,20 +645,37 @@ impl<'a> Walker<'a> {
         owner.is_some_and(|o| o.kind() == self.if_kind() && self.else_if(o).is_some_and(|n| n.id() == node.id()))
     }
 
+    /// An anonymous function whose body is a block of statements. A single-expression closure
+    /// (`.filter(|x| x.ok())`, `x => x.id`) is the flat alternative to a loop and opens no level.
+    fn block_closure(&self, node: Node<'a>) -> bool {
+        let body_is = |kind: &str| node.child_by_field_name("body").is_some_and(|b| b.kind() == kind);
+        match (self.lang, node.kind()) {
+            (Lang::Rust, "closure_expression") | (Lang::Java, "lambda_expression") => body_is("block"),
+            (Lang::TypeScript | Lang::Tsx, "arrow_function") => body_is("statement_block"),
+            (Lang::TypeScript | Lang::Tsx, "function_expression" | "generator_function") | (Lang::Go, "func_literal") => true,
+            (Lang::Swift, "lambda_literal") => {
+                let mut cursor = node.walk();
+                let statements = node.named_children(&mut cursor).find(|c| c.kind() == "statements");
+                statements.is_some_and(|s| s.named_child_count() > 1)
+            }
+            _ => false,
+        }
+    }
+
     /// Control flow that opens one nesting level for the function it adds to.
     fn nests(&self, node: Node<'a>) -> bool {
         let kind = node.kind();
         let opens = match self.lang {
-            Lang::Rust => matches!(kind, "if_expression" | "while_expression" | "for_expression" | "loop_expression" | "match_expression" | "closure_expression"),
+            Lang::Rust => matches!(kind, "if_expression" | "while_expression" | "for_expression" | "loop_expression" | "match_expression"),
             Lang::TypeScript | Lang::Tsx => matches!(kind, "if_statement" | "for_statement" | "for_in_statement" | "while_statement" | "do_statement"
-                | "switch_statement" | "catch_clause" | "ternary_expression" | "arrow_function" | "function_expression" | "generator_function"),
+                | "switch_statement" | "catch_clause" | "ternary_expression"),
             Lang::Java => matches!(kind, "if_statement" | "for_statement" | "enhanced_for_statement" | "while_statement" | "do_statement"
-                | "switch_expression" | "catch_clause" | "ternary_expression" | "lambda_expression"),
-            Lang::Go => matches!(kind, "if_statement" | "for_statement" | "expression_switch_statement" | "type_switch_statement" | "select_statement" | "func_literal"),
+                | "switch_expression" | "catch_clause" | "ternary_expression"),
+            Lang::Go => matches!(kind, "if_statement" | "for_statement" | "expression_switch_statement" | "type_switch_statement" | "select_statement"),
             Lang::Swift => matches!(kind, "if_statement" | "for_statement" | "while_statement" | "repeat_while_statement" | "switch_statement"
-                | "catch_block" | "ternary_expression" | "lambda_literal"),
+                | "catch_block" | "ternary_expression"),
         };
-        opens && !self.continues_else_if(node)
+        (opens && !self.continues_else_if(node)) || self.block_closure(node)
     }
 
     /// Declared parameters of a function-like node.

@@ -272,9 +272,9 @@ const cb = async (p, {q, r}) => { items.map(i => { if (i && p || q && r) { z(); 
     return a > 0 ? 1 : 2;
   }
   S(int z, int y, int w, int v, int u, int t) {}
-  void one() { java.util.function.Function<Integer, Integer> f = q -> q; }
+  void one() { java.util.function.Function<Integer, Integer> f = q -> q; }   // single-expression lambda: no level
 }
-""", {"S.deep": (4, 3, 0, 2), "S.S": (0, 0, 0, 6), "S.one": (1, 0, 0, 0)}),
+""", {"S.deep": (4, 3, 0, 2), "S.S": (0, 0, 0, 6), "S.one": (0, 0, 0, 0)}),
     "s.go": ("""package p
 func (s *S) Deep(a, b int, c string, rest ...int) int {
 	if a > 1 { x() } else if a > 0 {            // 1, else-if stays 1
@@ -403,6 +403,19 @@ class StructureAndPatternTests(unittest.TestCase):
                     row = rows[function]
                     self.assertEqual((row["max_nesting"], row["bumps"], row["condition_operators"], row["params"]), counts)
                     self.assertEqual(row["lines"], row["end_line"] - row["line"] + 1)
+
+    def test_single_expression_closures_open_no_nesting_level(self):
+        cases = [
+            ("c.rs", "fn f(v: &[u8]) -> usize { if v.len() > 1 { v.iter().filter(|x| **x > 1).map(|x| *x as usize).sum() } else { 0 } }\n", 1),
+            ("c.rs", "fn f(v: &[u8]) { if v.len() > 1 { v.iter().for_each(|x| { if *x > 1 { g(); } }); } }\n", 3),
+            ("c.ts", "function f(v: number[]) { if (v.length) { return v.filter(x => x > 1).map(x => x * 2); } return []; }\n", 1),
+            ("c.ts", "function f(v: number[]) { if (v.length) { v.forEach(x => { if (x) { g(); } }); } }\n", 3),
+            ("C.java", "class C { int f(java.util.List<Integer> v) { if (v.size() > 1) { return (int) v.stream().filter(x -> x > 1).count(); } return 0; } }\n", 1),
+            ("c.swift", "func f(v: [Int]) -> Int { if v.count > 1 { return v.filter { $0 > 1 }.count }\n  return 0 }\n", 1),
+        ]
+        for name, source, depth in cases:
+            with self.subTest(source=source):
+                self.assertEqual(self.measure(name, source)["functions"][0]["max_nesting"], depth)
 
     def test_patterns_report_planted_cases_and_no_clean_line(self):
         for name, source, expected in PATTERNS:

@@ -34,7 +34,7 @@ Every function row also carries the signals below, and `signals` names those at 
 
 | Signal | Counts | Default | Where the default comes from |
 |---|---|---|---|
-| `max_nesting` | Deepest nested control flow. An `else if` stays on its chain's level; a conditional expression inside another opens one, so a chained ternary reads as nested. Early exits (`guard`, `let ... else`) open none | 3 | "Deep nesting (3+ levels)" in the adapted simplification skill |
+| `max_nesting` | Deepest nested control flow. An `else if` stays on its chain's level; a conditional expression inside another opens one, so a chained ternary reads as nested. Early exits (`guard`, `let ... else`) and single-expression closures (`.filter(|x| x.ok())`) open none; a closure with a block body opens one | 3 | "Deep nesting (3+ levels)" in the adapted simplification skill |
 | `lines` | Name line to closing line, inclusive, comments and blanks included | 50 | "Long functions (50+ lines)" in the same skill |
 | `params` | Declared parameters without the receiver (`self`, `cls`, Rust `self`) | 6 | Error Prone TooManyParameters: five or fewer |
 | `bumps` | Top-level control-flow blocks that themselves contain nested control flow: separate chunks of nested logic | 2 | Reading-order choice; the source names the smell and no value |
