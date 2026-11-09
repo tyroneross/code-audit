@@ -25,7 +25,10 @@ use std::rc::Rc;
 const MAX_ROOT_DEGREE: usize = 32;
 const MAX_ROOT_WORK: u64 = 200_000;
 const MAX_EQUATIONS: usize = 32;
-const BRENT_STEPS: usize = 200;
+/// Enough for bisection alone to walk from 1 down to the smallest float, as a flat root at zero needs.
+const BRENT_STEPS: usize = 2200;
+/// At a crossing, the value at the root is at most this fraction of the values a step away.
+const CROSSING: f64 = 1e-3;
 /// Bisection steps for a single root of a long polynomial; enough for a rate as small as 2**-300.
 const MAX_SINGLE_STEPS: u64 = 480;
 
@@ -437,18 +440,26 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
         if let Some(error) = failure.borrow_mut().take() {
             return Err(format!("cannot evaluate the equation {error}"));
         }
-        found.map_err(|_| format!("left minus right changes sign between {low:?} and {high:?} but never settles near zero: a jump, not a root"))?
+        found.map_err(|_| format!("the search between {low:?} and {high:?} did not settle on a root within {BRENT_STEPS} steps"))?
     };
     let residual = f(root);
-    // A sign change without a root is a jump (1/x at 0, tan at pi/2): the value there is far from zero.
-    if !residual.is_finite() || residual.abs() > 1e-6 * at_low.abs().max(at_high.abs()).max(1.0) {
-        return Err(format!("left minus right jumps across zero near {name} = {root:?} without reaching it: a discontinuity, not a root"));
+    // Brent's method ends wherever the sign changes, which is also true of a jump (floor,
+    // 1/x at 0, tan at pi/2). At a crossing the value at the root is far smaller than the
+    // values a short step to either side, which have opposite signs; at a jump it is as
+    // large as one of them. The test is a ratio, so scaling the equation does not change it.
+    let step = 1e-6 * root.abs().max(high - low);
+    let (before, after) = (f((root - step).max(low)), f((root + step).min(high)));
+    if failure.borrow().is_some() || !residual.is_finite() || !before.is_finite() || !after.is_finite() {
+        return Err(format!("left minus right cannot be evaluated all around {name} = {root:?}, so it is not established as a root"));
     }
-    // A value of exactly zero on both sides too is not a crossing: the expression has underflowed
-    // (exp(-x) for large x) or is zero over a stretch, and no single root can be named.
-    let step = 1e-6 * root.abs().max(1.0);
-    if residual == 0.0 && f((root - step).max(low)) == 0.0 && f((root + step).min(high)) == 0.0 && failure.borrow().is_none() {
+    let beside = before.abs().max(after.abs());
+    if residual == 0.0 && beside == 0.0 {
+        // Exactly zero on both sides too: the expression has underflowed (exp(-x) for large x)
+        // or is zero over a stretch, and no single root can be named.
         return Err(format!("left minus right is exactly zero all around {name} = {root:?}: it is too small for floats there or zero over a stretch, so no single root can be named"));
+    }
+    if residual.abs() > CROSSING * beside {
+        return Err(format!("left minus right jumps across zero near {name} = {root:?} without reaching it: a discontinuity, not a root"));
     }
     let method = format!("Brent's method between {low:?} and {high:?}: one root; others may exist");
     Ok(report(&free, &method, &[solution(&[(name, &super::float(root)?)], false, Some(residual))], None))

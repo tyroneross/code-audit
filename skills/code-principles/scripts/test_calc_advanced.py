@@ -172,6 +172,16 @@ class SolveTests(unittest.TestCase):
         self.assertEqual(calc("--solve", "cos(x) == x", "--between", "2", "3")[0], 2)  # no sign change
         self.assertEqual(calc("--solve", "tan(x) == 0", "--between", "1", "2")[0], 2)  # the sign changes at a pole
         self.assertEqual(calc("--solve", "1/x == 0", "--between", "-1", "1")[0], 2)
+        # A jump stays a jump when the equation is scaled down or up; floor(x) is never 1/2.
+        for equation in ("(floor(x) - 1/2)/10**12 == 0", "floor(x) == 1/2", "(floor(x) - 1/2)*10**12 == 0", "round(x)/10**30 == 1/(2*10**30)"):
+            code, report = calc("--solve", equation, "--between", "0", "2")
+            self.assertEqual((code, report["status"]), (2, "invalid"), (equation, report))
+        # A real crossing passes at any scale, including a flat one and one at the end of the bracket.
+        for equation, low, high, root in (("(cos(x) - x)/10**12 == 0", "0", "1", 0.7390851332151607), ("(cos(x) - x)*10**12 == 0", "0", "1", 0.7390851332151607),
+                                          ("sin(x)**3 == 0", "-1", "2", 0.0), ("exp(x) == 2", "0", "1", math.log(2)), ("sin(x) == 0", "0", "1", 0.0)):
+            code, report = calc("--solve", equation, "--between", low, high)
+            self.assertEqual(code, 0, (equation, report))
+            self.assertTrue(math.isclose(report["solve"]["solutions"][0]["values"]["x"], root, rel_tol=1e-9, abs_tol=1e-5), (equation, report))
 
     def test_between_limits_polynomial_roots(self):
         self.assertEqual(self.roots("x**3 == x", "--between", "1/2", "2"), [(1, True)])
