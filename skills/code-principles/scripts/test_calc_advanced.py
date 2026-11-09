@@ -289,6 +289,11 @@ class CalculusTests(unittest.TestCase):
         # Bounds 3e-16 apart round to floats 2.2e-16 apart: the answer 8.15 came out as 6.04, "converged".
         code, report = calc("--integral", "exp(x)*10**16", "--from", "1", "--to", "1 + 3/10**16")
         self.assertEqual((code, report["status"]), (2, "invalid"))
+        # Bounds that are adjacent floats: every sample lands on one of the two, and the answer 8.21 came out as 1.84.
+        code, report = calc("--integral", "10**16*exp(10**16*(x - 1))", "--from", "1", "--to", "1 + 1/2**52")
+        self.assertEqual((code, report["status"]), (2, "invalid"))
+        code, report = calc("--integral", "exp(x)", "--from", "1", "--to", "1 + 1/2**20")  # narrow but with room to sample
+        self.assertTrue(math.isclose(report["integral"]["value"], math.e * math.expm1(2.0 ** -20), rel_tol=1e-9), report)
         code, report = calc("--integral", "exp(x)", "--from", "1/3", "--to", "22/7")  # ordinary bounds that are not floats are fine
         self.assertTrue(close(report["integral"]["value"], math.exp(22 / 7) - math.exp(1 / 3)))
         code, report = calc("--integral", "x", "--from", "1", "--to", "1 + 1/2**60")  # a polynomial is integrated exactly
@@ -492,6 +497,15 @@ class FinanceTests(unittest.TestCase):
         self.assertTrue(math.isclose(value("rate(10.5, -100, 800, 0)"), 0.05043597028651071, rel_tol=1e-9))
         self.assertTrue(math.isclose(value("rate(2.5, -40, 90, 0)"), 0.06254391358965222, rel_tol=1e-9))
         self.assertTrue(math.isclose(value("mirr(0, 1, -1, 1 + 1/10**20)"), 1e-20, rel_tol=1e-12))  # received over paid, minus one
+
+    def test_a_fractional_term_rate_among_huge_amounts_is_refused(self):
+        # pmt(1/10**16, 3/2, -10**20, 10**20) is 10000, so this rate is 1e-16; amounts of 1e20 leave float noise
+        # far larger than the difference that fixes it.
+        code, report = calc("rate(3/2, 10000, -10**20, 10**20)")
+        if code == 0:
+            self.assertTrue(math.isclose(number(report["results"][0]["value"]), 1e-16, rel_tol=1e-9), report)
+        else:
+            self.assertEqual(report["status"], "invalid")
 
     def test_bad_arguments_are_refused(self):
         for expression in ("irr(100, 110)", "irr(-100)", "fv(0.05, 10)", "pv(0.05, 10, -100, 0, 2)", "mirr(0.1, 0.1, 100, 50)", "npv(-1, 100, 100)",
@@ -894,6 +908,22 @@ class OracleTests(unittest.TestCase):
             got = precise(Fraction(shown["exact"])) if isinstance(shown, dict) else mpmath.mpf(shown)
             self.assertLessEqual(abs(got - truth), mpmath.mpf(10) ** -9 * abs(truth), (expression, shown, mpmath.nstr(truth, 20)))
         self.assertGreater(answered, 80)
+
+    def test_a_fractional_term_rate_fixed_only_by_float_noise_is_refused(self):
+        # Half a period with payment 2*(1 + e), 1 now and the payment's size owed later: the rate is about 4*e. For
+        # e = 2**-40 the float equation's noise is a few parts in a thousand of that rate, so an answer must either
+        # match a 60-digit root or be refused.
+        mpmath.mp.dps = 60
+        self.addCleanup(setattr, mpmath.mp, "dps", 15)
+        for power in (18, 30, 40, 48):
+            payment = 2 * (1 + mpmath.mpf(2) ** -power)
+            truth = mpmath.findroot(lambda r: -payment + (1 + r) ** mpmath.mpf("0.5") + payment * ((1 + r) ** mpmath.mpf("0.5") - 1) / r, mpmath.mpf(2) ** (2 - power))
+            code, report = calc(f"rate(1/2, 2*(1 + 1/2**{power}), 1, -2*(1 + 1/2**{power}))")
+            if code == 0:
+                got = mpmath.mpf(report["results"][0]["value"])
+                self.assertLessEqual(abs(got - truth), mpmath.mpf(10) ** -9 * abs(truth), (power, report, mpmath.nstr(truth, 20)))
+            else:
+                self.assertEqual(report["status"], "invalid", power)
 
     def test_irr_matches_the_numpy_financial_algorithm(self):
         rng = random.Random(83)

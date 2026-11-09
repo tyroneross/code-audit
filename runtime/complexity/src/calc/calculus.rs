@@ -35,6 +35,8 @@ const MAX_SCAN: usize = 1 << 20;
 const MAX_STRETCHES: usize = 256;
 /// Wall-clock budget for one numeric integral; past it the result is reported as not converged.
 const TIME_BUDGET: Duration = Duration::from_secs(3);
+/// The fewest floats a range must span at its larger end for sampling to mean anything.
+const MIN_RANGE_FLOATS: f64 = 67_108_864.0;
 const DERIVATIVE_AGREEMENT: f64 = 1e-5;
 
 /// The name the command is about: `--var`, or the only name without a value, or x.
@@ -315,10 +317,15 @@ fn area(f: &dyn Fn(f64) -> f64, low: f64, high: f64, cuts: &[f64], failed: &dyn 
         let gap = (whole - (left + right)).abs();
         // The total of the pieces' sizes, kept current, is what "small" is measured against.
         scale += left.abs() + right.abs() - whole.abs();
-        if gap <= PANEL_AGREEMENT * scale.max(f64::MIN_POSITIVE) || gap == 0.0 {
+        if !(from < middle && middle < to) {
+            // No float lies between the ends, so the "halves" are the panel itself and their
+            // agreement with it says nothing.
+            result.value += whole;
+            result.settled = false;
+        } else if gap <= PANEL_AGREEMENT * scale.max(f64::MIN_POSITIVE) || gap == 0.0 {
             result.value += left + right;
             result.error += gap;
-        } else if depth >= MAX_HALVINGS || result.evaluations > MAX_EVALUATIONS || !(from < middle && middle < to) {
+        } else if depth >= MAX_HALVINGS || result.evaluations > MAX_EVALUATIONS {
             result.value += left + right;
             result.error += gap;
             result.settled = false;
@@ -412,6 +419,12 @@ pub(super) fn integral(expression: &str, wanted: Option<&str>, from: Option<&str
     let allowed = exact_width.abs() / BigRational::from_integer(BigInt::from(1_000_000_000u64));
     if (float_width - &exact_width).abs() > allowed {
         return Err("--from and --to are too close together for floats to hold the width of the range; a numeric integral would run over a different range".into());
+    }
+    // Sampling needs room: a range only a few floats wide puts every sample on the same handful
+    // of points.
+    let largest = a.abs().max(b.abs());
+    if (b - a).abs() < MIN_RANGE_FLOATS * (largest.next_up() - largest) {
+        return Err("--from and --to are only a few floats apart, too close for a numeric integral to sample between them".into());
     }
     let node = with_constants_folded(&node, &name, names);
     let deadline = Instant::now() + TIME_BUDGET;
