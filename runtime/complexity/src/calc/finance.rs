@@ -11,11 +11,12 @@
 //! give exact results and a float input gives a float.
 
 use super::poly::Poly;
-use super::solve::{real_roots, single_root_above, Root, Span};
+use super::solve::{real_roots, single_root_above, Narrow, Root, Span};
 use super::{as_exact, as_float, binary, float, integer, is_zero, negate, other_side, power, steady, Outcome, Value};
 use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::{One, Signed, ToPrimitive, Zero};
+use roots::find_root_brent;
 
 const RATE_STEPS: usize = 100;
 const RATE_TOLERANCE: f64 = 1e-12;
@@ -186,32 +187,72 @@ fn present(rate: &Value, flows: &[Value]) -> Outcome<Value> {
     Ok(total)
 }
 
-/// The time-value equation's left side at rate r, and its slope, in floats (n periods,
-/// payment p, present value x, future value y, timing w).
-fn rate_residual(r: f64, [n, p, x, y, w]: [f64; 5]) -> f64 {
-    y + (r + 1.0).powf(n) * x + p * ((r + 1.0).powf(n) - 1.0) * (r * w + 1.0) / r
+/// The time-value equation's left side at rate r in floats (n periods, payment p, present
+/// value x, future value y, timing w), and the total size of its three terms. (1 + r)**n and
+/// (1 + r)**n - 1 come from log1p and expm1: the plain forms lose the answer when the
+/// difference is divided by a small rate.
+fn rate_residual(r: f64, [n, p, x, y, w]: [f64; 5]) -> (f64, f64) {
+    let log_growth = n * r.ln_1p();
+    let terms = [y, log_growth.exp() * x, p * log_growth.exp_m1() * (r * w + 1.0) / r];
+    (terms.iter().sum(), terms.iter().map(|term| term.abs()).sum())
 }
 
+/// Its slope by numpy-financial's formula. Good enough to steer the iteration; an accepted
+/// rate never rests on it.
 fn rate_slope(r: f64, [n, p, x, _, w]: [f64; 5]) -> f64 {
-    let (t1, t2) = ((r + 1.0).powf(n), (r + 1.0).powf(n - 1.0));
-    n * t2 * x - p * (t1 - 1.0) * (r * w + 1.0) / (r * r) + n * p * t2 * (r * w + 1.0) / r + p * (t1 - 1.0) * w / r
+    let log_growth = n * r.ln_1p();
+    let (t1, less_one) = (log_growth.exp(), log_growth.exp_m1());
+    let t2 = t1 / (1.0 + r);
+    n * t2 * x - p * less_one * (r * w + 1.0) / (r * r) + n * p * t2 * (r * w + 1.0) / r + p * less_one * w / r
 }
 
 /// numpy-financial's Newton iteration, started at 10%; `None` when it does not settle.
 fn newton_rate(inputs: [f64; 5]) -> Option<f64> {
     let mut r: f64 = 0.1;
     for _ in 0..RATE_STEPS {
-        let next = r - rate_residual(r, inputs) / rate_slope(r, inputs);
-        if !next.is_finite() {
+        let next = r - rate_residual(r, inputs).0 / rate_slope(r, inputs);
+        if !next.is_finite() || next <= -1.0 {
             return None;
         }
-        let settled = (next - r).abs() < RATE_TOLERANCE;
+        let settled = (next - r).abs() < RATE_TOLERANCE * r.abs().max(RATE_TOLERANCE);
         r = next;
         if settled {
             return Some(r);
         }
     }
     None
+}
+
+/// The rate for a term that is not a whole number of periods, in floats: the iteration's
+/// result is bracketed and finished by Brent's method on the residual, and accepted only when
+/// float noise in the residual, over its slope, could not move the rate by one part in 10**9.
+/// `Ok(None)` when no rate is found.
+fn fractional_rate(inputs: [f64; 5]) -> Outcome<Option<f64>> {
+    let Some(start) = newton_rate(inputs) else { return Ok(None) };
+    let g = |r: f64| rate_residual(r, inputs).0;
+    let mut spread = 1e-9;
+    let (low, high) = loop {
+        let (low, high) = ((start - spread * start.abs()).max(-1.0 + f64::EPSILON), start + spread * start.abs());
+        if (g(low) < 0.0) != (g(high) < 0.0) || g(low) == 0.0 || g(high) == 0.0 {
+            break (low, high);
+        }
+        spread *= 8.0;
+        if spread > 0.5 {
+            return Ok(None);
+        }
+    };
+    let Ok(r) = find_root_brent(low, high, &g, &mut Narrow) else { return Ok(None) };
+    let (grown, size) = (((1.0 + r).ln() * inputs[0]).exp(), rate_residual(r, inputs).1);
+    if !grown.is_normal() || r == 0.0 {
+        return Err("rate: a step of this calculation is too small or too large for a float with a fractional number of periods".into());
+    }
+    // The slope over a spread wide enough that noise in the two residuals does not matter.
+    let width = 1e-4 * r.abs();
+    let slope = (g(r + width) - g(r - width)) / (2.0 * width);
+    if !slope.is_finite() || slope == 0.0 || FLOAT_NOISE * size / slope.abs() > super::SENSITIVE * r.abs() {
+        return Err("rate: the amounts are too large beside their difference for floats to fix the rate with a fractional number of periods; use a whole number of periods".into());
+    }
+    Ok(Some(r))
 }
 
 /// The rate per period.
@@ -223,49 +264,45 @@ fn rate(nper: &Value, pmt: &Value, pv: &Value, fv: &Value, when: &Value) -> Outc
     }
     let inputs = [as_float(nper)?, as_float(pmt)?, as_float(pv)?, as_float(fv)?, as_float(when)?];
     let unsettled = || Err("rate: the iteration did not settle on a rate; check the signs (cash paid out is negative)".to_string());
-    let Some(mut r) = newton_rate(inputs) else { return unsettled() };
-    // The floats may have rounded the inputs (a future value of 1 + 2**-60 is 1.0). With a
-    // whole number of periods the equation can be evaluated exactly, so the rate is polished
-    // and confirmed there: each step moves by the exact residual over the slope, and the
-    // rate is accepted once that step is below one part in 10**12.
     let periods = match nper {
         Value::Exact(count) if count.is_integer() => count.to_integer().to_i32().filter(|count| count.abs() <= MAX_EXACT_RATE_PERIODS),
         _ => None,
     };
     let Some(periods) = periods else {
-        // A fractional or very long term has no exact form. The float answer is accepted when
-        // it satisfies the float equation and does not move when an input that is not itself
-        // a float is replaced by the float on its other side.
-        let [n, p, x, y, _] = inputs;
-        let scale = y.abs().max(x.abs()).max((p * n).abs()).max(1.0);
-        if rate_residual(r, inputs).abs() > 1e-7 * scale {
-            return unsettled();
-        }
-        // The equation's left side is only known to float noise times the amounts in it. That
-        // noise over the slope is how far the rate could be off; it must be below one part in 10**9.
-        if !(r + 1.0).powf(n).is_normal() {
-            return Err("rate: a step of this calculation is too small or too large for a float with a fractional number of periods".into());
-        }
-        if FLOAT_NOISE * scale / rate_slope(r, inputs).abs() > super::SENSITIVE * r.abs() {
-            return Err("rate: the amounts are too large beside their difference for floats to fix the rate with a fractional number of periods; use a whole number of periods".into());
-        }
+        // A fractional or very long term has no exact form. The float answer must also hold
+        // still when an input that is not itself a float is replaced by the float on its other side.
+        let Some(r) = fractional_rate(inputs)? else { return unsettled() };
         for (index, value) in [nper, pmt, pv, fv].into_iter().enumerate() {
             if let Some(nearby) = other_side(value, inputs[index]) {
                 let mut moved = inputs;
                 moved[index] = nearby;
-                let Some(other) = newton_rate(moved) else { return unsettled() };
+                let Some(other) = fractional_rate(moved)? else { return unsettled() };
                 steady("rate", r, other)?;
             }
         }
         return float(r);
     };
+    // The floats may have rounded the inputs (a future value of 1 + 2**-60 is 1.0). With a
+    // whole number of periods the equation can be evaluated exactly, so the rate is polished
+    // and confirmed there: each step moves by the exact residual over an exact slope, and the
+    // rate is accepted once that step is below one part in 10**12.
+    let Some(mut r) = newton_rate(inputs) else { return unsettled() };
     let (exact_pmt, exact_pv, exact_fv, exact_when) = (as_exact(pmt)?, as_exact(pv)?, as_exact(fv)?, as_exact(when)?);
     let one = BigRational::one();
+    let residual = |rate: &BigRational| {
+        let grown = (&one + rate).pow(periods);
+        &exact_fv + &exact_pv * &grown + &exact_pmt * (&one + rate * &exact_when) / rate * (&grown - &one)
+    };
+    let nudge = &one + BigRational::new(BigInt::one(), BigInt::from(1u32 << 20));
     for _ in 0..RATE_POLISH {
         let Some(rate) = BigRational::from_float(r).filter(|rate| !rate.is_zero() && *rate > -one.clone()) else { return unsettled() };
-        let grown = (&one + &rate).pow(periods);
-        let residual = &exact_fv + &exact_pv * &grown + &exact_pmt * (&one + &rate * &exact_when) / &rate * (&grown - &one);
-        let step = super::to_float(&residual)? / rate_slope(r, inputs);
+        let beside = &rate * &nudge;
+        let (here, there) = (residual(&rate), residual(&beside));
+        let slope = (&there - &here) / (&beside - &rate);
+        if slope.is_zero() {
+            return unsettled();
+        }
+        let step = super::to_float(&(here / slope))?;
         if !step.is_finite() {
             return unsettled();
         }
@@ -329,20 +366,31 @@ fn mirr(finance: &Value, reinvest: &Value, flows: &[Value]) -> Outcome<Value> {
     if received.iter().all(is_zero) || paid.iter().all(is_zero) {
         return Err("mirr needs at least one cash flow paid out (negative) and one received (positive)".into());
     }
-    // (received / paid)**(1/(n - 1)) * (1 + reinvest) - 1, taken through logarithms: the
-    // ratio stays exact until its logarithm, and expm1 gives the final "minus one" without
-    // subtracting two numbers that may both be near 1.
-    // The ratio is formed from exact present values where they can be held, so two present
-    // values that agree to sixteen digits still give the right logarithm.
-    let ratio = match (exact_present(reinvest, &received)?, exact_present(finance, &paid)?) {
-        (Some(top), Some(bottom)) => Value::Exact((top / bottom).abs()),
-        _ => {
-            let sized = |value: Value| if matches!(&value, Value::Exact(r) if r.is_negative()) || matches!(&value, Value::Float(f) if *f < 0.0) { negate(value) } else { value };
-            div(&sized(present(reinvest, &received)?), &sized(present(finance, &paid)?))?
-        }
-    };
-    let carried = log_one_plus(reinvest).map_err(|_| "mirr: the reinvestment rate must be above -100%".to_string())?;
-    float((super::natural_log(&ratio)? / (flows.len() as f64 - 1.0) + carried).exp_m1())
+    // (received / paid)**(1/(n - 1)) * (1 + reinvest) - 1. Written as one power,
+    // (received / paid * (1 + reinvest)**(n - 1))**(1/(n - 1)) - 1, the quantity in brackets
+    // is formed exactly where it can be held; then one logarithm and expm1 give the answer.
+    // Two logarithms added together cancel when the rate is near zero; one does not.
+    let steps = flows.len() as i32 - 1;
+    let growth = BigRational::one() + as_exact(reinvest)?;
+    if !growth.is_positive() {
+        return Err("mirr: the reinvestment rate must be above -100%".into());
+    }
+    if let (Some(top), Some(bottom), true) = (
+        exact_present(reinvest, &received)?,
+        exact_present(finance, &paid)?,
+        steps as u64 * growth.numer().bits().max(growth.denom().bits()) <= MAX_EXACT_GROWTH_BITS,
+    ) {
+        let whole_power = Value::Exact((top / bottom).abs() * growth.pow(steps));
+        return float((super::natural_log(&whole_power)? / steps as f64).exp_m1());
+    }
+    // Too large to hold exactly: floats, with the two logarithms added.
+    let sized = |value: Value| if matches!(&value, Value::Exact(r) if r.is_negative()) || matches!(&value, Value::Float(f) if *f < 0.0) { negate(value) } else { value };
+    let ratio = div(&sized(present(reinvest, &received)?), &sized(present(finance, &paid)?))?;
+    let (first, second) = (super::natural_log(&ratio)? / steps as f64, log_one_plus(reinvest)?);
+    if first.abs().max(second.abs()) * FLOAT_NOISE > super::SENSITIVE * (first + second).abs() {
+        return Err("mirr: the rate is a small difference that floats cannot hold for flows this large".into());
+    }
+    float((first + second).exp_m1())
 }
 
 /// A finance function by name, or `None` when the name is not one.

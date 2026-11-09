@@ -462,6 +462,27 @@ class FinanceTests(unittest.TestCase):
         self.assertEqual(value("fv(-1/2, 1100, 0, -2**1200)"), 2 ** 100)  # a whole number of periods is exact
         self.assertTrue(math.isclose(value("fv(-1/2, 21/2, 0, -10**10)"), 10 ** 10 * 0.5 ** 10.5, rel_tol=1e-12))
 
+    def test_mirr_near_zero_does_not_cancel(self):
+        # Reinvesting -1 into 1 at any reinvestment rate and getting 1 back a period later is a modified rate of exactly 0:
+        # (1/(1 + r))**1 * (1 + r) - 1. Two logarithms added used to leave 1.1e-19.
+        self.assertEqual(value("mirr(1/10**16, 7/12000, -1, 1)"), 0.0)
+        self.assertEqual(value("mirr(0.05, 0.07, -1, 1)"), 0.0)
+        # (1 + 1/3)**2 / (1 + 1/3)**2 ... worked in fractions: flows -1, 0, (4/3)**2 at reinvestment 1/3 give exactly 1/3.
+        self.assertTrue(math.isclose(value("mirr(1/5, 1/3, -1, 0, 16/9)"), 1 / 3, rel_tol=1e-15))
+
+    def test_a_fractional_term_rate_does_not_cancel_at_a_small_rate(self):
+        # Half a period, payment 262145/131072 at the end, 1 now and -262145/131072 later: the rate is exactly
+        # 262145/17179869184 (substitution gives zero). The float equation divided a cancelled difference by the
+        # rate and came out two parts in a million off.
+        code, report = calc("rate(1/2, 262145/131072, 1, -262145/131072)")
+        if code == 0:  # either right to one part in 10**9 or refused; never the old 1.52588182e-5
+            self.assertTrue(math.isclose(number(report["results"][0]["value"]), 262145 / 17179869184, rel_tol=1e-9), report)
+        else:
+            self.assertEqual(report["status"], "invalid")
+        self.assertTrue(math.isclose(value("rate(10.5, -100, 800, 0)"), 0.05043597028651071, rel_tol=1e-9))
+        self.assertTrue(math.isclose(value("rate(2.5, -40, 90, 0)"), 0.06254391358965222, rel_tol=1e-9))
+        self.assertTrue(math.isclose(value("mirr(0, 1, -1, 1 + 1/10**20)"), 1e-20, rel_tol=1e-12))  # received over paid, minus one
+
     def test_bad_arguments_are_refused(self):
         for expression in ("irr(100, 110)", "irr(-100)", "fv(0.05, 10)", "pv(0.05, 10, -100, 0, 2)", "mirr(0.1, 0.1, 100, 50)", "npv(-1, 100, 100)",
                            "nper(0.05, 10, -1000)", "npv(0.05)", "rate(10, 100, 1000, 5000)"):
@@ -769,6 +790,53 @@ class OracleTests(unittest.TestCase):
             self.assertEqual([number(c) for c in report["expand"]["coefficients_low_to_high"]], [Fraction(int(c.p), int(c.q)) for c in expected], source)
             again = sympy.expand(sympy.sympify(report["expand"]["polynomial"], rational=True))
             self.assertEqual(again, sympy.expand(sympy.sympify(source, rational=True)), source)
+
+    def test_finance_is_right_or_refused_at_extreme_exact_inputs(self):
+        # Rates next to 0 and -1, fractional terms, and amounts from 1e-10 to 1e300 that offset each other. Each printed
+        # result must agree with the formula evaluated to 600 digits to one part in 10**9; a refusal is acceptable, a
+        # wrong number is not. (This audit, run on 12,000 calls, is what found the cancellations the code now avoids.)
+        mpmath.mp.dps = 600
+        self.addCleanup(setattr, mpmath.mp, "dps", 15)
+        rng = random.Random(103)
+        precise = lambda x: mpmath.mpf(x.numerator) / mpmath.mpf(x.denominator)
+        rates = [Fraction(1, 10**16), Fraction(-1, 2), Fraction(5, 100), Fraction(1, 3), Fraction(-1) + Fraction(1, 10**16), Fraction(7, 12000), Fraction(3, 2), Fraction(1, 2**60)]
+        terms = [Fraction(1), Fraction(10), Fraction(360), Fraction(1, 2), Fraction(3, 2), Fraction(21, 2), Fraction(2201, 2), Fraction(7, 3), Fraction(-5)]
+        amounts = [Fraction(0), Fraction(1), Fraction(-1), Fraction(100), Fraction(10**20), Fraction(-10**20), Fraction(10**300), Fraction(-10**300), 1 + Fraction(1, 2**60), Fraction(-1, 10**10), Fraction(2 * 10**20)]
+        answered = 0
+        for _ in range(240):
+            r, n, w = rng.choice(rates), rng.choice(terms), rng.choice([0, 1])
+            p, x, y = rng.choice(amounts), rng.choice(amounts), rng.choice(amounts)
+            grown = (1 + precise(r)) ** precise(n)
+            factor = (1 + precise(r) * w) * (grown - 1) / precise(r)
+            kind = rng.choice(["fv", "pv", "pmt", "npv", "mirr"])
+            if kind == "fv":
+                expression, truth = f"fv({r}, {n}, {p}, {x}, {w})", -(precise(x) * grown + precise(p) * factor)
+            elif kind == "pv":
+                expression, truth = f"pv({r}, {n}, {p}, {y}, {w})", -(precise(y) + precise(p) * factor) / grown
+            elif kind == "pmt":
+                expression, truth = f"pmt({r}, {n}, {x}, {y}, {w})", -(precise(y) + precise(x) * grown) / factor
+            elif kind == "npv":
+                flows = [rng.choice(amounts) for _ in range(rng.randint(1, 6))]
+                expression, truth = f"npv({r}, {', '.join(map(str, flows))})", sum(precise(f) / (1 + precise(r)) ** t for t, f in enumerate(flows))
+            else:
+                flows, reinvest = [rng.choice(amounts) for _ in range(rng.randint(2, 6))], rng.choice(rates)
+                received = sum(precise(f) / (1 + precise(reinvest)) ** t for t, f in enumerate(flows) if f > 0)
+                paid = sum(precise(f) / (1 + precise(r)) ** t for t, f in enumerate(flows) if f < 0)
+                if not received or not paid:
+                    continue
+                expression = f"mirr({r}, {reinvest}, {', '.join(map(str, flows))})"
+                truth = (abs(received) / abs(paid)) ** (mpmath.mpf(1) / (len(flows) - 1)) * (1 + precise(reinvest)) - 1
+            code, report = calc(expression)
+            if code != 0:
+                continue
+            answered += 1
+            shown = report["results"][0]["value"]
+            got = precise(Fraction(shown["exact"])) if isinstance(shown, dict) else mpmath.mpf(shown)
+            if abs(truth) < mpmath.mpf(10) ** -500:  # an exact zero, up to the reference's own rounding
+                self.assertEqual(got, 0, expression)
+            else:
+                self.assertLessEqual(abs(got - truth), mpmath.mpf(10) ** -9 * abs(truth), (expression, shown, mpmath.nstr(truth, 20)))
+        self.assertGreater(answered, 100)
 
     def test_irr_matches_the_numpy_financial_algorithm(self):
         rng = random.Random(83)
