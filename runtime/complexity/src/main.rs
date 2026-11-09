@@ -40,6 +40,33 @@
 //! test code. Decisions that still have no function (top-level statements,
 //! field or constant initializers) are counted per file as
 //! `unowned_decisions`; `complexity.py` reports them as a gap.
+//!
+//! Structural signals per function row (method `tree-sitter-structure-v1`):
+//! - `max_nesting`: deepest level of nested control flow. Conditionals, loops,
+//!   `match`/`switch`, `catch`, conditional expressions and anonymous functions
+//!   that add to the row each open one level. An `else if` continues its chain
+//!   at the same level; a conditional expression inside another opens a new one,
+//!   so a chained ternary reads as nested. Swift `guard` and Rust `let ... else`
+//!   are early exits and open no level.
+//! - `bumps`: top-level control-flow blocks in the function that themselves
+//!   contain nested control flow (each is a separate chunk of nested logic).
+//! - `condition_operators`: the most `&&`/`||` operators combined in one
+//!   expression (Rust let-chain joins included). Counting restarts at every
+//!   statement, block, argument list and nested control-flow construct.
+//! - `params`: declared parameters, without a Rust `self` or Java receiver. A Go
+//!   declaration `a, b int` counts 2.
+//!
+//! Pattern leads per file (`patterns`), each compared as source text with
+//! whitespace removed and reported only when no operand calls a function,
+//! awaits, allocates or mutates:
+//! - `identical_operands`: `a == a`, `a && a`, `a - a` and the other operators
+//!   whose result is fixed when both sides are the same expression. Not run for
+//!   Swift, whose grammar does not preserve precedence in mixed expressions.
+//! - `self_assignment`: `x = x` with the plain assignment operator.
+//! - `duplicate_branches`: an `if`/`else` or conditional expression whose two
+//!   branches are the same code.
+//! - `repeated_condition`: a condition that repeats an earlier one in the same
+//!   `else if` chain, so its branch cannot run.
 
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
@@ -54,6 +81,12 @@ const MAX_MINHASHES: usize = 128;
 const TARGET_RECALL: f64 = 0.98;
 /// TypeScript test-framework calls whose callbacks are test code (Jest, Vitest, Mocha).
 const TEST_CALLEES: [&str; 7] = ["describe", "it", "test", "beforeEach", "afterEach", "beforeAll", "afterAll"];
+/// Operators whose result is fixed when both operands are the same expression.
+const FIXED_WHEN_IDENTICAL: [&str; 16] = ["==", "!=", "===", "!==", "<", ">", "<=", ">=", "&&", "||", "&", "|", "^", "-", "/", "%"];
+/// Node-kind fragments that mark an expression with an effect or a fresh value.
+const IMPURE_KINDS: [&str; 10] = ["call", "invocation", "await", "update", "creation", "new_expression", "yield", "try", "closure", "lambda"];
+/// Node-kind fragments where a new statement, block or argument list starts.
+const CONDITION_BOUNDARIES: [&str; 9] = ["block", "statements", "statement_list", "body", "argument", "arm", "case", "entry", "declaration"];
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Lang {
@@ -145,6 +178,19 @@ struct Row {
     nodes: u32,
     test_reason: Option<String>,
     kinds: Vec<u16>,
+    max_nesting: u32,
+    /// Deepest level reached inside the top-level block being walked.
+    chunk_depth: u32,
+    bumps: u32,
+    condition_operators: u32,
+    params: u32,
+}
+
+struct Pattern {
+    rule: &'static str,
+    line: usize,
+    row: Option<usize>,
+    detail: String,
 }
 
 struct Walker<'a> {
@@ -161,6 +207,9 @@ struct Walker<'a> {
     crate_root: bool,
     /// Decision points outside every measured function.
     unowned: u32,
+    patterns: Vec<Pattern>,
+    /// Running `&&`/`||` count of each expression that combines conditions.
+    conditions: Vec<u32>,
 }
 
 fn text<'a>(node: Node, src: &'a [u8]) -> &'a str {
@@ -175,6 +224,23 @@ fn field_text<'a>(node: Node, field: &str, src: &'a [u8]) -> Option<&'a str> {
 fn bare_type(raw: &str) -> String {
     let head = raw.split('<').next().unwrap_or(raw);
     head.split_whitespace().collect::<Vec<_>>().join("")
+}
+
+/// Source text with all whitespace removed, for comparing two fragments.
+fn squeezed(node: Node, src: &[u8]) -> String {
+    text(node, src).split_whitespace().collect()
+}
+
+/// False when the expression calls, awaits, allocates or mutates, so evaluating
+/// it twice could differ.
+fn pure(node: Node, src: &[u8]) -> bool {
+    let kind = node.kind();
+    if IMPURE_KINDS.iter().any(|k| kind.contains(k)) || (kind == "unary_expression" && text(node, src).starts_with("<-")) {
+        return false;
+    }
+    let mut cursor = node.walk();
+    let children: Vec<Node> = node.children(&mut cursor).collect();
+    children.into_iter().all(|c| pure(c, src))
 }
 
 fn word_present(haystack: &str, word: &str) -> bool {
@@ -325,7 +391,18 @@ fn rust_preceding_attrs<'t>(node: Node<'t>, src: &[u8]) -> Vec<(String, String)>
 
 impl<'a> Walker<'a> {
     fn new(lang: Lang, src: &'a [u8], crate_root: bool) -> Self {
-        Walker { lang, src, rows: Vec::new(), scope: Vec::new(), mod_path: Vec::new(), modules: Vec::new(), crate_root, unowned: 0 }
+        Walker {
+            lang,
+            src,
+            rows: Vec::new(),
+            scope: Vec::new(),
+            mod_path: Vec::new(),
+            modules: Vec::new(),
+            crate_root,
+            unowned: 0,
+            patterns: Vec::new(),
+            conditions: Vec::new(),
+        }
     }
 
     /// Returns (display name, name node) when `node` starts a named function.
@@ -499,6 +576,169 @@ impl<'a> Walker<'a> {
         }
     }
 
+    /// `&&`/`||` operators this node contributes to a combined condition.
+    fn logical_ops(&self, node: Node) -> u32 {
+        match (self.lang, node.kind()) {
+            (Lang::Rust, "let_chain") => self.decision(node),
+            (Lang::Swift, "conjunction_expression" | "disjunction_expression") => 1,
+            (Lang::Swift, _) => 0,
+            (_, "binary_expression") => matches!(field_text(node, "operator", self.src).unwrap_or(""), "&&" | "||") as u32,
+            _ => 0,
+        }
+    }
+
+    fn if_kind(&self) -> &'static str {
+        if self.lang == Lang::Rust { "if_expression" } else { "if_statement" }
+    }
+
+    /// The `if` that an `else` continues with, when this `if` has one.
+    fn else_if(&self, node: Node<'a>) -> Option<Node<'a>> {
+        let next = match self.lang {
+            Lang::Rust | Lang::TypeScript | Lang::Tsx => node.child_by_field_name("alternative")?.named_child(0)?,
+            Lang::Java | Lang::Go => node.child_by_field_name("alternative")?,
+            Lang::Swift => {
+                let mut cursor = node.walk();
+                let found = node.named_children(&mut cursor).find(|c| c.kind() == "if_statement")?;
+                found
+            }
+        };
+        (next.kind() == self.if_kind()).then_some(next)
+    }
+
+    /// True for an `if` reached through the `else` of another `if`.
+    fn continues_else_if(&self, node: Node<'a>) -> bool {
+        if node.kind() != self.if_kind() {
+            return false;
+        }
+        let owner = match self.lang {
+            Lang::Rust | Lang::TypeScript | Lang::Tsx => node.parent().filter(|p| p.kind() == "else_clause").and_then(|p| p.parent()),
+            Lang::Java | Lang::Go | Lang::Swift => node.parent(),
+        };
+        owner.is_some_and(|o| o.kind() == self.if_kind() && self.else_if(o).is_some_and(|n| n.id() == node.id()))
+    }
+
+    /// Control flow that opens one nesting level for the function it adds to.
+    fn nests(&self, node: Node<'a>) -> bool {
+        let kind = node.kind();
+        let opens = match self.lang {
+            Lang::Rust => matches!(kind, "if_expression" | "while_expression" | "for_expression" | "loop_expression" | "match_expression" | "closure_expression"),
+            Lang::TypeScript | Lang::Tsx => matches!(kind, "if_statement" | "for_statement" | "for_in_statement" | "while_statement" | "do_statement"
+                | "switch_statement" | "catch_clause" | "ternary_expression" | "arrow_function" | "function_expression" | "generator_function"),
+            Lang::Java => matches!(kind, "if_statement" | "for_statement" | "enhanced_for_statement" | "while_statement" | "do_statement"
+                | "switch_expression" | "catch_clause" | "ternary_expression" | "lambda_expression"),
+            Lang::Go => matches!(kind, "if_statement" | "for_statement" | "expression_switch_statement" | "type_switch_statement" | "select_statement" | "func_literal"),
+            Lang::Swift => matches!(kind, "if_statement" | "for_statement" | "while_statement" | "repeat_while_statement" | "switch_statement"
+                | "catch_block" | "ternary_expression" | "lambda_literal"),
+        };
+        opens && !self.continues_else_if(node)
+    }
+
+    /// Declared parameters of a function-like node.
+    fn params(&self, node: Node<'a>) -> u32 {
+        let listed = |list: Node, skip: &[&str]| {
+            let mut cursor = list.walk();
+            let count = list.named_children(&mut cursor).filter(|c| !c.kind().contains("comment") && !skip.contains(&c.kind())).count();
+            count as u32
+        };
+        let field = node.child_by_field_name("parameters");
+        match self.lang {
+            Lang::Rust => field.map_or(0, |p| listed(p, &["self_parameter", "attribute_item"])),
+            Lang::TypeScript | Lang::Tsx => field.map_or(node.child_by_field_name("parameter").is_some() as u32, |p| listed(p, &[])),
+            Lang::Java => field.map_or(0, |p| if p.kind() == "identifier" { 1 } else { listed(p, &["receiver_parameter"]) }),
+            Lang::Go => field.map_or(0, |p| {
+                let mut cursor = p.walk();
+                let total: usize = p
+                    .named_children(&mut cursor)
+                    .filter(|c| c.kind().ends_with("parameter_declaration"))
+                    .map(|c| c.children_by_field_name("name", &mut c.walk()).count().max(1))
+                    .sum();
+                total as u32
+            }),
+            Lang::Swift => {
+                let mut cursor = node.walk();
+                let direct = node.children(&mut cursor).filter(|c| c.kind() == "parameter").count() as u32;
+                let closure = node
+                    .child_by_field_name("type")
+                    .filter(|t| t.kind() == "lambda_function_type")
+                    .and_then(|t| t.named_child(0))
+                    .filter(|l| l.kind() == "lambda_function_type_parameters")
+                    .map_or(0, |l| listed(l, &[]));
+                direct + closure
+            }
+        }
+    }
+
+    fn pattern(&mut self, rule: &'static str, node: Node, row: Option<usize>, detail: String) {
+        self.patterns.push(Pattern { rule, line: node.start_position().row + 1, row, detail });
+    }
+
+    /// Record the pattern leads that start at this node.
+    fn find_patterns(&mut self, node: Node<'a>, row: Option<usize>) {
+        let src = self.src;
+        let same = |a: Node, b: Node| pure(a, src) && pure(b, src) && squeezed(a, src) == squeezed(b, src);
+        let pair = |first: &str, second: &str| node.child_by_field_name(first).zip(node.child_by_field_name(second));
+        let kind = node.kind();
+        if kind == "binary_expression" && self.lang != Lang::Swift {
+            let op = field_text(node, "operator", src).unwrap_or("");
+            if let Some((left, _)) = pair("left", "right").filter(|(l, r)| FIXED_WHEN_IDENTICAL.contains(&op) && same(*l, *r)) {
+                let note = if matches!(op, "==" | "!=" | "===" | "!==") { "; a deliberate NaN test is the one valid use" } else { "" };
+                self.pattern("identical_operands", node, row, format!("both sides of `{op}` are `{}`{note}", text(left, src).trim()));
+            }
+        }
+        let assigned = match (self.lang, kind) {
+            (Lang::Rust | Lang::TypeScript | Lang::Tsx, "assignment_expression") => pair("left", "right"),
+            (Lang::Java, "assignment_expression") | (Lang::Go, "assignment_statement") => {
+                pair("left", "right").filter(|_| field_text(node, "operator", src) == Some("="))
+            }
+            (Lang::Swift, "assignment") => {
+                let mut cursor = node.walk();
+                let plain = node.children(&mut cursor).any(|c| text(c, src) == "=");
+                pair("target", "result").filter(|_| plain)
+            }
+            _ => None,
+        };
+        if let Some((left, _)) = assigned.filter(|(l, r)| same(*l, *r)) {
+            self.pattern("self_assignment", node, row, format!("`{}` is assigned to itself", text(left, src).trim()));
+        }
+        let branches = match (self.lang, kind) {
+            (Lang::TypeScript | Lang::Tsx | Lang::Java, "ternary_expression") => pair("consequence", "alternative"),
+            (Lang::Swift, "ternary_expression") => pair("if_true", "if_false"),
+            (Lang::Swift, "if_statement") => {
+                let mut cursor = node.walk();
+                let bodies: Vec<Node> = node.named_children(&mut cursor).filter(|c| c.kind() == "statements").collect();
+                (bodies.len() == 2 && self.else_if(node).is_none()).then(|| (bodies[0], bodies[1]))
+            }
+            (Lang::Rust | Lang::TypeScript | Lang::Tsx, k) if k == self.if_kind() => {
+                node.child_by_field_name("consequence").zip(node.child_by_field_name("alternative").and_then(|a| a.named_child(0)))
+            }
+            (Lang::Java | Lang::Go, "if_statement") => pair("consequence", "alternative"),
+            _ => None,
+        };
+        // Branches are compared as text even when they call functions: the same call in both is the finding.
+        let empty = |n: Node| squeezed(n, src).trim_matches(['{', '}']).is_empty();
+        if branches.is_some_and(|(a, b)| b.kind() != self.if_kind() && !empty(a) && squeezed(a, src) == squeezed(b, src)) {
+            self.pattern("duplicate_branches", node, row, "both branches are the same code".into());
+        }
+        if kind == self.if_kind() && !self.continues_else_if(node) {
+            let condition = |n: Node| {
+                let mut cursor = n.walk();
+                let parts: Vec<Node> = n.children_by_field_name("condition", &mut cursor).collect();
+                parts.iter().all(|p| pure(*p, src)).then(|| parts.iter().map(|p| squeezed(*p, src)).collect::<Vec<_>>().join(","))
+            };
+            let mut seen: Vec<String> = Vec::new();
+            let mut link = Some(node);
+            while let Some(current) = link {
+                if let Some(text) = condition(current).filter(|t| !t.is_empty()) {
+                    if seen.contains(&text) {
+                        self.pattern("repeated_condition", current, row, "this condition repeats an earlier one in the same else-if chain".into());
+                    }
+                    seen.push(text);
+                }
+                link = self.else_if(current);
+            }
+        }
+    }
+
     fn test_reason(&self, node: Node, name: &str, in_test_scope: Option<&str>) -> Option<String> {
         let src = self.src;
         match self.lang {
@@ -608,12 +848,13 @@ impl<'a> Walker<'a> {
         self.modules.push((normalized, under_test));
     }
 
-    fn walk(&mut self, node: Node<'a>, current: Option<usize>, test_ctx: Option<String>, file: &str) {
+    fn walk(&mut self, node: Node<'a>, current: Option<usize>, test_ctx: Option<String>, file: &str, depth: u32, condition: Option<usize>) {
         self.out_of_line_module(node, file, &test_ctx);
         let is_inline_mod = self.lang == Lang::Rust && node.kind() == "mod_item" && node.child_by_field_name("body").is_some();
         if is_inline_mod {
             self.mod_path.push(field_text(node, "name", self.src).unwrap_or("").to_string());
         }
+        let (mut depth, mut condition, mut opens_chunk) = (depth, condition, false);
         let (current, test_ctx, pushed) = if let Some((short, name_node)) = self.function_row(node, current) {
             let qualified = self.scope.iter().cloned().chain(std::iter::once(short.clone())).collect::<Vec<_>>().join(".");
             let file_ctx = self.scope_test_context(node).or(test_ctx.clone());
@@ -626,7 +867,13 @@ impl<'a> Walker<'a> {
                 nodes: 0,
                 test_reason: reason.clone(),
                 kinds: Vec::new(),
+                max_nesting: 0,
+                chunk_depth: 0,
+                bumps: 0,
+                condition_operators: 0,
+                params: self.params(node),
             });
+            (depth, condition) = (0, None);
             self.scope.push(short);
             // A test function's nested helpers are test code too.
             let inherited = reason.or(file_ctx.filter(|c| c != "xctest"));
@@ -637,8 +884,30 @@ impl<'a> Walker<'a> {
             (current, ctx, true)
         } else {
             let add = self.decision(node);
+            self.find_patterns(node, current);
             if let Some(i) = current {
+                let nests = self.nests(node);
+                if nests || CONDITION_BOUNDARIES.iter().any(|k| node.kind().contains(k)) || node.kind().ends_with("_statement") {
+                    condition = None;
+                }
+                let ops = self.logical_ops(node);
+                if ops > 0 {
+                    let index = condition.unwrap_or_else(|| {
+                        self.conditions.push(0);
+                        self.conditions.len() - 1
+                    });
+                    self.conditions[index] += ops;
+                    condition = Some(index);
+                }
+                let combined = condition.map_or(0, |c| self.conditions[c]);
                 let row = &mut self.rows[i];
+                row.condition_operators = row.condition_operators.max(combined);
+                if nests {
+                    depth += 1;
+                    opens_chunk = depth == 1;
+                    row.max_nesting = row.max_nesting.max(depth);
+                    row.chunk_depth = if opens_chunk { 1 } else { row.chunk_depth.max(depth) };
+                }
                 row.cc += add;
                 if node.is_named() {
                     row.nodes += 1;
@@ -652,7 +921,10 @@ impl<'a> Walker<'a> {
         let mut cursor = node.walk();
         let children: Vec<Node<'a>> = node.children(&mut cursor).collect();
         for child in children {
-            self.walk(child, current, test_ctx.clone(), file);
+            self.walk(child, current, test_ctx.clone(), file, depth, condition);
+        }
+        if let Some(i) = current.filter(|_| opens_chunk) {
+            self.rows[i].bumps += (self.rows[i].chunk_depth >= 2) as u32;
         }
         if pushed {
             self.scope.pop();
@@ -888,6 +1160,7 @@ fn main() {
             "swift": versions.get("tree-sitter-swift"),
         },
         "method": "tree-sitter-decisions-v1",
+        "structure_method": "tree-sitter-structure-v1",
     });
     let opts = match parse_args() {
         Ok(o) => o,
@@ -934,7 +1207,7 @@ fn main() {
         let root = tree.root_node();
         let mut walker = Walker::new(lang, &raw, lang == Lang::Rust && rust_crate_root(&opts.root, rel));
         let file_ctx = (lang == Lang::Rust && rust_file_is_test(root, &raw)).then(|| "file has #![cfg(test)]".to_string());
-        walker.walk(root, None, file_ctx, rel);
+        walker.walk(root, None, file_ctx, rel, 0, None);
         let mut functions = Vec::new();
         for row in &walker.rows {
             let function_id = format!("{}:{}", row.name, row.line);
@@ -952,8 +1225,20 @@ fn main() {
                 "cc": row.cc,
                 "nodes": row.nodes,
                 "test_reason": row.test_reason,
+                "max_nesting": row.max_nesting,
+                "bumps": row.bumps,
+                "condition_operators": row.condition_operators,
+                "params": row.params,
             }));
         }
+        let patterns: Vec<serde_json::Value> = walker
+            .patterns
+            .iter()
+            .map(|p| {
+                let function_id = p.row.map(|i| format!("{}:{}", walker.rows[i].name, walker.rows[i].line));
+                serde_json::json!({"rule": p.rule, "line": p.line, "function_id": function_id, "detail": p.detail})
+            })
+            .collect();
         files.push(serde_json::json!({
             "path": rel,
             "language": lang.name(),
@@ -962,6 +1247,7 @@ fn main() {
             "parse_errors": root.has_error(),
             "functions": functions,
             "unowned_decisions": walker.unowned,
+            "patterns": patterns,
             "modules": walker.modules.iter().map(|(files, test)| serde_json::json!({"candidates": files, "under_test": test})).collect::<Vec<_>>(),
         }));
     }

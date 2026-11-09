@@ -30,6 +30,14 @@ Python functions are not compared (stated as a gap in the duplicates section).
 In the tree-sitter languages, decision points outside every function (top-level
 statements, initializers) are a reported gap, never silently dropped; Python
 module-level code is not measured.
+
+Structural signals: each row also carries max_nesting, bumps, condition_operators,
+params and lines (name line to closing line, inclusive). `signals` names the ones
+at or above --structure thresholds; `hotspot` stays the CC rule. `patterns` lists
+parser-backed leads (identical_operands, self_assignment, duplicate_branches,
+repeated_condition). Signals and patterns are places to read, never defects, and
+none changes the exit status. An analyzer built before these fields existed
+yields null values and one gap.
 Directory walks select source suffixes, exclude generated/vendor directories
 (SKIP below), and do not follow symlinked subdirectories. Explicit files override
 these filters. Git inventory disables repository-configured fsmonitor hooks.
@@ -46,6 +54,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import python_structure  # noqa: E402
 from scan import TEST_PATH  # noqa: E402  shared test-path convention
 
 SKIP = {".git", "node_modules", "dist", "build", "vendor", "target", "__pycache__", ".venv"}
@@ -53,7 +62,11 @@ SOURCE_SUFFIXES = {".py", ".ts", ".mts", ".cts", ".tsx", ".js", ".jsx", ".mjs", 
 COVERAGE_SCHEMA = "code-audit.function-coverage.v1"
 NATIVE_SUFFIXES = {".rs", ".ts", ".mts", ".cts", ".tsx", ".java", ".go", ".swift"}
 NATIVE_MANIFEST = Path(__file__).resolve().parents[3] / "runtime" / "complexity" / "Cargo.toml"
-PYTHON_ANALYZER = {"name": "python-ast", "version": sys.version.split()[0], "method": "python-ast-decisions-v1", "languages": ["python"]}
+PYTHON_ANALYZER = {"name": "python-ast", "version": sys.version.split()[0], "method": "python-ast-decisions-v1",
+                   "structure_method": "python-ast-structure-v1", "languages": ["python"]}
+STRUCTURE_FIELDS = ("max_nesting", "bumps", "condition_operators", "params")
+# Inclusive reading-order thresholds. Sources and the two unsourced defaults: references/measurement.md.
+STRUCTURE_THRESHOLDS = {"max_nesting": 3, "lines": 50, "params": 6, "bumps": 2, "condition_operators": 3}
 
 
 def native_binary():
@@ -137,23 +150,30 @@ class Functions(ast.NodeVisitor):
     def __init__(self):
         self.scope = []
         self.rows = []
+        self.in_class = False  # the innermost enclosing scope is a class body
+
+    def enter(self, node, in_class):
+        self.scope.append(node.name)
+        outer, self.in_class = self.in_class, in_class
+        self.generic_visit(node)
+        self.in_class = outer
+        self.scope.pop()
 
     def visit_ClassDef(self, node):
-        self.scope.append(node.name)
-        self.generic_visit(node)
-        self.scope.pop()
+        self.enter(node, True)
 
     def visit_FunctionDef(self, node):
         name = ".".join([*self.scope, node.name])
         counter = Decisions()
         for statement in node.body:
             counter.visit(statement)
+        shape = python_structure.Shape(node.body)
         self.rows.append({"name": name, "line": node.lineno,
                           "end_line": node.end_lineno, "function_id": f"{name}:{node.lineno}",
-                          "cc": counter.score})
-        self.scope.append(node.name)
-        self.generic_visit(node)
-        self.scope.pop()
+                          "cc": counter.score, "max_nesting": shape.max_nesting, "bumps": shape.bumps,
+                          "condition_operators": shape.condition_operators,
+                          "params": python_structure.param_count(node.args, self.in_class)})
+        self.enter(node, False)
 
     visit_AsyncFunctionDef = visit_FunctionDef
 
@@ -217,7 +237,18 @@ def select(root, paths):
     return [p for p in walk(root, gaps) if p.suffix in SOURCE_SUFFIXES], "walk-source", gaps
 
 
-def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, similarity=0.8):
+def structure_thresholds(overrides):
+    """Defaults with `name=value` overrides applied; rejects unknown names and non-positive values."""
+    thresholds = dict(STRUCTURE_THRESHOLDS)
+    for item in overrides or []:
+        name, _, value = item.partition("=")
+        if name not in thresholds or not value.isdigit() or int(value) < 1:
+            raise ValueError(f"--structure expects name=positive-integer with name in {sorted(thresholds)}; got {item!r}")
+        thresholds[name] = int(value)
+    return thresholds
+
+
+def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, similarity=0.8, structure=None):
     root = Path(root).resolve()
     if not root.is_dir():
         raise ValueError(f"source root is not a directory: {root}")
@@ -226,8 +257,9 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
     if isinstance(similarity, bool) or not isinstance(similarity, (int, float)) or not 0 <= similarity <= 1:
         raise ValueError("similarity must be a number in [0,1]")
     coverage = coverage_document(coverage)
+    limits = structure_thresholds(structure)
     selected, selection, gaps = select(root, paths)
-    rows, digests = [], {}
+    rows, digests, patterns = [], {}, []
     selected_names = set()
     seen_files = set()
     native_names = []
@@ -265,10 +297,22 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
         if supplied is not None and not compatible:
             gaps.append({"path": name, "reason": "coverage source digest mismatch; CRAP unavailable"})
         visitor = Functions()
-        visitor.visit(tree)
+        try:
+            visitor.visit(tree)
+            leads = python_structure.patterns(tree)
+        except RecursionError:
+            gaps.append({"path": name, "reason": "expression nesting exceeds the interpreter recursion limit; file not measured"})
+            continue
         for row in visitor.rows:
-            add_row(rows, row, name, "python", None, supplied if compatible else None, threshold)
+            add_row(rows, row, name, "python", None, supplied if compatible else None, threshold, limits)
+        for rule, line, detail in leads:
+            owner = max((r for r in visitor.rows if r["line"] <= line <= r["end_line"]), key=lambda r: r["line"], default=None)
+            patterns.append({"rule": rule, "path": name, "line": line, "language": "python",
+                             "function_id": owner and owner["function_id"], "detail": detail})
     native = run_native(root, native_names, duplicates, similarity, gaps)
+    if native and "structure_method" not in native["analyzer"]:
+        gaps.append({"path": ".", "reason": "tree-sitter analyzer predates structural signals and pattern leads; "
+                                            f"those fields are null for its files. Rebuild: {native_build_hint()}"})
     test_modules = rust_test_module_files((native or {}).get("files", []))
     for entry in (native or {}).get("files", []):
         name = entry["path"]
@@ -287,8 +331,10 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
             gaps.append({"path": name, "reason": "coverage source digest mismatch; CRAP unavailable"})
         for function in entry["functions"]:
             row = {key: function[key] for key in ("name", "line", "end_line", "function_id", "cc")}
+            row.update({key: function.get(key) for key in STRUCTURE_FIELDS})
             reason = function["test_reason"] or test_modules.get(name)
-            add_row(rows, row, name, entry["language"], reason, supplied if compatible else None, threshold)
+            add_row(rows, row, name, entry["language"], reason, supplied if compatible else None, threshold, limits)
+        patterns.extend({**lead, "path": name, "language": entry["language"]} for lead in entry.get("patterns", []))
     if not rows:
         gaps.append({"path": ".", "reason": "no named functions measured; no clean-review conclusion"})
     analyzers = [PYTHON_ANALYZER] if any(r["language"] == "python" for r in rows) or not native else []
@@ -298,6 +344,10 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
     for row in rows:
         languages[row["language"]] = languages.get(row["language"], 0) + 1
     duplicate_report = label_duplicates(native.get("duplicates"), rows) if duplicates and native else None
+    kinds = {(r["path"], r["function_id"]): r["kind"] for r in rows}
+    for lead in patterns:
+        lead["kind"] = kinds.get((lead["path"], lead["function_id"])) or classify(lead["path"])[0]
+    patterns.sort(key=lambda lead: (lead["kind"] != "production", lead["path"], lead["line"], lead["rule"]))
     revision = git(root, "rev-parse", "HEAD")
     return {"schema": "code-audit.complexity.v1", "root": str(root),
             "revision": revision.decode().strip() if revision else None,
@@ -312,6 +362,12 @@ def measure(root, paths=None, coverage=None, threshold=10, duplicates=False, sim
             "test_function_count": sum(r["kind"] == "test" for r in rows),
             "production_hotspot_count": sum(r["hotspot"] and r["kind"] == "production" for r in rows),
             "coverage_unavailable_functions": sum(r["coverage_percent"] is None for r in rows),
+            "structure_thresholds": limits, "structure_rule": "value >= threshold",
+            "structure_signal_count": sum(bool(r["signals"]) for r in rows),
+            "production_structure_signal_count": sum(bool(r["signals"]) and r["kind"] == "production" for r in rows),
+            "pattern_count": len(patterns),
+            "production_pattern_count": sum(lead["kind"] == "production" for lead in patterns),
+            "patterns": patterns,
             **({"duplicates": duplicate_report} if duplicate_report else {}),
             "functions": sorted(rows, key=lambda r: (-r["cc"], r["path"], r["line"]))}
 
@@ -352,13 +408,15 @@ def label_duplicates(report, rows):
     return report
 
 
-def add_row(rows, row, path, language, test_reason, supplied, threshold):
-    """Attach path, language, test split, coverage and CRAP to one function row."""
+def add_row(rows, row, path, language, test_reason, supplied, threshold, limits):
+    """Attach path, language, test split, coverage, CRAP and structural signals to one function row."""
     percent = supplied["functions"].get(row["function_id"]) if supplied else None
     kind, reason = classify(path, test_reason)
+    row["lines"] = row["end_line"] - row["line"] + 1
     row.update(path=path, language=language, kind=kind, test_reason=reason, coverage_percent=percent,
                crap=None if percent is None else round(row["cc"] ** 2 * (1 - percent / 100) ** 3 + row["cc"], 6),
-               hotspot=row["cc"] >= threshold)
+               hotspot=row["cc"] >= threshold,
+               signals=[name for name, limit in limits.items() if row.get(name) is not None and row[name] >= limit])
     rows.append(row)
 
 
@@ -372,9 +430,11 @@ def main(argv=None):
     parser.add_argument("--fail-on-hotspots", action="store_true", help="exit 1 for measured hotspots; never establishes a defect")
     parser.add_argument("--duplicates", action="store_true", help="add structural duplicate candidates (tree-sitter languages only)")
     parser.add_argument("--similarity", type=float, default=0.8, help="duplicate candidate similarity, inclusive (default: 0.8)")
+    parser.add_argument("--structure", nargs="+", metavar="NAME=N",
+                        help="inclusive structural-signal thresholds (default: " + " ".join(f"{k}={v}" for k, v in STRUCTURE_THRESHOLDS.items()) + ")")
     args = parser.parse_args(argv)
     try:
-        report = measure(args.root, args.paths, args.coverage, args.threshold, args.duplicates, args.similarity)
+        report = measure(args.root, args.paths, args.coverage, args.threshold, args.duplicates, args.similarity, args.structure)
     except (ValueError, OSError, json.JSONDecodeError) as error:
         print(json.dumps({"schema": "code-audit.complexity.v1", "status": "invalid", "error": str(error)}))
         return 2
