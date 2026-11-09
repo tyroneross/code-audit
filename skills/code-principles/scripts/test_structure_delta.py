@@ -97,6 +97,14 @@ class StructureDeltaTests(unittest.TestCase):
         self.write("fast.py", "def fast(buf, key):\n    return buf[0] ^ key[0], buf[1] ^ key[1]\n")
         self.assertEqual(self.flags()[0], {"protected_region_changed": ["fast.py"]})
 
+    def test_marker_mentioned_in_prose_or_a_string_opens_no_region(self):
+        self.write("notes.md", "Wrap hot code in `simplify-ignore-start` and close it later.\n<!-- simplify-ignore-start: table -->\n| a |\n<!-- simplify-ignore-end -->\n")
+        self.write("tool.py", 'START = "simplify-ignore-start"\nprint("see simplify-ignore-end")\n')
+        self.assertEqual(self.flags()[0], {})
+        self.commit("docs")
+        self.write("notes.md", "Wrap hot code in `simplify-ignore-start` and close it later.\n<!-- simplify-ignore-start: table -->\n| b |\n<!-- simplify-ignore-end -->\n")
+        self.assertEqual(self.flags()[0], {"protected_region_changed": ["notes.md"]})
+
     def test_edit_outside_a_protected_region_is_not_flagged(self):
         self.write("fast.py", PROTECTED.replace("return a, b", "return (a, b)").replace("def fast(buf, key):", "def fast(buf, key):\n    # note"))
         self.assertEqual(self.flags()[0], {})

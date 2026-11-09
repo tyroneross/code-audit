@@ -11,7 +11,8 @@ working tree with complexity.py, then functions are paired by path and name. Fla
 defects, and a report with no flag does not show that behaviour is preserved: run the project's tests.
 
   tests_changed             a test file is in the change; a behaviour-preserving change normally leaves tests alone
-  protected_region_changed  code between `simplify-ignore-start` and `simplify-ignore-end` differs from the base
+  protected_region_changed  code between comment lines that begin with `simplify-ignore-start` and
+                            `simplify-ignore-end` differs from the base
   protected_region_unbalanced  a start marker without an end, or the reverse
   large_change              more added plus deleted lines than --max-changed-lines; prefer an automated transform
                             and smaller reviewable steps
@@ -27,6 +28,7 @@ import argparse
 import collections
 import json
 from pathlib import Path
+import re
 import sys
 import tempfile
 
@@ -36,7 +38,8 @@ import gitsafe  # noqa: E402
 from scan import TEST_PATH  # noqa: E402  shared test-path convention
 
 BASE_CANDIDATES = ("refs/remotes/origin/main", "refs/remotes/origin/master", "refs/heads/main", "refs/heads/master")
-START, END = "simplify-ignore-start", "simplify-ignore-end"
+# A marker counts only as the first thing in a comment, so prose or a string that mentions it does not open a region.
+MARKER = re.compile(r"^\s*(?:#|//|/\*|\*|<!--|--|;|%)\s*simplify-ignore-(start|end)\b")
 WORSE_WHEN_HIGHER = ("cc", *complexity.STRUCTURE_FIELDS)
 COMPARED = (*WORSE_WHEN_HIGHER, "lines")
 MAX_CHANGED_LINES = 500
@@ -87,16 +90,17 @@ def protected_regions(source):
     """(Counter of protected block texts, balanced). A block is the lines strictly between a start and an end marker."""
     blocks, current, balanced = collections.Counter(), None, True
     for line in source.splitlines():
-        if START in line:
+        marker = MARKER.match(line)
+        if marker is None:
+            if current is not None:
+                current.append(line.rstrip())
+        elif marker.group(1) == "start":
             balanced, current = balanced and current is None, []
-        elif END in line:
-            if current is None:
-                balanced = False
-            else:
+        else:
+            balanced = balanced and current is not None
+            if current is not None:
                 blocks["\n".join(current)] += 1
             current = None
-        elif current is not None:
-            current.append(line.rstrip())
     return blocks, balanced and current is None
 
 
@@ -114,7 +118,7 @@ def protected_changes(root, base, changed):
         before = gitsafe.run(root, "show", *gitsafe.NO_DRIVERS, f"{base}:./{path}")
         before = before.decode("utf-8", "replace") if before is not None else ""
         after = read_text(Path(root) / path) or ""
-        if START not in before and START not in after and END not in after:
+        if "simplify-ignore-" not in before + after:
             continue
         old, _ = protected_regions(before)
         new, balanced = protected_regions(after)

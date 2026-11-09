@@ -57,7 +57,7 @@ Revert a step when the result is harder to read. The common ways simplification 
 
 ## Protected regions
 
-Code between a comment containing `simplify-ignore-start` and one containing `simplify-ignore-end` is left byte-for-byte unchanged; add the reason after the start marker. Use it for hand-tuned hot paths, vendored blocks and generated sections. `structure_delta.py` reports any difference from the base and any unbalanced marker. The marker is checked after the change; it does not hide code from the agent.
+Code between a comment line that begins with `simplify-ignore-start` and one that begins with `simplify-ignore-end` is left byte-for-byte unchanged; add the reason after the start marker. Use it for hand-tuned hot paths, vendored blocks and generated sections. `structure_delta.py` reports any difference from the base and any unbalanced marker. The marker is checked after the change; it does not hide code from the agent.
 
 ## Report
 
