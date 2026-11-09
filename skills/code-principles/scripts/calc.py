@@ -328,8 +328,8 @@ def shown(value):
     if not isinstance(value, Fraction):
         return value
     try:
-        return {"exact": str(value), "decimal": float(value)}
-    except OverflowError:
+        return {"exact": str(value), "decimal": approximate(value)}
+    except (OverflowError, ValueError):  # too large, or too small to be anything but a misleading 0.0
         return {"exact": str(value), "decimal": None}
 
 

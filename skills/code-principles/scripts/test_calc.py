@@ -242,6 +242,13 @@ class CalcTests(unittest.TestCase):
             with self.subTest(expression=expression), self.assertRaises(ValueError):
                 calc.evaluate(expression)
 
+    def test_a_fraction_no_float_is_near_has_no_decimal(self):
+        for engine, run in ENGINES.items():
+            with self.subTest(engine=engine):
+                for expression, decimal in (("1/3", 0.3333333333333333), ("1/2**2000 + 1/2**2001", None), ("10**400 / 3", None), ("3/2**1074", 1.5e-323)):
+                    code, report = run([expression])
+                    self.assertEqual(report["results"][0]["value"]["decimal"], decimal, expression)
+
     def test_the_script_names_the_binary_for_what_only_the_binary_does(self):
         for argv in (["--solve", "x + 1 == 2"], ["2 * x", "--set", "x=3"], ["--maximize", "x", "--subject", "x <= 1"], ["pmt(0.05, 10, 1000)"], ["x + 1"]):
             code, report = self.run_main(*argv)

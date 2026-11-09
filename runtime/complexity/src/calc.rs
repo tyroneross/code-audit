@@ -817,12 +817,13 @@ impl Scope {
 }
 
 /// JSON form: an integer or float as a number, an exact fraction as text with its decimal
-/// beside it (null when the fraction is outside float range).
+/// beside it (null when no float is near the fraction: too large, or too small to be
+/// anything but a misleading 0.0).
 fn shown(value: &Value) -> String {
     match value {
         Value::Exact(r) if r.is_integer() => r.to_integer().to_string(),
         Value::Exact(r) => {
-            let decimal = to_float(r).map_or("null".to_string(), |f| format!("{f:?}"));
+            let decimal = nearest(r).map_or("null".to_string(), |f| format!("{f:?}"));
             format!("{{\"exact\": \"{r}\", \"decimal\": {decimal}}}")
         }
         Value::Float(f) => format!("{f:?}"),
