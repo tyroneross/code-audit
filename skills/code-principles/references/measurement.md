@@ -4,7 +4,7 @@ Use measurements when scoring is requested or complexity/refactoring is material
 
 ## Numbers come from a computation
 
-Every figure in a report is quoted from the tool that produced it or computed with a script. Totals, percentages, ratios, differences and threshold comparisons are not done by the model: language models make arithmetic errors that read as confident facts. The calculator evaluates arithmetic exactly (integers and fractions stay exact) and `--check "<left> == <right>"` exits 1 when a claimed equality or bound does not hold. It accepts numbers, operators and a few numeric functions and nothing else, so an expression copied from a repository under review cannot run code. Two forms take the same arguments and print the same report:
+Every figure in a report is quoted from the tool that produced it or computed with a script. Totals, percentages, ratios, differences and threshold comparisons are not done by the model: language models make arithmetic errors that read as confident facts. The calculator evaluates arithmetic exactly (integers and fractions stay exact) and `--check "<left> == <right>"` exits 1 when a claimed equality or bound does not hold. It accepts numbers, names, operators and a fixed list of numeric functions and nothing else, so an expression copied from a repository under review cannot run code. Two forms take the same arguments and print the same report:
 
 ```sh
 <plugin>/runtime/complexity/target/release/code-audit-complexity calc "99 + 124" --check "21 / 47 < 1/2"   # when the analyzer is built
@@ -13,7 +13,32 @@ python3 <cp>/scripts/calc.py "99 + 124" --check "21 / 47 < 1/2"                 
 
 Prefer the binary when it exists: measured on one Mac it answers in 8.7 ms with 2.4 MB against 64.6 ms and 21.6 MB for the script. `calc_vectors.json` holds hand-worked answers that both must give, and a seeded test runs 600 random expressions through both and requires agreement. For arithmetic inside reviewed code, see item E10 of the [focused checklist](focused-checklist.md).
 
-The binary uses exact big rationals (`num-rational`); `calc.py` uses the Python standard library (`fractions`, `math`, `statistics`) and needs no install. The choice was measured, with the alternatives recorded in [code health sources](../../../research/code-health-sources.md#calculation-engine). For statistics over measurement samples (comparing two timing runs, quantiles, a significance test) use R or another statistics tool when it is installed; do not use base R for exact integer arithmetic, where it loses precision above 2^53.
+The binary also does the mathematics a review meets beyond arithmetic: names, equations, derivatives, integrals, time value of money and small linear programs. `calc.py` stays the arithmetic fallback and says so when asked for more.
+
+```sh
+calc "pmt(rate/12, 360, 400000)" --set rate=65/1000              # names; finance functions (cash paid out is negative)
+calc --solve "x**3 - 6*x**2 + 11*x == 6"                         # every distinct real root of a polynomial
+calc --solve "2*x + 3*y == 7" --solve "x - y == 1"               # a linear system, exact
+calc --solve "cos(x) == x" --between 0 1                         # any other equation: one root inside a bracket
+calc --derivative "sin(x)*exp(2*x)" --at 1/2
+calc --integral "exp(-x**2)" --from 0 --to 1
+calc --expand "(x + 1)**3"
+calc --maximize "3*x + 2*y" --subject "x + y <= 4" --subject "x >= 0" --subject "y >= 0"   # add --integer x,y for whole numbers
+```
+
+Each answer states how far it is established, and a report quotes that with the number:
+
+| Field | True or present means |
+|---|---|
+| `exact` | The value is an exact integer or fraction, proved by substitution. False: a float correct to rounding, with its `residual` beside it |
+| `agrees` (derivative) | The rule-based value matches an independent central difference |
+| `converged`, `error_estimate` (integral) | The numeric integral met its tolerance; exit 1 when it did not |
+| `proved_optimal` (linear program) | The optimum satisfies every constraint exactly and the optimality conditions hold exactly. False: feasibility is exact but optimality rests on the solver, always the case with `--integer` |
+| `note` | No real root, a contradictory or under-determined system, an infeasible or unbounded program |
+
+Limits: `--solve` finds all real roots only for polynomials up to degree 32, and one root per bracket otherwise; complex roots are not reported. Derivative rules cover `+ - * / **`, `sqrt`, `exp`, `log`, `sin`, `cos` and `tan`. Only a polynomial gets a written antiderivative. A name in a linear program is unbounded unless a constraint bounds it, so write `x >= 0`. `npv` takes its first value at time 0, where a spreadsheet's NPV discounts the first value one period. `irr` returns one rate chosen by numpy-financial's rule when several exist. Money amounts typed as decimals are floats; write `1995/100` or whole cents when the cents must be exact. Run `calc --help` for the argument order of each function.
+
+The binary uses exact big rationals (`num-rational`); `calc.py` uses the Python standard library (`fractions`, `math`, `statistics`) and needs no install. The choice was measured, and the libraries behind each command were tested against independent methods before being adopted; both are recorded in [code health sources](../../../research/code-health-sources.md#calculation-engine). For statistics over measurement samples (comparing two timing runs, quantiles, a significance test) use R or another statistics tool when it is installed; do not use base R for exact integer arithmetic, where it loses precision above 2^53.
 
 ## Numerical evidence
 

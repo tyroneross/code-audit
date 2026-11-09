@@ -1,24 +1,38 @@
-//! `code-audit-complexity calc`: exact arithmetic, so a reported number comes from a
-//! computation and not from a model's mental arithmetic.
+//! `code-audit-complexity calc`: arithmetic, algebra, calculus, finance and small linear
+//! programs, so a reported number comes from a computation and not from a model's mental
+//! arithmetic.
 //!
-//! This is the fast form of `skills/code-principles/scripts/calc.py` and follows the same
-//! rules; `calc_vectors.json` beside that script is run against both so they cannot drift.
+//! Plain arithmetic is the fast form of `skills/code-principles/scripts/calc.py` and follows
+//! the same rules; `calc_vectors.json` beside that script is run against both so they cannot
+//! drift. The rest exists only here: names (`--set`), equations (`--solve`), derivatives,
+//! integrals, polynomial expansion, time-value-of-money functions and `--maximize` /
+//! `--minimize`.
 //!
-//! Accepted: numbers, `+ - * / // % **`, parentheses, and the functions in `call`. Nothing
-//! else parses, so an expression copied from a repository under review cannot run code.
-//! Integers and fractions stay exact; a float literal, `sqrt`, `log` or a fractional power
-//! makes the result a float. Semantics follow Python: `//` and `%` floor, `**` binds tighter
-//! than a leading minus and associates to the right, `round` sends a tie to the even digit.
+//! Accepted: numbers, names, `+ - * / // % **`, parentheses, and the functions in `call`.
+//! Nothing else parses, so an expression copied from a repository under review cannot run
+//! code. Integers and fractions stay exact; a float literal, `sqrt`, `log` or a fractional
+//! power makes the result a float. Semantics follow Python: `//` and `%` floor, `**` binds
+//! tighter than a leading minus and associates to the right, `round` sends a tie to the even
+//! digit.
 //!
-//! Budgets: an expression is at most `MAX_CHARS` characters and `MAX_PARTS` numbers and
-//! operations, and every exact value is at most `MAX_BITS` bits, checked before a power is
-//! computed. Work and memory are therefore bounded for any input.
+//! Budgets: an expression is at most `MAX_CHARS` characters and `MAX_PARTS` numbers, names
+//! and operations, every exact value is at most `MAX_BITS` bits (checked before a power is
+//! computed), and each command caps its own degree, unknowns and iterations. Work and memory
+//! are therefore bounded for any input.
+
+mod calculus;
+mod finance;
+mod optimize;
+mod poly;
+mod solve;
 
 use num_bigint::BigInt;
 use num_integer::Integer;
 use num_rational::BigRational;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 use std::cmp::Ordering;
+use std::collections::BTreeMap;
+use std::rc::Rc;
 
 const MAX_BITS: u64 = 4096;
 const MAX_ROUND_DIGITS: i64 = 60;
@@ -27,6 +41,8 @@ const MAX_PARTS: usize = 256;
 const MAX_NESTING: usize = 200;
 const TOLERANCE: f64 = 1e-9;
 const COMPARISONS: [&str; 6] = ["==", "!=", "<=", ">=", "<", ">"];
+const MAX_NAMES: usize = 64;
+const SCHEMA: &str = "code-audit.calc.v1";
 
 #[derive(Clone, Debug)]
 enum Value {
@@ -326,6 +342,10 @@ fn call(name: &str, arguments: Vec<Value>) -> Outcome<Value> {
         "stdev" => deviation(values, true),
         "pstdev" => deviation(values, false),
         "sqrt" => real(name, values, f64::sqrt, |x| x >= 0.0),
+        "exp" => real(name, values, f64::exp, |_| true),
+        "sin" => real(name, values, f64::sin, |_| true),
+        "cos" => real(name, values, f64::cos, |_| true),
+        "tan" => real(name, values, f64::tan, |_| true),
         "log2" => real(name, values, f64::log2, |x| x > 0.0),
         "log10" => real(name, values, f64::log10, |x| x > 0.0),
         "log" => match values {
@@ -344,7 +364,7 @@ fn call(name: &str, arguments: Vec<Value>) -> Outcome<Value> {
             let source = as_exact(value)?;
             integer(if name == "floor" { source.floor().to_integer() } else { source.ceil().to_integer() })
         }
-        _ => Err(format!("unknown function {name}; only numbers, arithmetic operators and numeric functions are accepted")),
+        _ => finance::call(name, values).unwrap_or_else(|| Err(format!("unknown function {name}; only numbers, names, arithmetic operators and the functions listed by --help are accepted"))),
     }
 }
 
@@ -355,7 +375,8 @@ enum Token {
     Symbol(&'static str),
 }
 
-const SYMBOLS: [&str; 15] = ["**", "//", "==", "!=", "<=", ">=", "+", "-", "*", "/", "%", "(", ")", ",", "<"];
+// A two-character symbol comes before the one-character symbol it starts with.
+const SYMBOLS: [&str; 17] = ["**", "//", "==", "!=", "<=", ">=", "+", "-", "*", "/", "%", "(", ")", ",", "<", ">", "="];
 
 fn tokens(source: &str) -> Outcome<Vec<Token>> {
     let chars: Vec<char> = source.chars().collect();
@@ -385,7 +406,7 @@ fn tokens(source: &str) -> Outcome<Vec<Token>> {
             out.push(Token::Name(chars[start..i].iter().collect()));
         } else {
             let rest: String = chars[i..].iter().take(2).collect();
-            let symbol = SYMBOLS.iter().chain([">"].iter()).find(|s| rest.starts_with(**s)).ok_or_else(|| format!("not an arithmetic expression: unexpected {c:?}"))?;
+            let symbol = SYMBOLS.iter().find(|s| rest.starts_with(**s)).ok_or_else(|| format!("not an arithmetic expression: unexpected {c:?}"))?;
             out.push(Token::Symbol(symbol));
             i += symbol.len();
         }
@@ -416,6 +437,60 @@ fn literal(text: &str) -> Outcome<Value> {
         return float(lower.parse::<f64>().map_err(|_| invalid())?);
     }
     Err(invalid())
+}
+
+/// A parsed expression. Parsing and evaluating are separate so an expression that holds a
+/// name can be evaluated at many values, differentiated, or read as a polynomial.
+#[derive(Clone, Debug)]
+enum Node {
+    Number(Value),
+    Name(String),
+    Negate(Rc<Node>),
+    Binary(&'static str, Rc<Node>, Rc<Node>),
+    Call(String, Vec<Rc<Node>>),
+}
+
+/// What a name stands for; `None` when it has no value.
+type Names<'a> = &'a dyn Fn(&str) -> Option<Value>;
+
+fn eval(node: &Node, names: Names) -> Outcome<Value> {
+    match node {
+        Node::Number(value) => Ok(value.clone()),
+        Node::Name(name) => names(name).ok_or_else(|| format!("{name} has no value: give --set {name}=VALUE, or find it with --solve")),
+        Node::Negate(inner) => Ok(negate(eval(inner, names)?)),
+        Node::Binary("**", base, exponent) => power(eval(base, names)?, eval(exponent, names)?),
+        Node::Binary(op, left, right) => binary(op, eval(left, names)?, eval(right, names)?),
+        Node::Call(name, arguments) => call(name, arguments.iter().map(|argument| eval(argument, names)).collect::<Outcome<Vec<_>>>()?),
+    }
+}
+
+/// Binding strength of a node's outermost operation, for printing with the fewest parentheses.
+fn strength(node: &Node) -> u8 {
+    match node {
+        Node::Binary("+" | "-", ..) => 1,
+        Node::Binary("**", ..) => 4,
+        Node::Binary(..) => 2,
+        Node::Negate(_) => 3,
+        Node::Number(Value::Exact(r)) if !r.is_integer() => 2,
+        Node::Number(Value::Exact(r)) if r.is_negative() => 3,
+        Node::Number(Value::Float(f)) if *f < 0.0 => 3,
+        _ => 5,
+    }
+}
+
+/// The expression as text that parses back to the same expression.
+fn text(node: &Node) -> String {
+    let wrap = |inner: &Node, least: u8| if strength(inner) < least { format!("({})", text(inner)) } else { text(inner) };
+    match node {
+        Node::Number(Value::Exact(r)) => r.to_string(),
+        Node::Number(Value::Float(f)) => format!("{f:?}"),
+        Node::Name(name) => name.clone(),
+        Node::Negate(inner) => format!("-{}", wrap(inner, 3)),
+        Node::Binary(op @ ("+" | "-"), left, right) => format!("{} {op} {}", wrap(left, 1), wrap(right, 2)),
+        Node::Binary("**", base, exponent) => format!("{}**{}", wrap(base, 5), wrap(exponent, 3)),
+        Node::Binary(op, left, right) => format!("{}{op}{}", wrap(left, 2), wrap(right, 3)),
+        Node::Call(name, arguments) => format!("{name}({})", arguments.iter().map(|argument| text(argument)).collect::<Vec<_>>().join(", ")),
+    }
 }
 
 struct Parser {
@@ -450,7 +525,7 @@ impl Parser {
         if self.take(symbol) { Ok(()) } else { Err(format!("not an arithmetic expression: expected {symbol}")) }
     }
 
-    /// One number or operation; the count bounds the work an expression can ask for.
+    /// One number, name or operation; the count bounds the work an expression can ask for.
     fn part(&mut self) -> Outcome<()> {
         self.parts += 1;
         if self.parts > MAX_PARTS { Err(format!("expression has more than {MAX_PARTS} parts")) } else { Ok(()) }
@@ -465,29 +540,27 @@ impl Parser {
         if self.at == self.tokens.len() { Ok(()) } else { Err("not an arithmetic expression: unexpected text after the expression".into()) }
     }
 
-    fn sum(&mut self) -> Outcome<Value> {
-        let mut value = self.term()?;
+    fn sum(&mut self) -> Outcome<Rc<Node>> {
+        let mut node = self.term()?;
         while let Some(op @ ("+" | "-")) = self.symbol() {
             self.at += 1;
             self.part()?;
-            let right = self.term()?;
-            value = binary(op, value, right)?;
+            node = Rc::new(Node::Binary(op, node, self.term()?));
         }
-        Ok(value)
+        Ok(node)
     }
 
-    fn term(&mut self) -> Outcome<Value> {
-        let mut value = self.factor()?;
+    fn term(&mut self) -> Outcome<Rc<Node>> {
+        let mut node = self.factor()?;
         while let Some(op @ ("*" | "/" | "//" | "%")) = self.symbol() {
             self.at += 1;
             self.part()?;
-            let right = self.factor()?;
-            value = binary(op, value, right)?;
+            node = Rc::new(Node::Binary(op, node, self.factor()?));
         }
-        Ok(value)
+        Ok(node)
     }
 
-    fn factor(&mut self) -> Outcome<Value> {
+    fn factor(&mut self) -> Outcome<Rc<Node>> {
         // A chain of signs is read in a loop, not by recursion, so its length cannot exhaust the stack.
         let mut negative = false;
         while let Some(op @ ("+" | "-")) = self.symbol() {
@@ -495,11 +568,11 @@ impl Parser {
             self.part()?;
             negative ^= op == "-";
         }
-        let value = self.power()?;
-        Ok(if negative { negate(value) } else { value })
+        let node = self.power()?;
+        Ok(if negative { Rc::new(Node::Negate(node)) } else { node })
     }
 
-    fn power(&mut self) -> Outcome<Value> {
+    fn power(&mut self) -> Outcome<Rc<Node>> {
         let base = self.atom()?;
         if !self.take("**") {
             return Ok(base);
@@ -508,20 +581,22 @@ impl Parser {
         self.enter()?;
         let exponent = self.factor()?;
         self.nesting -= 1;
-        power(base, exponent)
+        Ok(Rc::new(Node::Binary("**", base, exponent)))
     }
 
-    fn atom(&mut self) -> Outcome<Value> {
+    fn atom(&mut self) -> Outcome<Rc<Node>> {
         match self.tokens.get(self.at).cloned() {
             Some(Token::Number(text)) => {
                 self.at += 1;
                 self.part()?;
-                literal(&text)
+                Ok(Rc::new(Node::Number(literal(&text)?)))
             }
             Some(Token::Name(name)) => {
                 self.at += 1;
                 self.part()?;
-                self.expect("(")?;
+                if !self.take("(") {
+                    return Ok(Rc::new(Node::Name(name)));
+                }
                 self.enter()?;
                 let mut arguments = Vec::new();
                 while !self.take(")") {
@@ -534,45 +609,44 @@ impl Parser {
                     arguments.push(self.sum()?);
                 }
                 self.nesting -= 1;
-                call(&name, arguments)
+                Ok(Rc::new(Node::Call(name, arguments)))
             }
             Some(Token::Symbol("(")) => {
                 self.at += 1;
                 self.enter()?;
-                let value = self.sum()?;
+                let node = self.sum()?;
                 self.expect(")")?;
                 self.nesting -= 1;
-                Ok(value)
+                Ok(node)
             }
             _ => Err("not an arithmetic expression: expected a number".into()),
         }
     }
 }
 
-fn finite(value: Value) -> Outcome<Value> {
-    match value {
-        Value::Float(f) if !f.is_finite() => Err("result is not a finite real number".into()),
-        other => Ok(other),
-    }
+fn parse(source: &str) -> Outcome<Rc<Node>> {
+    let mut parser = Parser::new(source)?;
+    let node = parser.sum()?;
+    parser.finished()?;
+    Ok(node)
 }
 
-fn evaluate(source: &str) -> Outcome<Value> {
+/// `LEFT op RIGHT` with op one of `allowed`; `usage` is the error when the text is anything else.
+fn relation(source: &str, allowed: &[&str], usage: &str) -> Outcome<(Rc<Node>, &'static str, Rc<Node>)> {
     let mut parser = Parser::new(source)?;
-    let value = parser.sum()?;
-    parser.finished()?;
-    finite(value)
+    let left = parser.sum()?;
+    let op = parser.symbol().filter(|s| allowed.contains(s)).ok_or(usage)?;
+    parser.at += 1;
+    parser.part()?;
+    let right = parser.sum()?;
+    parser.finished().map_err(|_| usage.to_string())?;
+    Ok((left, op, right))
 }
 
 /// (passed, left, right) for one comparison `LEFT op RIGHT`.
-fn check(source: &str, tolerance: f64) -> Outcome<(bool, Value, Value)> {
-    let usage = "a check is one comparison, for example \"2 + 2 == 4\"";
-    let mut parser = Parser::new(source)?;
-    let left = finite(parser.sum()?)?;
-    let op = parser.symbol().filter(|s| COMPARISONS.contains(s)).ok_or(usage)?;
-    parser.at += 1;
-    parser.part()?;
-    let right = finite(parser.sum()?)?;
-    parser.finished().map_err(|_| usage.to_string())?;
+fn check(source: &str, tolerance: f64, names: Names) -> Outcome<(bool, Value, Value)> {
+    let (left, op, right) = relation(source, &COMPARISONS, "a check is one comparison, for example \"2 + 2 == 4\"")?;
+    let (left, right) = (eval(&left, names)?, eval(&right, names)?);
     let approximate = matches!(left, Value::Float(_)) || matches!(right, Value::Float(_));
     let passed = if approximate && matches!(op, "==" | "!=") {
         let (a, b) = (as_float(&left).map_err(|_| "a side is outside float range; compare exact values")?,
@@ -593,6 +667,38 @@ fn check(source: &str, tolerance: f64) -> Outcome<(bool, Value, Value)> {
     Ok((passed, left, right))
 }
 
+/// Names given a value with `--set`, plus the constants `pi` and `e`.
+#[derive(Default)]
+struct Scope {
+    set: BTreeMap<String, Value>,
+}
+
+impl Scope {
+    fn value(&self, name: &str) -> Option<Value> {
+        self.set.get(name).cloned().or(match name {
+            "pi" => Some(Value::Float(std::f64::consts::PI)),
+            "e" => Some(Value::Float(std::f64::consts::E)),
+            _ => None,
+        })
+    }
+
+    /// Add `NAME=EXPRESSION`; the expression may use the names set before it.
+    fn define(&mut self, assignment: &str) -> Outcome<()> {
+        let (name, expression) = assignment.split_once('=').ok_or("--set takes NAME=VALUE, for example --set rate=5/100")?;
+        let name = name.trim();
+        let plain = name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') && name.chars().next().is_some_and(|c| c.is_ascii_alphabetic() || c == '_');
+        if !plain || matches!(name, "pi" | "e") {
+            return Err(format!("{name:?} cannot be set: a name is letters, digits and _, and pi and e are constants"));
+        }
+        if self.set.len() >= MAX_NAMES {
+            return Err(format!("more than {MAX_NAMES} names"));
+        }
+        let value = eval(&*parse(expression)?, &|name| self.value(name))?;
+        self.set.insert(name.to_string(), value);
+        Ok(())
+    }
+}
+
 /// JSON form: an integer or float as a number, an exact fraction as text with its decimal
 /// beside it (null when the fraction is outside float range).
 fn shown(value: &Value) -> String {
@@ -610,56 +716,163 @@ fn quoted(text: &str) -> String {
     serde_json::to_string(text).unwrap_or_else(|_| "\"\"".into())
 }
 
-const HELP: &str = "usage: code-audit-complexity calc EXPRESSION [EXPRESSION ...] [--check \"LEFT == RIGHT\" ...] [--tolerance 1e-9]\n\n\
-Evaluates arithmetic exactly: numbers, + - * / // % **, parentheses and the functions abs, round, min, max, sum,\n\
-mean, median, stdev, pstdev, sqrt, floor, ceil, log, log2, log10. Nothing else is accepted.\n\
-Exit: 0 every expression evaluated and every check passed; 1 a check failed; 2 an expression is invalid.";
+/// A JSON object from keys and already-encoded values.
+fn object(fields: &[(&str, String)]) -> String {
+    format!("{{{}}}", fields.iter().map(|(key, value)| format!("{}: {value}", quoted(key))).collect::<Vec<_>>().join(", "))
+}
+
+fn list(items: &[String]) -> String {
+    format!("[{}]", items.join(", "))
+}
+
+const HELP: &str = "usage: code-audit-complexity calc EXPRESSION ... [--check \"LEFT == RIGHT\" ...] [--set NAME=VALUE ...] [--tolerance 1e-9]
+       code-audit-complexity calc --solve \"EQUATION\" [--solve \"EQUATION\" ...] [--between LOW HIGH]
+       code-audit-complexity calc --derivative EXPRESSION [--at VALUE] [--var NAME]
+       code-audit-complexity calc --integral EXPRESSION [--from LOW --to HIGH] [--var NAME]
+       code-audit-complexity calc --expand EXPRESSION [--var NAME]
+       code-audit-complexity calc --maximize|--minimize EXPRESSION --subject \"LEFT <= RIGHT\" ... [--integer NAME,NAME]
+
+Arithmetic is exact: numbers, + - * / // % **, parentheses, the constants pi and e, names given with --set, and
+  abs round min max sum mean median stdev pstdev sqrt exp log log2 log10 sin cos tan floor ceil.
+Finance (cash paid out is negative; `when` is 0 for payments at the end of a period, 1 for the beginning):
+  fv(rate, nper, pmt, pv[, when])   pv(rate, nper, pmt[, fv, when])   pmt(rate, nper, pv[, fv, when])
+  nper(rate, pmt, pv[, fv, when])   rate(nper, pmt, pv, fv[, when])
+  npv(rate, v0, v1, ...)  first value at time 0 (a spreadsheet NPV discounts its first value one period)
+  irr(v0, v1, ...)        mirr(finance_rate, reinvest_rate, v0, v1, ...)
+--solve      one equation in one name (every real root of a polynomial; other equations need --between), or
+             several linear equations in several names, solved exactly.
+--derivative the derivative by the differentiation rules; a polynomial is exact.
+--integral   a polynomial exactly; anything else numerically between --from and --to.
+--maximize / --minimize  a linear objective under linear constraints. A name is unbounded unless a constraint
+             bounds it, so write \"x >= 0\" when a quantity cannot be negative.
+Nothing else is accepted. Exit: 0 computed and every check passed; 1 a check failed or a numeric answer did not
+converge; 2 the input is invalid.";
+
+/// What one invocation asks for.
+#[derive(Default)]
+struct Request {
+    expressions: Vec<String>,
+    checks: Vec<String>,
+    sets: Vec<String>,
+    equations: Vec<String>,
+    between: Option<(String, String)>,
+    derivative: Option<String>,
+    at: Option<String>,
+    integral: Option<String>,
+    from: Option<String>,
+    to: Option<String>,
+    expand: Option<String>,
+    objective: Option<(bool, String)>,
+    subjects: Vec<String>,
+    integers: Vec<String>,
+    var: Option<String>,
+    tolerance: Option<f64>,
+}
+
+fn request(arguments: &[String]) -> Outcome<Option<Request>> {
+    let mut wanted = Request::default();
+    let mut rest = arguments.iter();
+    while let Some(argument) = rest.next() {
+        let mut value = |what: &str| rest.next().cloned().ok_or_else(|| format!("{argument} needs {what}"));
+        match argument.as_str() {
+            "-h" | "--help" => return Ok(None),
+            "--check" => wanted.checks.push(value("a comparison")?),
+            "--set" => wanted.sets.push(value("NAME=VALUE")?),
+            "--solve" => wanted.equations.push(value("an equation")?),
+            "--between" => wanted.between = Some((value("two bounds")?, value("two bounds")?)),
+            "--derivative" => wanted.derivative = Some(value("an expression")?),
+            "--at" => wanted.at = Some(value("a value")?),
+            "--integral" => wanted.integral = Some(value("an expression")?),
+            "--from" => wanted.from = Some(value("a bound")?),
+            "--to" => wanted.to = Some(value("a bound")?),
+            "--expand" => wanted.expand = Some(value("an expression")?),
+            "--maximize" | "--minimize" => wanted.objective = Some((argument == "--maximize", value("an objective")?)),
+            "--subject" => wanted.subjects.push(value("a constraint")?),
+            "--integer" => wanted.integers.extend(value("names")?.split(',').map(|name| name.trim().to_string()).filter(|name| !name.is_empty())),
+            "--var" => wanted.var = Some(value("a name")?),
+            "--tolerance" => {
+                wanted.tolerance = Some(value("a number")?.parse::<f64>().ok().filter(|t| t.is_finite() && *t >= 0.0).ok_or("--tolerance needs a non-negative number")?)
+            }
+            // A misspelt option is words and hyphens only; "--max(0)" and "--5" are arithmetic (a double minus).
+            other if other.len() > 2 && other.starts_with("--") && other[2..].chars().all(|c| c.is_ascii_alphabetic() || c == '-') => {
+                return Err(format!("unknown option {other}; see --help"))
+            }
+            other => wanted.expressions.push(other.to_string()),
+        }
+    }
+    Ok(Some(wanted))
+}
+
+/// The report's fields and the exit status for one request.
+fn answer(wanted: &Request) -> Outcome<(Vec<(&'static str, String)>, i32)> {
+    let mut scope = Scope::default();
+    for assignment in &wanted.sets {
+        scope.define(assignment)?;
+    }
+    let names: Names = &|name| scope.value(name);
+    let (mut fields, mut status) = (Vec::new(), 0);
+    let mut results = Vec::new();
+    for expression in &wanted.expressions {
+        results.push(object(&[("expression", quoted(expression)), ("value", shown(&eval(&*parse(expression)?, names)?))]));
+    }
+    let mut verdicts = Vec::new();
+    for expression in &wanted.checks {
+        let (passed, left, right) = check(expression, wanted.tolerance.unwrap_or(TOLERANCE), names)?;
+        verdicts.push(object(&[("check", quoted(expression)), ("passed", passed.to_string()), ("left", shown(&left)), ("right", shown(&right))]));
+        status = status.max(!passed as i32);
+    }
+    fields.push(("results", list(&results)));
+    fields.push(("checks", list(&verdicts)));
+    if !wanted.equations.is_empty() {
+        fields.push(("solve", solve::solve(&wanted.equations, wanted.between.as_ref(), names)?));
+    }
+    if let Some(expression) = &wanted.derivative {
+        fields.push(("derivative", calculus::derivative(expression, wanted.var.as_deref(), wanted.at.as_deref(), names)?));
+    }
+    if let Some(expression) = &wanted.integral {
+        let (report, converged) = calculus::integral(expression, wanted.var.as_deref(), wanted.from.as_deref(), wanted.to.as_deref(), names)?;
+        fields.push(("integral", report));
+        status = status.max(!converged as i32);
+    }
+    if let Some(expression) = &wanted.expand {
+        fields.push(("expand", calculus::expand(expression, wanted.var.as_deref(), names)?));
+    }
+    if let Some((maximize, objective)) = &wanted.objective {
+        fields.push(("optimize", optimize::optimize(*maximize, objective, &wanted.subjects, &wanted.integers, names)?));
+    }
+    Ok((fields, status))
+}
 
 /// Run the subcommand; returns the process exit status.
 pub fn run(arguments: &[String]) -> i32 {
-    let (mut expressions, mut checks, mut tolerance) = (Vec::new(), Vec::new(), TOLERANCE);
     let invalid = |error: String| {
-        println!("{{\"schema\": \"code-audit.calc.v1\", \"status\": \"invalid\", \"error\": {}}}", quoted(&error));
+        println!("{}", object(&[("schema", quoted(SCHEMA)), ("status", quoted("invalid")), ("error", quoted(&error))]));
         2
     };
-    let mut iter = arguments.iter();
-    while let Some(argument) = iter.next() {
-        match argument.as_str() {
-            "-h" | "--help" => {
-                println!("{HELP}");
-                return 0;
-            }
-            "--check" => match iter.next() {
-                Some(value) => checks.push(value.clone()),
-                None => return invalid("--check needs a comparison".into()),
-            },
-            "--tolerance" => match iter.next().and_then(|v| v.parse::<f64>().ok()).filter(|t| t.is_finite() && *t >= 0.0) {
-                Some(value) => tolerance = value,
-                None => return invalid("--tolerance needs a non-negative number".into()),
-            },
-            other => expressions.push(other.to_string()),
+    let wanted = match request(arguments) {
+        Ok(Some(wanted)) => wanted,
+        Ok(None) => {
+            println!("{HELP}");
+            return 0;
         }
+        Err(error) => return invalid(error),
+    };
+    let asks = !wanted.expressions.is_empty() || !wanted.checks.is_empty() || !wanted.equations.is_empty()
+        || wanted.derivative.is_some() || wanted.integral.is_some() || wanted.expand.is_some() || wanted.objective.is_some();
+    if !asks {
+        return invalid("give at least one expression, --check, --solve, --derivative, --integral, --expand, --maximize or --minimize".into());
     }
-    if expressions.is_empty() && checks.is_empty() {
-        return invalid("give at least one expression or --check".into());
-    }
-    let (mut results, mut verdicts, mut status) = (Vec::new(), Vec::new(), 0);
-    for expression in &expressions {
-        match evaluate(expression) {
-            Ok(value) => results.push(format!("{{\"expression\": {}, \"value\": {}}}", quoted(expression), shown(&value))),
-            Err(error) => return invalid(error),
+    // A fault inside this module or a numeric library becomes a stated refusal, never a crash:
+    // the caller always gets one JSON report and exit 0, 1 or 2.
+    std::panic::set_hook(Box::new(|_| {}));
+    let outcome = std::panic::catch_unwind(|| answer(&wanted)).unwrap_or_else(|_| Err("internal error while computing; nothing is reported".into()));
+    match outcome {
+        Ok((fields, status)) => {
+            let mut report = vec![("schema", quoted(SCHEMA)), ("status", quoted(if status == 0 { "ok" } else { "failed" }))];
+            report.extend(fields);
+            println!("{}", object(&report));
+            status
         }
+        Err(error) => invalid(error),
     }
-    for expression in &checks {
-        match check(expression, tolerance) {
-            Ok((passed, left, right)) => {
-                verdicts.push(format!("{{\"check\": {}, \"passed\": {passed}, \"left\": {}, \"right\": {}}}", quoted(expression), shown(&left), shown(&right)));
-                status = status.max(!passed as i32);
-            }
-            Err(error) => return invalid(error),
-        }
-    }
-    println!("{{\"schema\": \"code-audit.calc.v1\", \"status\": \"{}\", \"results\": [{}], \"checks\": [{}]}}",
-             if status == 0 { "ok" } else { "failed" }, results.join(", "), verdicts.join(", "));
-    status
 }

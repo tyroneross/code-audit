@@ -49,6 +49,12 @@ MAX_ROUND_DIGITS = 60
 MAX_CHARS = 2000
 MAX_NODES = 256
 TOLERANCE = 1e-9
+# This script is the arithmetic fallback. Names, equations, calculus, finance functions and linear programs exist
+# only in the analyzer binary, which is built on exact rationals and checked against independent methods.
+BINARY_ONLY = {"--set", "--solve", "--between", "--derivative", "--at", "--integral", "--from", "--to", "--expand", "--maximize", "--minimize",
+               "--subject", "--integer", "--var"}
+BINARY_ONLY_MESSAGE = ("names, equations, derivatives, integrals, finance functions and linear programs need the analyzer binary: "
+                       "build runtime/complexity (cargo build --release) and run `code-audit-complexity calc --help`")
 
 
 def bits(value):
@@ -155,7 +161,7 @@ def number(node):
         except (TypeError, statistics.StatisticsError) as error:  # wrong argument count or kind
             raise ValueError(f"{node.func.id}: {error}") from None
         return bounded(result)
-    raise ValueError(f"only numbers, arithmetic operators and {sorted(FUNCTIONS)} are accepted")
+    raise ValueError(f"only numbers, arithmetic operators and {sorted(FUNCTIONS)} are accepted here; {BINARY_ONLY_MESSAGE}")
 
 
 def parse(expression):
@@ -229,6 +235,9 @@ def main(argv=None):
     # An expression may begin with a minus sign ("-5 + 3"); a leading space stops argparse reading it as an option.
     options = {"--check", "--tolerance", "-h", "--help"}
     argv = sys.argv[1:] if argv is None else list(argv)
+    if BINARY_ONLY & set(argv):
+        print(json.dumps({"schema": "code-audit.calc.v1", "status": "invalid", "error": BINARY_ONLY_MESSAGE}))
+        return 2
     args = parser.parse_args([argument if not argument.startswith("-") or argument.split("=")[0] in options else " " + argument
                               for argument in argv])
     if not args.expressions and not args.check:

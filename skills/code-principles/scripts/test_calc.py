@@ -230,6 +230,12 @@ class CalcTests(unittest.TestCase):
             with self.subTest(expression=expression), self.assertRaises(ValueError):
                 calc.evaluate(expression)
 
+    def test_the_script_names_the_binary_for_what_only_the_binary_does(self):
+        for argv in (["--solve", "x + 1 == 2"], ["2 * x", "--set", "x=3"], ["--maximize", "x", "--subject", "x <= 1"], ["pmt(0.05, 10, 1000)"], ["x + 1"]):
+            code, report = self.run_main(*argv)
+            self.assertEqual((code, report["status"]), (2, "invalid"), argv)
+            self.assertIn("analyzer binary", report["error"], argv)
+
     def test_crap_formula_matches_the_scorer(self):
         import complexity
         row = complexity.finish_row({"name": "f", "line": 1, "end_line": 3, "function_id": "f:1", "cc": 10, "path": "m.py", "language": "python"},

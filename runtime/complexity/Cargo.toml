@@ -1,9 +1,9 @@
 [package]
 name = "code-audit-complexity"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 license = "Apache-2.0"
-description = "Parser-backed per-function complexity and structural-duplicate leads for Rust, TypeScript, JavaScript, Java, Go and Swift, plus an exact arithmetic calculator. Reads source files only; never builds or runs the measured project."
+description = "Parser-backed per-function complexity and structural-duplicate leads for Rust, TypeScript, JavaScript, Java, Go and Swift, plus an exact calculator for arithmetic, equations, calculus, finance and small linear programs. Reads source files only; never builds or runs the measured project."
 publish = false
 
 [dependencies]
@@ -20,6 +20,11 @@ num-bigint = "=0.4.6"
 num-integer = "=0.1.46"
 num-rational = "=0.4.2"
 num-traits = "=0.2.19"
+# calc --solve for equations that are not polynomials (Brent's method), numeric integration
+# (double exponential quadrature) and --maximize / --minimize (simplex with branch and bound).
+roots = "=0.0.8"
+quadrature = "=0.1.2"
+microlp = "=0.7.0"
 
 [profile.release]
 opt-level = 3
