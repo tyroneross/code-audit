@@ -61,7 +61,7 @@ Code between a comment line that begins with `simplify-ignore-start` and one tha
 
 ## Report
 
-Scope and base revision; functions changed with before and after signals; flags raised and their disposition; tests, build and lint commands with results; steps reverted; what was left alone and why. Separate measured structure from claims about readability, and do not claim a speed gain without a comparable measurement.
+Scope and base revision; functions changed with before and after signals; flags raised and their disposition; tests, build and lint commands with results; steps reverted; what was left alone and why. Separate measured structure from claims about readability, and do not claim a speed gain without a comparable measurement. Quote every figure from tool output or `calc.py`; do not compute totals or percentages yourself.
 
 ## Source boundary
 

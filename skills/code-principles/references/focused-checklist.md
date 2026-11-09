@@ -56,6 +56,8 @@ Write the comparison as a differential check: run old and new over the same inpu
 - **E8 Hand-written parsers of standard formats** (PDF, CSV, HTML, ZIP, dates, source code) need tests for escapes, nesting, string literals and encodings, or a maintained library. Regex over source code matches inside strings and comments unless it accounts for them.
 - **E9 Built ≠ wired.** Every new export, guard, setting or delegation has a non-test production caller and is actually loaded (route manifest, registration, build output); every caller of the legacy path it replaces is migrated or exempted by name. Method: for each changed exported symbol run `rosslabs-lsp refs --symbol <name> --path <root>` and list symbols whose only references are tests or the definition; when LSP reports `ready: false`, use `rg -nw <name>` excluding tests.
 
+- **E10 Check arithmetic by running it.** Formulas, unit and currency conversions, rounding, percentages, limits, offsets and date math: evaluate the changed expression on boundary inputs (zero, one, the largest allowed, a negative, a value that does not divide evenly) and compare with the contract. `python3 <cp>/scripts/calc.py --check "<expression> == <expected>"` evaluates arithmetic exactly and runs nothing else; use a scratch script outside the repository for code that needs the language's own integer or float behavior. Integer division, float equality, rounding direction, overflow, unit mix-ups and off-by-one are the usual defects. Reading the arithmetic is not a check, and neither is a model's mental calculation.
+
 ## F. Frozen values that should be dynamic
 
 A value is a lead when it has a live source of truth or varies by context but is frozen in code; a literal alone is not. Procedure, harm order and the scanner's measured precision: [frozen values and path length](frozen-values-and-path-length.md).
@@ -90,7 +92,7 @@ Read the referenced principle in the [canonical rule cards](../../audit/referenc
 | C4 | P18 |
 | C5 | P20 async ownership, P21 |
 | D1–D5 | P10 substitution, P27 compatibility, P23 verification |
-| E1–E9 | P08, P13, P22, P23, P24, P25, P26, P30 |
+| E1–E10 | P08, P13, P22, P23, P24, P25, P26, P30 |
 | F1–F7 | P06 meaning and validation, P27 compatibility, P07 |
 | G1–G3 | P09 extension points, P13 splitting, P29 separate services, P18 |
 

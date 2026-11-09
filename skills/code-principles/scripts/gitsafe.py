@@ -32,6 +32,12 @@ def run(root, *args, timeout=20, stdin=None, ok=(0,)):
     return result.stdout if result.returncode in ok else None
 
 
+def links_at(root, base):
+    """Root-relative paths that are symbolic links at base. Their blob is the link target, not file contents."""
+    tree = run(root, "ls-tree", "-r", "-z", base, "--", ".")
+    return {entry.split("\t", 1)[1] for entry in names(tree or b"") if entry.startswith("120000 ")}
+
+
 def blobs(root, base, paths):
     """{path: bytes at base, or None when absent there} read in one Git process, without filters or textconv."""
     wanted = [path for path in paths if "\n" not in path]

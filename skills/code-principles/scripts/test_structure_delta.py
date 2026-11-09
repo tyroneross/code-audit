@@ -235,6 +235,16 @@ class StructureDeltaTests(unittest.TestCase):
         self.assertEqual(report["status"], "incomplete")
         self.assertEqual([(g["side"], g["path"]) for g in report["gaps"]], [("working tree", "zero.py")])
 
+    def test_link_at_the_base_is_not_read_as_source(self):
+        import os
+        os.symlink("pass", self.root / "alias.py")
+        self.commit("link")
+        (self.root / "alias.py").unlink()
+        self.write("alias.py", "pass\n")
+        _, report = self.flags()
+        self.assertEqual(report["binary_or_unreadable_files"], ["alias.py"])
+        self.assertEqual((report["status"], [(g["side"], g["path"]) for g in report["gaps"]]), ("incomplete", [("base", "alias.py")]))
+
     def test_partial_clone_does_not_fetch_a_missing_object(self):
         top = self.root.parent / (self.root.name + "-partial")
         self.addCleanup(lambda: shutil.rmtree(top, ignore_errors=True))

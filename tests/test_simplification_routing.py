@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "skills/code-principles/scripts"
 REFERENCE = ROOT / "skills/code-principles/references/simplification.md"
 ADDED = [REFERENCE, ROOT / "research/code-health-sources.md", SCRIPTS / "structure_delta.py", SCRIPTS / "hotspots.py",
-         SCRIPTS / "python_structure.py", SCRIPTS / "gitsafe.py"]
+         SCRIPTS / "python_structure.py", SCRIPTS / "gitsafe.py", SCRIPTS / "calc.py"]
 sys.path.insert(0, str(SCRIPTS))
 import complexity  # noqa: E402
 
@@ -50,6 +50,16 @@ class SimplificationRouting(unittest.TestCase):
         for rule, row in record["rules"].items():
             self.assertEqual((row["hits"], row["true_positive"]), (len(row["sample"]), sum(s["label"] == "tp" for s in row["sample"])), rule)
         self.assertEqual(set(record["status"]), {"identical_operands", "self_assignment", "duplicate_branches", "repeated_condition"})
+
+    def test_numbers_are_computed_by_script_in_every_entry_point(self):
+        self.assertTrue((SCRIPTS / "calc.py").is_file())
+        entry = (ROOT / "skills/code-audit/SKILL.md").read_text()
+        self.assertIn("compute, do not estimate", entry)
+        self.assertIn("../code-principles/scripts/calc.py", entry)
+        self.assertTrue((ROOT / "skills/code-audit/../code-principles/scripts/calc.py").resolve().is_file())
+        for path in ("skills/code-principles/SKILL.md", "skills/code-principles/references/measurement.md",
+                     "skills/code-principles/references/focused-checklist.md", "skills/code-principles/references/simplification.md"):
+            self.assertIn("calc.py", (ROOT / path).read_text(), path)
 
     def test_every_considered_source_is_pinned(self):
         text = (ROOT / "research/code-health-sources.md").read_text()

@@ -1783,7 +1783,7 @@
       "path": "skills/code-principles/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "6e0a05e57b63e4a2bfb0894c0921d1fe1ec906487762ebe4c442669d99570340",
+      "current_sha256": "da1e98b430cfe4e7447e55b0b6c665bef65c8c4ff933e44dd79b11a779c3ed0b",
       "modified_from_import": true
     },
     {
@@ -1924,7 +1924,7 @@
       "source": "code-principles-audit",
       "source_path": "skills/code-principles/SKILL.md",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "20266c6d528ad58c4bd50012ddf7ef58734812f4f504a4f27c9cce157d2dae5a",
+      "current_sha256": "ed13e737aa3a23075206231ced29f2711bcaedf177c39db9353463353c459e7f",
       "modified_from_import": true,
       "adaptation": "Checklist extracted from the imported focused skill; contextual failure-handler wording and relative links updated."
     },
@@ -1982,7 +1982,7 @@
       "source": "addyosmani/agent-skills",
       "source_path": "skills/code-simplification/SKILL.md",
       "source_sha256": "e13b433345e6bf425c3625442ac1b3507b371c18d7ea3e3db822da7a7f742a29",
-      "current_sha256": "68bcb2fa9a78a68c96fa96e6239d5b9e46c25b321ab2bdea5a788c408e2e712f",
+      "current_sha256": "e8b2819e7dfbe5fec7b81e37f2ae87cabfc7f8ec7d8a794ee009e16a76c54ff2",
       "modified_from_import": true,
       "adaptation": "Rewritten as a conditional Code Audit reference: process and signal table adapted from this source, behaviour and scope rules shared with anthropics/claude-plugins-official code-simplifier.md, the protected-region marker from dvy1987/agent-loom. Examples, rationalization table and host-specific wording dropped; measured signals and structure_delta.py checks added."
     }

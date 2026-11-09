@@ -25,6 +25,7 @@ if unused code, stale experiments or constant flags: read ../code-principles/ref
 if literals with a source of truth, environment-specific values, or extra layers/services: read ../code-principles/references/frozen-values-and-path-length.md; compare each version, path, id, name table and copied list with its source in every supplied file
 run recon, follow the starting route in references/audit-methods.md, adapt per its rules and end with its coverage matrix
 probe before concluding: when execution is authorized, run the cheapest discriminating check outside the repo; label each finding probed or read
+compute, do not estimate: every number you report (totals, percentages, ratios, deltas) comes from a tool's output or ../code-principles/scripts/calc.py; check arithmetic in reviewed code by evaluating it on concrete inputs, never by reasoning alone
 compare a local patch with the simplest adequate shared correction and the shortest correct path
 if repair authorized: fix the confirmed cause and preserve valid behavior
 verify changed behavior and affected guarantees
@@ -73,4 +74,4 @@ For commands, recipes and outcome logging, use [audit methods](references/audit-
 
 ## Output
 
-Lead with consequence and proportionate action. Material findings identify trigger, source location, consequence, counterevidence, correction and verification. Mark checks PASS, FAIL, N/A with an applicability reason or UNAVAILABLE with the missing requirement. Separate source review, tests, live runtime, deployment and acceptance. Required behavior still failing prevents completion.
+Lead with consequence and proportionate action. Quote figures from the tool or script that produced them; do not add, divide or take percentages yourself. Material findings identify trigger, source location, consequence, counterevidence, correction and verification. Mark checks PASS, FAIL, N/A with an applicability reason or UNAVAILABLE with the missing requirement. Separate source review, tests, live runtime, deployment and acceptance. Required behavior still failing prevents completion.

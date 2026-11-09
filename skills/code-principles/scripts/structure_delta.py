@@ -95,6 +95,7 @@ def changed_files(root, base):
     if states is None:
         raise ValueError("git could not list the base tree or hash the working files; cannot list the change")
     at_base = gitsafe.blobs(root, base, [path for path, state in states.items() if state not in ("added", "untracked")])
+    at_base.update(dict.fromkeys(gitsafe.links_at(root, base) & set(at_base)))  # a link's blob is its target, not source
     changed, contents = {}, {}
     for path, state in states.items():
         before = at_base.get(path, b"")
