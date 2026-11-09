@@ -282,6 +282,11 @@ class CalculusTests(unittest.TestCase):
         code, report = calc("--integral", "2**60*sin(x)", "--from", "1", "--to", "1 + 1/2**60")  # the answer is sin(1), not 0
         self.assertEqual((code, report["status"]), (2, "invalid"))
         self.assertEqual(calc("--solve", "sin(x) == 0", "--between", "3", "3 + 1/2**60")[0], 2)
+        # Bounds 3e-16 apart round to floats 2.2e-16 apart: the answer 8.15 came out as 6.04, "converged".
+        code, report = calc("--integral", "exp(x)*10**16", "--from", "1", "--to", "1 + 3/10**16")
+        self.assertEqual((code, report["status"]), (2, "invalid"))
+        code, report = calc("--integral", "exp(x)", "--from", "1/3", "--to", "22/7")  # ordinary bounds that are not floats are fine
+        self.assertTrue(close(report["integral"]["value"], math.exp(22 / 7) - math.exp(1 / 3)))
         code, report = calc("--integral", "x", "--from", "1", "--to", "1 + 1/2**60")  # a polynomial is integrated exactly
         self.assertEqual(number(report["integral"]["value"]), ((1 + Fraction(1, 2**60)) ** 2 - 1) / 2)
 

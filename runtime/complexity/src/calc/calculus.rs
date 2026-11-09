@@ -10,6 +10,7 @@ use super::solve::function;
 use super::{as_exact, as_float, binary, eval, float, list, object, parse, quoted, shown, text, Names, Node, Outcome, Value};
 use num_bigint::BigInt;
 use num_rational::BigRational;
+use num_traits::Signed;
 use std::cell::RefCell;
 use std::collections::BTreeSet;
 use std::rc::Rc;
@@ -403,8 +404,14 @@ pub(super) fn integral(expression: &str, wanted: Option<&str>, from: Option<&str
     let (low, high) = bounds.ok_or("only a polynomial has its antiderivative written out: give --from and --to for a numeric integral")?;
     range(&mut fields, &low, &high);
     let (a, b) = (as_float(&low)?, as_float(&high)?);
-    if a == b && super::compare(&low, &high)? != std::cmp::Ordering::Equal {
-        return Err("--from and --to differ but are the same float; a numeric integral cannot tell them apart".into());
+    // The integral runs between the floats nearest the bounds. When the bounds are close
+    // together those floats can span a different width (1 to 1 + 3/10**16 becomes 1 to
+    // 1 + 2**-52, a quarter narrower), so the float width must match the exact width.
+    let exact_width = as_exact(&high)? - as_exact(&low)?;
+    let float_width = BigRational::from_float(b).unwrap_or_default() - BigRational::from_float(a).unwrap_or_default();
+    let allowed = exact_width.abs() / BigRational::from_integer(BigInt::from(1_000_000_000u64));
+    if (float_width - &exact_width).abs() > allowed {
+        return Err("--from and --to are too close together for floats to hold the width of the range; a numeric integral would run over a different range".into());
     }
     let node = with_constants_folded(&node, &name, names);
     let deadline = Instant::now() + TIME_BUDGET;
