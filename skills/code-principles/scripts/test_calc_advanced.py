@@ -179,6 +179,14 @@ class SolveTests(unittest.TestCase):
                          "(x - 1) + (floor(x) - 1/2)/10**9 == 0"):  # a jump of one part in a billion across zero
             code, report = calc("--solve", equation, "--between", "0", "2")
             self.assertEqual((code, report["status"]), (2, "invalid"), (equation, report))
+        # The width of the bracket must not matter: this has no root (below -1/2 before 1, at least 1/2 from 1 on).
+        for low, high in (("0", "2"), ("-10**14", "10**14"), ("-10**300", "10**300")):
+            code, report = calc("--solve", "x - 1 + floor(x) - 1/2 == 0", "--between", low, high)
+            self.assertEqual((code, report["status"]), (2, "invalid"), (low, high, report))
+        for low, high in (("0", "1"), ("-10**14", "10**14"), ("-10**300", "10**300")):
+            code, report = calc("--solve", "exp(x/10) - 2 + x/10**3 == 0", "--between", low, high)
+            if code == 0:  # a real root is found at any width, or the search is refused; it is never somewhere else
+                self.assertTrue(math.isclose(report["solve"]["solutions"][0]["values"]["x"], 6.896927571180642, rel_tol=1e-9), (low, high, report))  # from a 30-digit root finder
         # A real crossing passes at any scale, including a flat one and one at the end of the bracket.
         for equation, low, high, root in (("(cos(x) - x)/10**12 == 0", "0", "1", 0.7390851332151607), ("(cos(x) - x)*10**12 == 0", "0", "1", 0.7390851332151607),
                                           ("sin(x)**3 == 0", "-1", "2", 0.0), ("exp(x) == 2", "0", "1", math.log(2)), ("sin(x) == 0", "0", "1", 0.0),

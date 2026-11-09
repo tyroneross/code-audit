@@ -27,10 +27,13 @@ const MAX_ROOT_WORK: u64 = 200_000;
 const MAX_EQUATIONS: usize = 32;
 /// Enough for bisection alone to walk from 1 down to the smallest float, as a flat root at zero needs.
 const BRENT_STEPS: usize = 2200;
-/// At a crossing, the value at the root is at most this fraction of the value a step away on
-/// either side. A smooth function gives about 1e-9 (the root is found to a few parts in
-/// 10**16 and a step is a millionth), so real roots pass with room and a small jump does not.
-const CROSSING: f64 = 1e-7;
+/// How many floats from the root the first probes are made, and the largest fraction of a
+/// neighbour's value the value at the root may be. Brent's method ends within about four
+/// floats of a root, so a continuous function gives 4/1024 and passes with room.
+const CLOSE: f64 = 1024.0;
+const CROSSING: f64 = 0.05;
+/// Eight times closer to a root, a continuous function's value is at most this fraction of what it was.
+const SHRINK: f64 = 0.5;
 /// Bisection steps for a single root of a long polynomial; enough for a rate as small as 2**-300.
 const MAX_SINGLE_STEPS: u64 = 480;
 
@@ -449,24 +452,49 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
     };
     let residual = f(root);
     // Brent's method ends wherever the sign changes, which is also true of a jump (floor,
-    // 1/x at 0, tan at pi/2). At a crossing the value at the root is far smaller than the
-    // values a short step to either side, which have opposite signs; at a jump it is as
-    // large as one of them. The test is a ratio, so scaling the equation does not change it.
-    let step = 1e-6 * root.abs().max(high - low);
-    // A side that would leave the bracket is not looked at; a root at an end has one neighbour.
-    let sides: Vec<f64> = [root - step, root + step].into_iter().filter(|x| *x >= low && *x <= high).map(&f).collect();
-    if failure.borrow().is_some() || !residual.is_finite() || sides.is_empty() || sides.iter().any(|side| !side.is_finite()) {
-        return Err(format!("left minus right cannot be evaluated all around {name} = {root:?}, so it is not established as a root"));
-    }
-    if residual == 0.0 && sides.iter().all(|side| *side == 0.0) {
-        // Exactly zero beside it too: the expression has underflowed (exp(-x) for large x) or
-        // is zero over a stretch, and no single root can be named.
-        return Err(format!("left minus right is exactly zero all around {name} = {root:?}: it is too small for floats there or zero over a stretch, so no single root can be named"));
-    }
-    let smallest = sides.iter().fold(f64::INFINITY, |least, side| least.min(side.abs()));
-    let same_side = sides.len() == 2 && (sides[0] < 0.0) == (sides[1] < 0.0);
-    if residual.abs() > CROSSING * smallest || same_side {
-        return Err(format!("left minus right jumps across zero near {name} = {root:?} without passing through it: a discontinuity, not a root"));
+    // 1/x at 0, tan at pi/2). The two are told apart right beside the root: a thousand floats
+    // to either side, a continuous function has moved a thousand times further from zero than
+    // its value at the root and to opposite sides, while across a jump the value at the root
+    // is as large as its neighbours. Beside a flat root (sin(x)**3 at 0) the neighbours may
+    // be exactly zero, which says nothing, so the probes widen until both are non-zero and
+    // the test is made there, at the smallest distance where it can be. A probe that would
+    // leave the bracket is not made; a root at an end has one neighbour.
+    let spacing = if root == 0.0 { 1e-300 } else { root.abs().next_up() - root.abs() };
+    let widest = 1e-6 * root.abs().max(high - low);
+    let mut reach = (CLOSE * spacing).min(widest);
+    loop {
+        let sides: Vec<f64> = [root - reach, root + reach].into_iter().filter(|x| *x >= low && *x <= high).map(&f).collect();
+        // A probe that cannot be evaluated this close (a power too small for a float, say) says
+        // nothing either; the next, wider one is tried.
+        let unknown = failure.borrow_mut().take().is_some() || sides.iter().any(|side| !side.is_finite());
+        if !residual.is_finite() || (unknown && reach >= widest) {
+            return Err(format!("left minus right cannot be evaluated all around {name} = {root:?}, so it is not established as a root"));
+        }
+        if !unknown && !sides.is_empty() && sides.iter().all(|side| *side != 0.0) {
+            let smallest = sides.iter().fold(f64::INFINITY, |least, side| least.min(side.abs()));
+            let same_side = sides.len() == 2 && (sides[0] < 0.0) == (sides[1] < 0.0);
+            // And it must be heading for zero on each side: eight times closer, a continuous
+            // function is at least twice as near zero (eight times for a plain crossing, 2.8
+            // for a square root), while beside a jump it has hardly moved.
+            let heading = [root - reach, root + reach].into_iter().filter(|x| *x >= low && *x <= high).zip(&sides).all(|(x, near)| {
+                let further = root + (x - root) * 8.0;
+                if further < low || further > high {
+                    return true;
+                }
+                let far = f(further);
+                failure.borrow_mut().take().is_some() || !far.is_finite() || ((far < 0.0) == (*near < 0.0) && near.abs() <= SHRINK * far.abs())
+            });
+            if residual.abs() > CROSSING * smallest || same_side || !heading {
+                return Err(format!("left minus right jumps across zero near {name} = {root:?} without passing through it: a discontinuity, not a root"));
+            }
+            break;
+        }
+        if reach >= widest {
+            // Zero, or out of the bracket, at every distance: the expression has underflowed
+            // (exp(-x) for large x) or is zero over a stretch, and no single root can be named.
+            return Err(format!("left minus right is exactly zero all around {name} = {root:?}: it is too small for floats there or zero over a stretch, so no single root can be named"));
+        }
+        reach = (reach * 8.0).min(widest);
     }
     let method = format!("Brent's method between {low:?} and {high:?}: one root; others may exist");
     Ok(report(&free, &method, &[solution(&[(name, &super::float(root)?)], false, Some(residual))], None))
