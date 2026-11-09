@@ -93,6 +93,9 @@ fn nearest(value: &BigRational) -> Outcome<f64> {
 /// their size, before the result is taken to depend on digits a float cannot hold.
 const SENSITIVE: f64 = 1e-9;
 
+/// The widest gap between the two floats around an exact argument of sin, cos or tan.
+const WAVE_GAP: f64 = 1e-6;
+
 /// The float on the other side of an exact value from its nearest float `float`; `None` when
 /// the value is itself that float (or was a float to begin with).
 fn other_side(value: &Value, float: f64) -> Option<f64> {
@@ -390,6 +393,13 @@ fn real(name: &str, arguments: &[Value], f: impl Fn(f64) -> f64, domain: impl Fn
     }
     let result = f(x);
     if let Some(nearby) = other_side(value, x).filter(|nearby| domain(*nearby)) {
+        // Agreement at the two floats settles a function that only rises or only falls
+        // between them. A wave can agree at both and be anywhere in between when they are
+        // many periods apart, so for those the two floats must also be close together: within
+        // a millionth, a wave cannot stray from them by more than one part in 10**12.
+        if matches!(name, "sin" | "cos" | "tan") && (nearby - x).abs() > WAVE_GAP {
+            return Err(format!("{name} of an exact value this large is not known from floats: the two nearest floats are {:e} apart, many of its periods", (nearby - x).abs()));
+        }
         steady(name, result, f(nearby))?;
     }
     float(result)

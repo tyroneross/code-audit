@@ -82,6 +82,10 @@ class NamesAndFunctionsTests(unittest.TestCase):
         for expression in ("sin(10**30 + 1)", "cos(10**40 + 1/3)", "(1 + 1/2**60) ** (2**60 + 1/2)", "exp(10**18 + 1/3)"):
             code, report = calc(expression)
             self.assertEqual((code, report["status"]), (2, "invalid"), (expression, report))
+        # The two floats around this 781-bit value are 2**727 apart and happen to have nearly equal sines (0.99999998);
+        # the sine of the value itself is -0.49994. Agreement of the two is not enough for a wave.
+        code, report = calc("sin(4503599627881507*2**727 + 2**727/3)")
+        self.assertEqual((code, report["status"]), (2, "invalid"), report)
         # An exact value a float holds, or one the function is not sensitive to, is fine.
         self.assertTrue(close(value("sin(1/3)"), math.sin(1 / 3), 1e-15))
         self.assertTrue(close(value("exp(1/3)"), math.exp(1 / 3), 1e-15))
