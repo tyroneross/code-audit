@@ -198,6 +198,15 @@ class StructureDeltaTests(unittest.TestCase):
         expected = self.git("diff", "--numstat", "HEAD", "--", "data.txt").split("\t")[:2]
         self.assertEqual(report["changed_lines"], int(expected[0]) + int(expected[1]))
 
+    def test_base_contents_are_read_in_one_batch_and_only_for_files(self):
+        import gitsafe
+        self.write("dir/odd name é.py", "x = 1\n")
+        self.write("empty.txt", "")
+        self.commit("more")
+        read = gitsafe.blobs(self.root, "HEAD", ["dir/odd name é.py", "missing.py", "empty.txt", "dir", "app.py"])
+        self.assertEqual((read["dir/odd name é.py"], read["missing.py"], read["empty.txt"], read["dir"]), (b"x = 1\n", None, b"", None))
+        self.assertEqual(read["app.py"], NESTED.encode())
+
     def test_unchanged_submodule_is_not_listed(self):
         self.git("update-index", "--add", "--cacheinfo", f"160000,{self.git('rev-parse', 'HEAD')},vendor/mod")
         (self.root / "vendor/mod").mkdir(parents=True)

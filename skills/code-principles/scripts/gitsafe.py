@@ -42,7 +42,8 @@ def blobs(root, base, paths):
         if header[-1:] == [b"missing"] or len(header) != 3:
             continue
         size = int(header[2])
-        found[path] = output[offset:offset + size]
+        if header[1] == b"blob":  # a directory or submodule at base has no file bytes
+            found[path] = output[offset:offset + size]
         offset += size + 1
     return found
 
