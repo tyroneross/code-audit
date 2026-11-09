@@ -206,8 +206,10 @@ fn refine(q: &Ints, mut a: BigRational, mut b: BigRational, steps: u64) -> Outco
     Ok(Root::Near(near(&middle)?))
 }
 
-/// Every distinct real root of p in ascending order (only those above zero when `positive`).
-pub(super) fn real_roots(p: &Poly, positive: bool) -> Outcome<Vec<Root>> {
+/// Every distinct real root of p in ascending order; only those above `above` when it is
+/// given, which must not itself be a root.
+pub(super) fn real_roots(p: &Poly, above: Option<&BigRational>) -> Outcome<Vec<Root>> {
+    let wanted = |root: &BigRational| above.is_none_or(|limit| root > limit);
     let mut c = integral(p);
     let degree = c.len().saturating_sub(1);
     let bits = c.iter().map(BigInt::bits).max().unwrap_or(0);
@@ -221,13 +223,13 @@ pub(super) fn real_roots(p: &Poly, positive: bool) -> Outcome<Vec<Root>> {
     let zeros = c.iter().take_while(|value| value.is_zero()).count();
     if zeros > 0 && degree > 0 {
         c.drain(..zeros);
-        if !positive {
+        if wanted(&BigRational::zero()) {
             found.push(Root::Exact(BigRational::zero()));
         }
     }
     if c.len() == 2 {
         let root = BigRational::new(-c[0].clone(), c[1].clone());
-        if !positive || root.is_positive() {
+        if wanted(&root) {
             found.push(Root::Exact(root));
         }
     } else if c.len() > 2 {
@@ -238,9 +240,9 @@ pub(super) fn real_roots(p: &Poly, positive: bool) -> Outcome<Vec<Root>> {
         let lead_bits = q.last().map_or(1, BigInt::bits);
         let widest = q.iter().map(BigInt::bits).max().unwrap_or(1);
         let bound = BigRational::from_integer(BigInt::one() << (widest.saturating_sub(lead_bits) + 2) as usize);
-        let low = if positive { BigRational::zero() } else { -bound.clone() };
+        let low = above.cloned().unwrap_or_else(|| -bound.clone());
         let steps = 2 * (widest + lead_bits) + 80;
-        let mut pending = vec![(low, bound)];
+        let mut pending = if low < bound { vec![(low, bound)] } else { Vec::new() };
         while let Some((a, b)) = pending.pop() {
             match variations(&chain, &a).saturating_sub(variations(&chain, &b)) {
                 0 => {}
@@ -321,7 +323,7 @@ fn report(free: &[String], method: &str, solutions: &[String], note: Option<&str
 }
 
 /// One equation in one name: the difference of its two sides is zero.
-fn one(difference: &Node, name: &str, between: Option<(f64, f64)>, names: Names) -> Outcome<String> {
+fn one(difference: &Node, name: &str, between: Option<(Value, Value)>, names: Names) -> Outcome<String> {
     let free = [name.to_string()];
     if let Some(p) = polynomial(difference, name, names)? {
         if p.degree() == 0 {
@@ -329,9 +331,12 @@ fn one(difference: &Node, name: &str, between: Option<(f64, f64)>, names: Names)
             return Ok(report(&free, "the name cancels out", &[], Some(note)));
         }
         let mut solutions = Vec::new();
-        for root in real_roots(&p, false)? {
+        // --between is compared exactly: a root just past a bound is outside it.
+        let range = between.as_ref().map(|(low, high)| Ok::<_, String>((as_exact(low)?, as_exact(high)?))).transpose()?;
+        for root in real_roots(&p, None)? {
             let value = root.value()?;
-            if between.is_some_and(|(low, high)| !(low..=high).contains(&root.float())) {
+            let place = as_exact(&value)?;
+            if range.as_ref().is_some_and(|(low, high)| place < *low || place > *high) {
                 continue;
             }
             let residual = match &root {
@@ -341,10 +346,11 @@ fn one(difference: &Node, name: &str, between: Option<(f64, f64)>, names: Names)
             solutions.push(solution(&[(name, &value)], matches!(root, Root::Exact(_)), residual));
         }
         let method = format!("polynomial of degree {}: every distinct real root, isolated exactly by Sturm's theorem", p.degree());
-        let note = solutions.is_empty().then_some("no real root");
+        let note = solutions.is_empty().then_some(if range.is_some() { "no real root between the bounds" } else { "no real root" });
         return Ok(report(&free, &method, &solutions, note));
     }
     let (low, high) = between.ok_or(format!("this equation is not a polynomial in {name}: give --between LOW HIGH, two values where its sides differ in opposite directions"))?;
+    let (low, high) = (as_float(&low)?, as_float(&high)?);
     let failure = RefCell::new(None);
     let f = function(difference, name, names, &failure);
     let (at_low, at_high) = (f(low), f(high));
@@ -369,6 +375,12 @@ fn one(difference: &Node, name: &str, between: Option<(f64, f64)>, names: Names)
     if !residual.is_finite() || residual.abs() > 1e-6 * at_low.abs().max(at_high.abs()).max(1.0) {
         return Err(format!("left minus right jumps across zero near {name} = {root:?} without reaching it: a discontinuity, not a root"));
     }
+    // A value of exactly zero on both sides too is not a crossing: the expression has underflowed
+    // (exp(-x) for large x) or is zero over a stretch, and no single root can be named.
+    let step = 1e-6 * root.abs().max(1.0);
+    if residual == 0.0 && f((root - step).max(low)) == 0.0 && f((root + step).min(high)) == 0.0 && failure.borrow().is_none() {
+        return Err(format!("left minus right is exactly zero all around {name} = {root:?}: it is too small for floats there or zero over a stretch, so no single root can be named"));
+    }
     let method = format!("Brent's method between {low:?} and {high:?}: one root; others may exist");
     Ok(report(&free, &method, &[solution(&[(name, &super::float(root)?)], false, Some(residual))], None))
 }
@@ -387,7 +399,7 @@ fn system(differences: &[Rc<Node>], free: &[String], names: Names) -> Outcome<St
     let method = "linear system: exact Gauss-Jordan elimination, checked by substitution";
     match eliminate(rows.clone(), free.len())? {
         Solution::None => Ok(report(free, method, &[], Some("the equations contradict each other: no solution"))),
-        Solution::Many => Ok(report(free, method, &[], Some("the equations do not determine every name: infinitely many solutions"))),
+        Solution::Many(_) => Ok(report(free, method, &[], Some("the equations do not determine every name: infinitely many solutions"))),
         Solution::Unique(values) => {
             // Substitute back into every equation as given; exact arithmetic makes this a proof.
             let satisfied = rows.iter().all(|row| row[..free.len()].iter().zip(&values).fold(BigRational::zero(), |sum, (a, x)| sum + a * x) == row[free.len()]);
@@ -416,9 +428,8 @@ pub(super) fn solve(equations: &[String], between: Option<&(String, String)>, na
     let free: Vec<String> = free.into_iter().collect();
     let bounds = match between {
         Some((low, high)) => {
-            let bound = |text: &str| eval(&*parse(text)?, names).and_then(|value| as_float(&value));
-            let (low, high) = (bound(low)?, bound(high)?);
-            if low >= high {
+            let (low, high) = (eval(&*parse(low)?, names)?, eval(&*parse(high)?, names)?);
+            if super::compare(&low, &high)? != std::cmp::Ordering::Less {
                 return Err("--between takes LOW then HIGH, with LOW below HIGH".into());
             }
             Some((low, high))

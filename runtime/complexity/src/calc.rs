@@ -342,7 +342,11 @@ fn call(name: &str, arguments: Vec<Value>) -> Outcome<Value> {
         "stdev" => deviation(values, true),
         "pstdev" => deviation(values, false),
         "sqrt" => real(name, values, f64::sqrt, |x| x >= 0.0),
-        "exp" => real(name, values, f64::exp, |_| true),
+        // exp is never zero; a float result of 0.0 is an underflow, and reads as a root or a vanishing term.
+        "exp" => match real(name, values, f64::exp, |_| true)? {
+            Value::Float(0.0) => Err("exp is too small for a float here (below about 1e-308)".into()),
+            result => Ok(result),
+        },
         "sin" => real(name, values, f64::sin, |_| true),
         "cos" => real(name, values, f64::cos, |_| true),
         "tan" => real(name, values, f64::tan, |_| true),

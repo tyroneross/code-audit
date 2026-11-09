@@ -26,6 +26,7 @@ const TIME_LIMIT: Duration = Duration::from_secs(5);
 const BINDING: f64 = 1e-7;
 /// Choices of binding constraints tried when more bind than there are names.
 const MAX_PROOF_ATTEMPTS: usize = 2000;
+const UNCONFIRMED: &str = "the solver's answer could not be confirmed against the constraints, so nothing is reported; simpler or smaller numbers usually help";
 const ROUNDED: &str = "a coefficient does not fit a float exactly, so the solver worked on a slightly different program, and its answer could not be proved optimal; use smaller or simpler numbers";
 /// The whole numbers the solver can search: comfortably inside 32 bits.
 const WHOLE_LOW: f64 = -2_000_000_000.0;
@@ -65,9 +66,31 @@ fn kept(value: &BigRational) -> bool {
     nearest(value).is_ok_and(|float| BigRational::from_float(float).as_ref() == Some(value))
 }
 
-/// The exact point where the binding constraints meet, when they pin down every name.
-fn vertex(binding: &[&Constraint], count: usize) -> Outcome<Option<Vec<BigRational>>> {
-    let rows = binding.iter().map(|constraint| constraint.row.iter().cloned().chain([constraint.bound.clone()]).collect()).collect();
+/// The exact point the solver's float answer stands for. Whole-number names are held at the
+/// nearest whole number (the solver returns 0.9999997 for 1). The binding constraints that
+/// involve any other name are then solved exactly for those names. A name still left free
+/// (one the objective does not care about, say) is held at the value the solver gave it,
+/// taken as the exact number that float is. The caller checks the point against every
+/// constraint, so a wrong guess here is refused and never reported.
+fn vertex(binding: &[&Constraint], found: &[f64], whole: &[bool]) -> Outcome<Option<Vec<BigRational>>> {
+    let count = found.len();
+    let hold = |name: usize, value: f64| -> Option<Vec<BigRational>> {
+        let held = BigRational::from_float(value)?;
+        Some((0..count).map(|other| if other == name { BigRational::from_integer(BigInt::one()) } else { BigRational::zero() }).chain([held]).collect())
+    };
+    let mut rows: Vec<Vec<BigRational>> = Vec::new();
+    for name in (0..count).filter(|&name| whole[name]) {
+        let Some(row) = hold(name, found[name].round()) else { return Ok(None) };
+        rows.push(row);
+    }
+    let touches_other = |constraint: &&&Constraint| constraint.row.iter().zip(whole).any(|(coefficient, whole)| !whole && !coefficient.is_zero());
+    rows.extend(binding.iter().filter(touches_other).map(|constraint| constraint.row.iter().cloned().chain([constraint.bound.clone()]).collect::<Vec<_>>()));
+    if let Solution::Many(free) = eliminate(rows.clone(), count)? {
+        for name in free {
+            let Some(row) = hold(name, found[name]) else { return Ok(None) };
+            rows.push(row);
+        }
+    }
     Ok(match eliminate(rows, count)? {
         Solution::Unique(point) => Some(point),
         _ => None,
@@ -79,14 +102,14 @@ fn vertex(binding: &[&Constraint], count: usize) -> Outcome<Option<Vec<BigRation
 /// way (the Karush-Kuhn-Tucker conditions). Each choice of as many binding constraints as
 /// names gives one candidate combination by exact elimination; one that passes is a proof.
 fn proved(maximize: bool, objective: &[BigRational], binding: &[&Constraint], count: usize) -> Outcome<bool> {
-    if binding.len() < count {
-        return Ok(false);
-    }
-    let mut chosen: Vec<usize> = (0..count).collect();
+    // Fewer binding constraints than names is fine when the objective ignores the rest: the
+    // combination is then sought among all of them.
+    let size = count.min(binding.len());
+    let mut chosen: Vec<usize> = (0..size).collect();
     for _ in 0..MAX_PROOF_ATTEMPTS {
         // Solve sum(weight[i] x chosen[i].row) = objective: one equation per name.
         let rows = (0..count).map(|name| chosen.iter().map(|&index| binding[index].row[name].clone()).chain([objective[name].clone()]).collect()).collect();
-        if let Solution::Unique(weights) = eliminate(rows, count)? {
+        if let Solution::Unique(weights) = eliminate(rows, size)? {
             let right_way = chosen.iter().zip(&weights).all(|(&index, weight)| match (binding[index].op, maximize) {
                 ("<=", true) | (">=", false) => !weight.is_negative(),
                 (">=", true) | ("<=", false) => !weight.is_positive(),
@@ -96,10 +119,10 @@ fn proved(maximize: bool, objective: &[BigRational], binding: &[&Constraint], co
                 return Ok(true);
             }
         }
-        // The next choice of `count` indices in increasing order, or stop after the last.
-        let Some(moving) = (0..count).rev().find(|&slot| chosen[slot] < binding.len() - count + slot) else { return Ok(false) };
+        // The next choice of `size` indices in increasing order, or stop after the last.
+        let Some(moving) = (0..size).rev().find(|&slot| chosen[slot] < binding.len() - size + slot) else { return Ok(false) };
         chosen[moving] += 1;
-        for slot in moving + 1..count {
+        for slot in moving + 1..size {
             chosen[slot] = chosen[slot - 1] + 1;
         }
     }
@@ -236,16 +259,8 @@ pub(super) fn optimize(maximize: bool, objective: &str, subjects: &[String], int
             binding.push(constraint);
         }
     }
-    let whole = |value: f64| BigRational::from_float(value.round()).unwrap_or_default();
-    let candidate = if inexact {
-        None
-    } else if let Some(point) = vertex(&binding, free.len())? {
-        Some(point)
-    } else if integers.len() == free.len() {
-        Some(found.iter().map(|value| whole(*value)).collect()) // every name is a whole number: round the float answer
-    } else {
-        None
-    };
+    let is_whole: Vec<bool> = free.iter().map(|name| integers.contains(name)).collect();
+    let candidate = if inexact { None } else { vertex(&binding, &found, &is_whole)? };
     let integral = |point: &[BigRational]| free.iter().zip(point).all(|(name, value)| !integers.contains(name) || value.is_integer());
     let float_goal = solved.objective() / nearest(&goal_factor)? + to_float(&goal.constant)?;
     let exact_point = candidate.filter(|point| {
@@ -278,7 +293,28 @@ pub(super) fn optimize(maximize: bool, objective: &str, subjects: &[String], int
             })));
         }
         None if rounded => return Err(ROUNDED.into()),
+        // Exact inputs deserve an exactly checked answer. The solver's floats alone are not
+        // one: it has returned points that break a constraint or a whole-number rule.
+        None if !inexact => return Err(UNCONFIRMED.into()),
         None => {
+            // Float inputs: the answer is checked as far as floats allow.
+            let close = |value: f64, target: f64, scale: f64| (value - target).abs() <= 1e-6 * scale.max(1.0);
+            for constraint in &constraints {
+                let (row, bound) = (floats(&constraint.row)?, nearest(&constraint.bound)?);
+                let value: f64 = row.iter().zip(&found).map(|(a, x)| a * x).sum();
+                let scale = row.iter().zip(&found).fold(bound.abs(), |scale, (a, x)| scale.max((a * x).abs()));
+                let holds = match constraint.op {
+                    "<=" => value <= bound || close(value, bound, scale),
+                    ">=" => value >= bound || close(value, bound, scale),
+                    _ => close(value, bound, scale),
+                };
+                if !holds {
+                    return Err(UNCONFIRMED.into());
+                }
+            }
+            if found.iter().zip(&is_whole).any(|(value, whole)| *whole && !close(*value, value.round(), 1.0)) {
+                return Err(UNCONFIRMED.into());
+            }
             let values: Vec<(&str, String)> = free.iter().zip(&found).map(|(name, value)| (name.as_str(), shown(&Value::Float(*value)))).collect();
             fields.push(("objective", shown(&super::float(float_goal)?)));
             fields.push(("values", object(&values)));
@@ -330,6 +366,10 @@ mod tests {
         let objective = [whole(1), whole(1)];
         let x_high = constraint([1, 0], "<=", 4);
         assert!(!proved(true, &objective, &[&x_high], 2).unwrap());
+        // One binding constraint is enough when the objective is a multiple of it and ignores the other name.
+        assert!(proved(true, &[whole(3), whole(0)], &[&x_high], 2).unwrap());
+        assert!(!proved(false, &[whole(3), whole(0)], &[&x_high], 2).unwrap());
+        assert!(!proved(true, &[whole(3), whole(0)], &[], 2).unwrap());
         // On the line x + y == 5 every point has the same objective, so any corner on it is optimal either way.
         let (line, y_low) = (constraint([1, 1], "==", 5), constraint([0, 1], ">=", 0));
         assert!(proved(true, &objective, &[&line, &y_low], 2).unwrap());

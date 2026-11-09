@@ -61,7 +61,7 @@ impl Poly {
     }
 
     /// self + sign x other
-    fn combined(&self, other: &Poly, sign: i32) -> Outcome<Poly> {
+    pub fn combined(&self, other: &Poly, sign: i32) -> Outcome<Poly> {
         let zero = BigRational::zero();
         let c = (0..self.c.len().max(other.c.len()))
             .map(|i| {
@@ -72,7 +72,7 @@ impl Poly {
         Ok(Poly::new(c, self.inexact || other.inexact))
     }
 
-    fn times(&self, other: &Poly) -> Outcome<Poly> {
+    pub fn times(&self, other: &Poly) -> Outcome<Poly> {
         if self.c.is_empty() || other.c.is_empty() {
             return Ok(Poly::new(Vec::new(), self.inexact || other.inexact));
         }
@@ -101,6 +101,12 @@ impl Poly {
             result = result.times(self)?;
         }
         Ok(result)
+    }
+
+    /// The same polynomial written in y, where the name is y + 1: p(y + 1).
+    pub fn shifted_by_one(&self) -> Outcome<Poly> {
+        let step = Poly::new(vec![BigRational::one(), BigRational::one()], false);
+        self.c.iter().rev().try_fold(Poly::new(Vec::new(), self.inexact), |sum, c| sum.times(&step)?.combined(&Poly::new(vec![c.clone()], false), 1))
     }
 
     /// The value at x by Horner's rule. At most MAX_DEGREE multiplications; the caller holds the result to the budget.
@@ -280,15 +286,20 @@ pub(super) fn linear(node: &Node, names: Names) -> Outcome<Linear> {
 pub(super) enum Solution {
     Unique(Vec<BigRational>),
     None,
-    Many,
+    /// Not every unknown is determined; these are the ones the equations leave free.
+    Many(Vec<usize>),
 }
 
 /// Solve `rows x unknowns = last column` exactly by Gauss-Jordan elimination. Each row holds
 /// one coefficient per unknown and then the right-hand side.
 pub(super) fn eliminate(mut rows: Vec<Vec<BigRational>>, unknowns: usize) -> Outcome<Solution> {
     let mut rank = 0;
+    let mut free = Vec::new();
     for column in 0..unknowns {
-        let Some(pivot) = (rank..rows.len()).find(|&row| !rows[row][column].is_zero()) else { continue };
+        let Some(pivot) = (rank..rows.len()).find(|&row| !rows[row][column].is_zero()) else {
+            free.push(column);
+            continue;
+        };
         rows.swap(rank, pivot);
         let scale = rows[rank][column].clone();
         for value in rows[rank].iter_mut() {
@@ -309,7 +320,7 @@ pub(super) fn eliminate(mut rows: Vec<Vec<BigRational>>, unknowns: usize) -> Out
         return Ok(Solution::None);
     }
     if rank < unknowns {
-        return Ok(Solution::Many);
+        return Ok(Solution::Many(free));
     }
     // Full rank: after Gauss-Jordan the pivot rows are the identity, in order.
     Ok(Solution::Unique(rows[..unknowns].iter().map(|row| row[unknowns].clone()).collect()))

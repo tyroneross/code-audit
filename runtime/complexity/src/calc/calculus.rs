@@ -18,6 +18,12 @@ use std::rc::Rc;
 const MAX_PRINTED_PARTS: usize = 400;
 const INTEGRAL_TARGET: f64 = 1e-12;
 const INTEGRAL_ACCEPTED: f64 = 1e-7;
+/// Panels the range starts with, how closely a panel must match its halves relative to the
+/// total, and the limits on halving and on evaluations.
+const PANELS: usize = 32;
+const PANEL_AGREEMENT: f64 = 1e-11;
+const MAX_HALVINGS: u32 = 48;
+const MAX_EVALUATIONS: u64 = 400_000;
 const DERIVATIVE_AGREEMENT: f64 = 1e-5;
 
 /// The name the command is about: `--var`, or the only name without a value, or x.
@@ -157,6 +163,65 @@ fn approximate(node: &Node, names: Names) -> bool {
     }
 }
 
+struct Area {
+    value: f64,
+    /// Sum over the panels of the difference between a panel and its two halves.
+    error: f64,
+    evaluations: u64,
+    /// Every panel agreed with its halves inside the depth and evaluation budgets.
+    settled: bool,
+}
+
+/// The integral of f from low to high. One pass of a quadrature rule reports a small error
+/// for a function with a narrow peak between its sample points, so the range is cut into
+/// panels and each panel is accepted only when it agrees with the sum of its two halves;
+/// a panel that does not is halved again. A feature much narrower than a panel's sample
+/// spacing can still be missed: no finite sampling can exclude that.
+fn area(f: &dyn Fn(f64) -> f64, low: f64, high: f64, failed: &dyn Fn() -> bool) -> Area {
+    let mut result = Area { value: 0.0, error: 0.0, evaluations: 0, settled: true };
+    if low >= high || low.is_nan() || high.is_nan() {
+        return result;
+    }
+    let piece = |from: f64, to: f64, evaluations: &mut u64| {
+        let part = quadrature::integrate(f, from, to, INTEGRAL_TARGET);
+        *evaluations += part.num_function_evaluations as u64;
+        part.integral
+    };
+    // (from, to, estimate, depth)
+    let mut pending = Vec::new();
+    let mut scale = 0.0;
+    for panel in 0..PANELS {
+        let from = low + (high - low) * panel as f64 / PANELS as f64;
+        let to = if panel + 1 == PANELS { high } else { low + (high - low) * (panel + 1) as f64 / PANELS as f64 };
+        let whole = piece(from, to, &mut result.evaluations);
+        scale += whole.abs();
+        pending.push((from, to, whole, 0));
+    }
+    while let Some((from, to, whole, depth)) = pending.pop() {
+        if failed() {
+            result.settled = false;
+            break;
+        }
+        let middle = 0.5 * (from + to);
+        let (left, right) = (piece(from, middle, &mut result.evaluations), piece(middle, to, &mut result.evaluations));
+        let gap = (whole - (left + right)).abs();
+        // The total of the pieces' sizes, kept current, is what "small" is measured against.
+        scale += left.abs() + right.abs() - whole.abs();
+        if gap <= PANEL_AGREEMENT * scale.max(f64::MIN_POSITIVE) || gap == 0.0 {
+            result.value += left + right;
+            result.error += gap;
+        } else if depth >= MAX_HALVINGS || result.evaluations > MAX_EVALUATIONS || !(from < middle && middle < to) {
+            result.value += left + right;
+            result.error += gap;
+            result.settled = false;
+        } else {
+            pending.push((from, middle, left, depth + 1));
+            pending.push((middle, to, right, depth + 1));
+        }
+    }
+    result
+}
+
 fn point(source: &str, names: Names) -> Outcome<Value> {
     eval(&*parse(source)?, names)
 }
@@ -233,17 +298,17 @@ pub(super) fn integral(expression: &str, wanted: Option<&str>, from: Option<&str
     let (a, b) = (as_float(&low)?, as_float(&high)?);
     let failure = RefCell::new(None);
     let f = function(&node, &name, names, &failure);
-    let result = quadrature::integrate(&f, a.min(b), a.max(b), INTEGRAL_TARGET);
+    let result = area(&f, a.min(b), a.max(b), &|| failure.borrow().is_some());
     if let Some(error) = failure.borrow_mut().take() {
         return Err(format!("the integrand cannot be evaluated {error}"));
     }
-    let value = if a <= b { result.integral } else { -result.integral };
-    let converged = result.error_estimate.is_finite() && result.error_estimate <= INTEGRAL_ACCEPTED * value.abs().max(1.0);
+    let value = if a <= b { result.value } else { -result.value };
+    let converged = result.settled && result.error.is_finite() && result.error <= INTEGRAL_ACCEPTED * value.abs().max(1.0);
     fields.push(("value", shown(&float(value)?)));
-    fields.push(("error_estimate", if result.error_estimate.is_finite() { format!("{:?}", result.error_estimate) } else { "null".into() }));
-    fields.push(("evaluations", result.num_function_evaluations.to_string()));
+    fields.push(("error_estimate", if result.error.is_finite() { format!("{:?}", result.error) } else { "null".into() }));
+    fields.push(("evaluations", result.evaluations.to_string()));
     fields.push(("converged", converged.to_string()));
-    fields.push(("method", quoted("double exponential (tanh-sinh) quadrature")));
+    fields.push(("method", quoted("double exponential (tanh-sinh) quadrature on panels, each halved until whole and halves agree")));
     Ok((object(&fields), converged))
 }
 

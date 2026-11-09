@@ -108,18 +108,23 @@ fn rate(nper: &Value, pmt: &Value, pv: &Value, fv: &Value, when: &Value) -> Outc
     Err("rate: the iteration did not settle on a rate; check the signs (cash paid out is negative)".into())
 }
 
-/// The one growth factor g = 1 + rate above zero at which the flows' present value is zero,
-/// for flows whose sign changes once. Bracketed between powers of two, then Brent's method.
-fn only_growth(flows: &[Value]) -> Outcome<f64> {
+/// The one rate above -100% at which the flows' present value is zero, for flows whose sign
+/// changes once. The search runs in u = log(1 + rate), bracketed between powers of two of the
+/// growth factor and finished by Brent's method; the rate is expm1(u), which keeps the digits
+/// of a rate near zero.
+fn only_rate(flows: &[Value]) -> Outcome<f64> {
     let amounts = flows.iter().map(as_float).collect::<Outcome<Vec<_>>>()?;
-    // Present value per unit of g**0 for g >= 1, and of g**n below 1: the same sign, and neither overflows.
-    let f = |g: f64| {
-        if g >= 1.0 { amounts.iter().rev().fold(0.0, |sum, amount| sum / g + amount) } else { amounts.iter().fold(0.0, |sum, amount| sum * g + amount) }
+    let last = (amounts.len() - 1) as f64;
+    // Present value times exp(u * periods) when u is negative, so neither form overflows; the sign is the same.
+    let f = |u: f64| {
+        let weight = |period: f64| if u >= 0.0 { (-u * period).exp() } else { (u * (last - period)).exp() };
+        amounts.iter().enumerate().map(|(period, amount)| amount * weight(period as f64)).sum::<f64>()
     };
-    let grid: Vec<f64> = (-40..=40).map(|power| 2f64.powi(power)).collect();
+    let grid: Vec<f64> = (-40..=40).map(|power| power as f64 * std::f64::consts::LN_2).collect();
     let bracket = grid.windows(2).find(|pair| (f(pair[0]) < 0.0) != (f(pair[1]) < 0.0) || f(pair[1]) == 0.0);
     let pair = bracket.ok_or("irr: no rate between -100% and a trillion-fold brings the net present value to zero")?;
-    find_root_brent(pair[0], pair[1], &f, &mut Narrow).map_err(|error| format!("irr: {error}"))
+    let u = find_root_brent(pair[0], pair[1], &f, &mut Narrow).map_err(|error| format!("irr: {error}"))?;
+    Ok(u.exp_m1())
 }
 
 /// The internal rate of return: the rate at which the flows' net present value is zero.
@@ -127,26 +132,28 @@ fn irr(flows: &[Value]) -> Outcome<Value> {
     if flows.len() < 2 || flows.len() > MAX_FLOWS {
         return Err(format!("irr takes between 2 and {MAX_FLOWS} cash flows"));
     }
-    let exact_flows = flows.iter().map(as_exact).collect::<Outcome<Vec<_>>>()?;
+    let mut exact_flows = flows.iter().map(as_exact).collect::<Outcome<Vec<_>>>()?;
     if !(exact_flows.iter().any(Signed::is_positive) && exact_flows.iter().any(Signed::is_negative)) {
         return Err("irr needs at least one cash flow paid out (negative) and one received (positive)".into());
     }
-    // With g = 1 + rate, sum(flow[t] / g**t) = 0 is the polynomial sum(flow[t] * g**(n - t)) = 0.
+    // Flows of zero at the end add nothing (and would put a false root at a rate of -100%).
+    while exact_flows.last().is_some_and(Zero::is_zero) {
+        exact_flows.pop();
+    }
     let inexact = flows.iter().any(|flow| matches!(flow, Value::Float(_)));
-    let p = Poly::new(exact_flows.iter().rev().cloned().collect(), inexact);
-    let one = BigRational::one();
-    // One change of sign along the flows means exactly one positive root (Descartes' rule of
+    // One change of sign along the flows means exactly one rate above -100% (Descartes' rule of
     // signs), which a bracketed search finds at any length; several changes need every root.
     let signs: Vec<bool> = exact_flows.iter().filter(|flow| !flow.is_zero()).map(Signed::is_positive).collect();
     let changes = signs.windows(2).filter(|pair| pair[0] != pair[1]).count();
-    let growths = if changes == 1 && p.degree() > MAX_EXACT_PERIODS { vec![Root::Near(only_growth(flows)?)] } else { real_roots(&p, true)? };
-    let rates: Vec<Root> = growths
-        .into_iter()
-        .map(|root| match root {
-            Root::Exact(g) => Root::Exact(g - &one),
-            Root::Near(g) => Root::Near(g - 1.0),
-        })
-        .collect();
+    let rates = if changes == 1 && exact_flows.len() - 1 > MAX_EXACT_PERIODS {
+        vec![Root::Near(only_rate(&flows[..exact_flows.len()])?)]
+    } else {
+        // With g = 1 + rate, sum(flow[t] / g**t) = 0 is the polynomial sum(flow[t] * g**(n - t)) = 0.
+        // It is rewritten in the rate itself before the roots are found, so a rate near zero
+        // is located as a small number and not as the difference of two numbers near one.
+        let in_growth = Poly::new(exact_flows.iter().rev().cloned().collect(), inexact);
+        real_roots(&in_growth.shifted_by_one()?, Some(&-BigRational::one()))?
+    };
     let size = |root: &Root| root.value().and_then(|value| as_float(&value)).map(f64::abs).unwrap_or(f64::INFINITY);
     let positive = |root: &Root| matches!(root, Root::Exact(r) if !r.is_negative()) || matches!(root, Root::Near(r) if *r >= 0.0);
     // numpy-financial's choice among several rates: the non-negative ones when the signs

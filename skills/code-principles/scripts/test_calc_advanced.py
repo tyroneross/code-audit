@@ -149,6 +149,18 @@ class SolveTests(unittest.TestCase):
     def test_between_limits_polynomial_roots(self):
         self.assertEqual(self.roots("x**3 == x", "--between", "1/2", "2"), [(1, True)])
 
+    def test_between_is_compared_exactly(self):
+        self.assertEqual(self.roots("x == 1 + 1/2**60", "--between", "0", "1"), [])  # just past the upper bound
+        self.assertEqual(self.roots("x == 1 + 1/2**60", "--between", "0", "2"), [(1 + Fraction(1, 2**60), True)])
+        self.assertEqual(self.roots("x**2 == 4", "--between", "2", "3"), [(2, True)])  # a bound itself counts
+
+    def test_an_underflow_or_a_flat_zero_is_not_a_root(self):
+        self.assertEqual(calc("exp(-1000)")[0], 2)  # exp is never zero; 0.0 would be an underflow
+        for arguments in (["--solve", "exp(-x) == 0", "--between", "1000", "1001"], ["--solve", "0*sin(x) == 0", "--between", "1", "2"],
+                          ["--solve", "2.0**(-x) == 0", "--between", "2000", "2001"]):
+            code, report = calc(*arguments)
+            self.assertEqual((code, report["status"]), (2, "invalid"), (arguments, report))
+
     def test_set_names_are_constants_in_an_equation(self):
         self.assertEqual(self.roots("a*x == b", "--set", "a=4", "--set", "b=10"), [(Fraction(5, 2), True)])
         self.assertEqual(calc("--solve", "2 + 2 == 4")[0], 2)  # nothing to solve for
@@ -205,6 +217,16 @@ class CalculusTests(unittest.TestCase):
             self.assertEqual(code, 0, report)
             self.assertTrue(close(report["integral"]["value"], expected), (expression, report))
             self.assertTrue(report["integral"]["converged"])
+
+    def test_a_narrow_peak_between_sample_points_is_found(self):
+        # A single pass of the quadrature rule reported 3.4e-9 for this and called it converged.
+        # Exactly: (atan(9e5) + atan(1e5)) / 1e6.
+        code, report = calc("--integral", "1/(1 + 1000000000000*(x - 0.1)**2)", "--from", "0", "--to", "1")
+        expected = (math.atan(9e5) + math.atan(1e5)) / 1e6
+        self.assertTrue(math.isclose(report["integral"]["value"], expected, rel_tol=1e-9), (report, expected))
+        self.assertTrue(report["integral"]["converged"])
+        code, report = calc("--integral", "1/x", "--from", "0", "--to", "1")  # diverges: reported as not converged, exit 1
+        self.assertEqual((code, report["integral"]["converged"]), (1, False))
 
     def test_an_integrand_undefined_inside_the_range_is_refused(self):
         self.assertEqual(calc("--integral", "log(x)", "--from", "-1", "--to", "1")[0], 2)
@@ -284,6 +306,11 @@ class FinanceTests(unittest.TestCase):
             listed = ", ".join(map(str, flows))
             found = value(f"irr({listed})")
             self.assertTrue(abs(float(value(f"npv({found!r}, {listed})"))) < 1e-6 * abs(flows[0]), (periods, found))
+
+    def test_a_rate_near_zero_keeps_its_digits(self):
+        # sqrt(1 + 2**-60) - 1: found as a root in the rate itself, not as a growth factor near one minus one.
+        self.assertTrue(math.isclose(value("irr(-1, 0, 1 + 1/2**60)"), 4.336808689942018e-19, rel_tol=1e-12))
+        self.assertEqual(value("irr(-1, 2, 0)"), 1)  # a closing flow of zero changes nothing
 
     def test_bad_arguments_are_refused(self):
         for expression in ("irr(100, 110)", "irr(-100)", "fv(0.05, 10)", "pv(0.05, 10, -100, 0, 2)", "mirr(0.1, 0.1, 100, 50)", "npv(-1, 100, 100)",
@@ -377,6 +404,37 @@ class OptimizeTests(unittest.TestCase):
             else:
                 self.assertIn("does not fit a float exactly", report["error"])
         self.assertEqual(calc("--maximize", "x/2**1100", "--subject", "x <= 4", "--subject", "x >= 0")[0], 2)
+
+    def test_a_name_the_objective_ignores_does_not_cost_exactness_or_proof(self):
+        # x is free between its limits; the answer is still exact and proved from the one constraint that binds.
+        code, report = calc("--minimize", "3*y", "--subject", "x >= -6", "--subject", "x <= 2", "--subject", "y >= -5", "--subject", "y <= 2", "--subject", "-6*y <= 2")
+        answer = report["optimize"]
+        self.assertEqual((answer["objective"], number(answer["values"]["y"]), answer["exact"], answer["proved_optimal"]), (-1, Fraction(-1, 3), True, True))
+
+    def test_a_whole_number_the_solver_returns_inexactly_is_rebuilt(self):
+        # The solver returned w = 0.99999969999992 for this program; the answer is w = 1 and an objective of -26.
+        code, report = calc("--maximize", "-2*x - 7*y + 6*z - w", "--subject", "x >= -3", "--subject", "y >= 1", "--subject", "z >= -5", "--subject", "w >= -4",
+                            "--subject", "x <= 0", "--subject", "y <= 4", "--subject", "z <= -3", "--subject", "w <= 1", "--subject", "-4/3*x + 8*y - 2*z + 5/3*w >= -2",
+                            "--subject", "2*x - y + 2*z >= -17/2", "--subject", "-4*x - 2*y - 6*z - 4*w <= 14", "--integer", "w,x,y,z")
+        answer = report["optimize"]
+        self.assertEqual((answer["objective"], answer["values"], answer["exact"]), (-26, {"w": 1, "x": 0, "y": 1, "z": -3}, True))
+
+    def test_a_solver_answer_that_cannot_be_confirmed_is_refused(self):
+        # The solver returned x = -10, y = 8.99999999 here, which breaks x + y == -1 and the whole-number rule.
+        # The true optimum is x = 0, y = -1 with an objective of -1.
+        code, report = calc("--maximize", "y - x", "--subject", "x >= -10", "--subject", "y >= -10", "--subject", "999999999*x + 1000000000*y <= -1000000000",
+                            "--subject", "x + y == -1", "--integer", "x,y")
+        if code == 0:
+            self.assertEqual((report["optimize"]["values"], report["optimize"]["objective"], report["optimize"]["exact"]), ({"x": 0, "y": -1}, -1, True))
+        else:
+            self.assertIn("could not be confirmed", report["error"])
+
+    def test_mixed_whole_and_continuous_names_are_rebuilt_exactly(self):
+        code, report = calc("--maximize", "8*x - 4*y - 5*z", "--subject", "x >= -2", "--subject", "y >= -2", "--subject", "z >= 1", "--subject", "x <= 2", "--subject", "y <= 3",
+                            "--subject", "z <= 6", "--subject", "x/2 - 3/2*y + 3*z <= 6", "--subject", "2*x - 5/2*y - 6*z <= -7", "--integer", "x,y")
+        answer = report["optimize"]
+        # Expected value from a separate exact search over every whole x and y with z at the ends of the range left to it.
+        self.assertEqual((number(answer["objective"]), {k: number(v) for k, v in answer["values"].items()}, answer["exact"]), (Fraction(59, 12), {"x": 2, "y": 1, "z": Fraction(17, 12)}, True))
 
     def test_random_programs_match_corner_enumeration(self):
         rng = random.Random(53)
