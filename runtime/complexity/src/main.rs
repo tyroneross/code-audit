@@ -204,6 +204,15 @@ struct Row {
     params: u32,
 }
 
+/// Where the walk stands inside the function it is adding to.
+#[derive(Clone, Copy, Default)]
+struct Position {
+    /// Enclosing control-flow levels.
+    depth: u32,
+    /// Index into `Walker::conditions` of the combined condition being read, if any.
+    condition: Option<usize>,
+}
+
 struct Pattern {
     rule: &'static str,
     line: usize,
@@ -714,46 +723,67 @@ impl<'a> Walker<'a> {
         self.patterns.push(Pattern { rule, line: node.start_position().row + 1, row, detail });
     }
 
-    /// Record the pattern leads that start at this node.
-    fn find_patterns(&mut self, node: Node<'a>, row: Option<usize>) {
+    /// True when both nodes are the same source text and neither has an effect.
+    fn same(&self, a: Node, b: Node) -> bool {
+        pure(a, self.src) && pure(b, self.src) && squeezed(a, self.src) == squeezed(b, self.src)
+    }
+
+    fn fields(node: Node<'a>, first: &str, second: &str) -> Option<(Node<'a>, Node<'a>)> {
+        node.child_by_field_name(first).zip(node.child_by_field_name(second))
+    }
+
+    /// `a == a`, `a && a`, `a - a`: an operator whose result is fixed when both sides are the same.
+    fn identical_operands(&mut self, node: Node<'a>, row: Option<usize>) {
+        if node.kind() != "binary_expression" || self.lang == Lang::Swift {
+            return;
+        }
         let src = self.src;
-        let same = |a: Node, b: Node| pure(a, src) && pure(b, src) && squeezed(a, src) == squeezed(b, src);
-        let pair = |first: &str, second: &str| node.child_by_field_name(first).zip(node.child_by_field_name(second));
-        let kind = node.kind();
+        let op = field_text(node, "operator", src).unwrap_or("");
+        let Some((left, right)) = Self::fields(node, "left", "right").filter(|_| FIXED_WHEN_IDENTICAL.contains(&op)) else { return };
         // A right operand followed by `!`, `.`, `(` or `[` is the head of a longer expression
         // that the grammar split off (TypeScript `a !== a!.trim()`), so the sides are not the same.
-        let continues = |operand: Node| matches!(src[operand.end_byte()..].iter().find(|b| !b.is_ascii_whitespace()), Some(b'!' | b'.' | b'(' | b'['))
-            && !src[operand.end_byte()..].iter().skip_while(|b| b.is_ascii_whitespace()).take(2).eq(b"!=".iter());
-        if kind == "binary_expression" && self.lang != Lang::Swift {
-            let op = field_text(node, "operator", src).unwrap_or("");
-            let equality = matches!(op, "==" | "!=" | "===" | "!==");
-            let nan_test = equality && {
-                let line = String::from_utf8_lossy(src).lines().nth(node.start_position().row).unwrap_or("").to_lowercase();
-                FLOAT_WORDS.iter().any(|w| line.contains(w))
-            };
-            if let Some((left, _)) = pair("left", "right").filter(|(l, r)| FIXED_WHEN_IDENTICAL.contains(&op) && !nan_test && !continues(*r) && same(*l, *r)) {
-                let note = if equality { "; a deliberate NaN test is the one valid use" } else { "" };
-                self.pattern("identical_operands", node, row, format!("both sides of `{op}` are `{}`{note}", text(left, src).trim()));
-            }
+        let mut rest = src[right.end_byte()..].iter().skip_while(|b| b.is_ascii_whitespace());
+        let continues = match rest.next() {
+            Some(b'!') => rest.next() != Some(&b'='),
+            Some(b'.' | b'(' | b'[') => true,
+            _ => false,
+        };
+        let equality = matches!(op, "==" | "!=" | "===" | "!==");
+        let nan_test = equality && {
+            let line = String::from_utf8_lossy(src).lines().nth(node.start_position().row).unwrap_or("").to_lowercase();
+            FLOAT_WORDS.iter().any(|w| line.contains(w))
+        };
+        if !continues && !nan_test && self.same(left, right) {
+            let note = if equality { "; a deliberate NaN test is the one valid use" } else { "" };
+            self.pattern("identical_operands", node, row, format!("both sides of `{op}` are `{}`{note}", text(left, src).trim()));
         }
-        let assigned = match (self.lang, kind) {
-            (Lang::Rust | Lang::TypeScript | Lang::Tsx, "assignment_expression") => pair("left", "right"),
+    }
+
+    /// `x = x` with the plain assignment operator.
+    fn self_assignment(&mut self, node: Node<'a>, row: Option<usize>) {
+        let src = self.src;
+        let sides = match (self.lang, node.kind()) {
+            (Lang::Rust | Lang::TypeScript | Lang::Tsx, "assignment_expression") => Self::fields(node, "left", "right"),
             (Lang::Java, "assignment_expression") | (Lang::Go, "assignment_statement") => {
-                pair("left", "right").filter(|_| field_text(node, "operator", src) == Some("="))
+                Self::fields(node, "left", "right").filter(|_| field_text(node, "operator", src) == Some("="))
             }
             (Lang::Swift, "assignment") => {
                 let mut cursor = node.walk();
                 let plain = node.children(&mut cursor).any(|c| text(c, src) == "=");
-                pair("target", "result").filter(|_| plain)
+                Self::fields(node, "target", "result").filter(|_| plain)
             }
             _ => None,
         };
-        if let Some((left, _)) = assigned.filter(|(l, r)| same(*l, *r)) {
+        if let Some((left, _)) = sides.filter(|(l, r)| self.same(*l, *r)) {
             self.pattern("self_assignment", node, row, format!("`{}` is assigned to itself", text(left, src).trim()));
         }
-        let branches = match (self.lang, kind) {
-            (Lang::TypeScript | Lang::Tsx | Lang::Java, "ternary_expression") => pair("consequence", "alternative"),
-            (Lang::Swift, "ternary_expression") => pair("if_true", "if_false"),
+    }
+
+    /// The two arms of an `if`/`else` or conditional expression, when this node has both.
+    fn branches(&self, node: Node<'a>) -> Option<(Node<'a>, Node<'a>)> {
+        match (self.lang, node.kind()) {
+            (Lang::TypeScript | Lang::Tsx | Lang::Java, "ternary_expression") => Self::fields(node, "consequence", "alternative"),
+            (Lang::Swift, "ternary_expression") => Self::fields(node, "if_true", "if_false"),
             (Lang::Swift, "if_statement") => {
                 let mut cursor = node.walk();
                 let bodies: Vec<Node> = node.named_children(&mut cursor).filter(|c| c.kind() == "statements").collect();
@@ -762,30 +792,50 @@ impl<'a> Walker<'a> {
             (Lang::Rust | Lang::TypeScript | Lang::Tsx, k) if k == self.if_kind() => {
                 node.child_by_field_name("consequence").zip(node.child_by_field_name("alternative").and_then(|a| a.named_child(0)))
             }
-            (Lang::Java | Lang::Go, "if_statement") => pair("consequence", "alternative"),
+            (Lang::Java | Lang::Go, "if_statement") => Self::fields(node, "consequence", "alternative"),
             _ => None,
-        };
-        // Branches are compared as text even when they call functions: the same call in both is the finding.
-        let empty = |n: Node| squeezed(n, src).trim_matches(['{', '}']).is_empty();
-        let binds = kind == self.if_kind() && self.condition_binds(node);
-        if branches.is_some_and(|(a, b)| !binds && b.kind() != self.if_kind() && !empty(a) && squeezed(a, src) == squeezed(b, src)) {
+        }
+    }
+
+    /// Both arms are the same code. Arms are compared as text even when they call functions:
+    /// the same call in both is the finding.
+    fn duplicate_branches(&mut self, node: Node<'a>, row: Option<usize>) {
+        let src = self.src;
+        let Some((first, second)) = self.branches(node) else { return };
+        let empty = squeezed(first, src).trim_matches(['{', '}']).is_empty();
+        let binds = node.kind() == self.if_kind() && self.condition_binds(node);
+        if !binds && !empty && second.kind() != self.if_kind() && squeezed(first, src) == squeezed(second, src) {
             self.pattern("duplicate_branches", node, row, "both branches are the same code".into());
         }
-        if kind == self.if_kind() && !self.continues_else_if(node) {
-            let mut seen: Vec<String> = Vec::new();
-            let mut link = Some(node);
-            while let Some(current) = link {
-                let parts = self.condition_parts(current);
-                let condition = parts.iter().all(|p| pure(*p, src)).then(|| parts.iter().map(|p| squeezed(*p, src)).collect::<Vec<_>>().join(" "));
-                if let Some(text) = condition.filter(|t| !t.is_empty()) {
-                    if seen.contains(&text) {
-                        self.pattern("repeated_condition", current, row, "this condition repeats an earlier one in the same else-if chain".into());
-                    }
-                    seen.push(text);
-                }
-                link = self.else_if(current);
-            }
+    }
+
+    /// A condition that repeats an earlier one in the else-if chain that starts at this `if`.
+    fn repeated_condition(&mut self, node: Node<'a>, row: Option<usize>) {
+        if node.kind() != self.if_kind() || self.continues_else_if(node) {
+            return;
         }
+        let src = self.src;
+        let mut seen: Vec<String> = Vec::new();
+        let mut link = Some(node);
+        while let Some(current) = link {
+            let parts = self.condition_parts(current);
+            let condition = parts.iter().all(|p| pure(*p, src)).then(|| parts.iter().map(|p| squeezed(*p, src)).collect::<Vec<_>>().join(" "));
+            if let Some(text) = condition.filter(|t| !t.is_empty()) {
+                if seen.contains(&text) {
+                    self.pattern("repeated_condition", current, row, "this condition repeats an earlier one in the same else-if chain".into());
+                }
+                seen.push(text);
+            }
+            link = self.else_if(current);
+        }
+    }
+
+    /// Record the pattern leads that start at this node.
+    fn find_patterns(&mut self, node: Node<'a>, row: Option<usize>) {
+        self.identical_operands(node, row);
+        self.self_assignment(node, row);
+        self.duplicate_branches(node, row);
+        self.repeated_condition(node, row);
     }
 
     fn test_reason(&self, node: Node, name: &str, in_test_scope: Option<&str>) -> Option<String> {
@@ -897,13 +947,48 @@ impl<'a> Walker<'a> {
         self.modules.push((normalized, under_test));
     }
 
-    fn walk(&mut self, node: Node<'a>, current: Option<usize>, test_ctx: Option<String>, file: &str, depth: u32, condition: Option<usize>) {
+    /// Add one plain node to row `i`: its decisions, its share of a combined condition and its
+    /// nesting. Returns the position for its children and whether it opened a top-level block.
+    fn account(&mut self, node: Node<'a>, i: usize, at: Position) -> (Position, bool) {
+        let nests = self.nests(node);
+        let mut at = at;
+        if nests || CONDITION_BOUNDARIES.iter().any(|k| node.kind().contains(k)) || node.kind().ends_with("_statement") {
+            at.condition = None;
+        }
+        let ops = self.logical_ops(node);
+        if ops > 0 {
+            let index = at.condition.unwrap_or_else(|| {
+                self.conditions.push(0);
+                self.conditions.len() - 1
+            });
+            self.conditions[index] += ops;
+            at.condition = Some(index);
+        }
+        let combined = at.condition.map_or(0, |c| self.conditions[c]);
+        let add = self.decision(node);
+        let row = &mut self.rows[i];
+        row.condition_operators = row.condition_operators.max(combined);
+        row.cc += add;
+        if node.is_named() {
+            row.nodes += 1;
+            row.kinds.push(node.kind_id());
+        }
+        if !nests {
+            return (at, false);
+        }
+        at.depth += 1;
+        row.max_nesting = row.max_nesting.max(at.depth);
+        row.chunk_depth = if at.depth == 1 { 1 } else { row.chunk_depth.max(at.depth) };
+        (at, at.depth == 1)
+    }
+
+    fn walk(&mut self, node: Node<'a>, current: Option<usize>, test_ctx: Option<String>, file: &str, at: Position) {
         self.out_of_line_module(node, file, &test_ctx);
         let is_inline_mod = self.lang == Lang::Rust && node.kind() == "mod_item" && node.child_by_field_name("body").is_some();
         if is_inline_mod {
             self.mod_path.push(field_text(node, "name", self.src).unwrap_or("").to_string());
         }
-        let (mut depth, mut condition, mut opens_chunk) = (depth, condition, false);
+        let (mut at, mut opens_chunk) = (at, false);
         let (current, test_ctx, pushed) = if let Some((short, name_node)) = self.function_row(node, current) {
             let qualified = self.scope.iter().cloned().chain(std::iter::once(short.clone())).collect::<Vec<_>>().join(".");
             let file_ctx = self.scope_test_context(node).or(test_ctx.clone());
@@ -922,7 +1007,7 @@ impl<'a> Walker<'a> {
                 condition_operators: 0,
                 params: self.params(node),
             });
-            (depth, condition) = (0, None);
+            at = Position::default();
             self.scope.push(short);
             // A test function's nested helpers are test code too.
             let inherited = reason.or(file_ctx.filter(|c| c != "xctest"));
@@ -932,45 +1017,17 @@ impl<'a> Walker<'a> {
             self.scope.push(scope);
             (current, ctx, true)
         } else {
-            let add = self.decision(node);
             self.find_patterns(node, current);
-            if let Some(i) = current {
-                let nests = self.nests(node);
-                if nests || CONDITION_BOUNDARIES.iter().any(|k| node.kind().contains(k)) || node.kind().ends_with("_statement") {
-                    condition = None;
-                }
-                let ops = self.logical_ops(node);
-                if ops > 0 {
-                    let index = condition.unwrap_or_else(|| {
-                        self.conditions.push(0);
-                        self.conditions.len() - 1
-                    });
-                    self.conditions[index] += ops;
-                    condition = Some(index);
-                }
-                let combined = condition.map_or(0, |c| self.conditions[c]);
-                let row = &mut self.rows[i];
-                row.condition_operators = row.condition_operators.max(combined);
-                if nests {
-                    depth += 1;
-                    opens_chunk = depth == 1;
-                    row.max_nesting = row.max_nesting.max(depth);
-                    row.chunk_depth = if opens_chunk { 1 } else { row.chunk_depth.max(depth) };
-                }
-                row.cc += add;
-                if node.is_named() {
-                    row.nodes += 1;
-                    row.kinds.push(node.kind_id());
-                }
-            } else {
-                self.unowned += add;
+            match current {
+                Some(i) => (at, opens_chunk) = self.account(node, i, at),
+                None => self.unowned += self.decision(node),
             }
             (current, test_ctx, false)
         };
         let mut cursor = node.walk();
         let children: Vec<Node<'a>> = node.children(&mut cursor).collect();
         for child in children {
-            self.walk(child, current, test_ctx.clone(), file, depth, condition);
+            self.walk(child, current, test_ctx.clone(), file, at);
         }
         if let Some(i) = current.filter(|_| opens_chunk) {
             self.rows[i].bumps += (self.rows[i].chunk_depth >= 2) as u32;
@@ -1256,7 +1313,7 @@ fn main() {
         let root = tree.root_node();
         let mut walker = Walker::new(lang, &raw, lang == Lang::Rust && rust_crate_root(&opts.root, rel));
         let file_ctx = (lang == Lang::Rust && rust_file_is_test(root, &raw)).then(|| "file has #![cfg(test)]".to_string());
-        walker.walk(root, None, file_ctx, rel, 0, None);
+        walker.walk(root, None, file_ctx, rel, Position::default());
         let mut functions = Vec::new();
         for row in &walker.rows {
             let function_id = format!("{}:{}", row.name, row.line);
