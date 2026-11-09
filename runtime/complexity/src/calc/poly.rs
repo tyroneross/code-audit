@@ -121,7 +121,7 @@ impl Poly {
     }
 
     /// Text that parses back to the same polynomial, highest power first.
-    pub fn text(&self, name: &str) -> String {
+    pub fn text(&self, name: &str) -> Outcome<String> {
         let mut out = String::new();
         for (power, c) in self.c.iter().enumerate().rev().filter(|(_, c)| !c.is_zero()) {
             match (out.is_empty(), c.is_negative()) {
@@ -130,7 +130,8 @@ impl Poly {
                 (false, negative) => out.push_str(if negative { " - " } else { " + " }),
             }
             let size = c.abs();
-            let coefficient = if self.inexact { format!("{:?}", size.to_f64().unwrap_or(f64::NAN)) } else { size.to_string() };
+            // A float coefficient too small or too large for a float is refused, not printed as 0.0.
+            let coefficient = if self.inexact { format!("{:?}", nearest(&size)?) } else { size.to_string() };
             let variable = match power {
                 0 => String::new(),
                 1 => name.to_string(),
@@ -142,7 +143,7 @@ impl Poly {
                 _ => format!("{coefficient}*{variable}"),
             });
         }
-        if out.is_empty() { "0".into() } else { out }
+        Ok(if out.is_empty() { "0".into() } else { out })
     }
 }
 

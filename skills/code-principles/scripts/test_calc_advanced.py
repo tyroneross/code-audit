@@ -363,6 +363,15 @@ class CalculusTests(unittest.TestCase):
         self.assertEqual(calc("--integral", "sin(x)")[0], 2)  # no antiderivative is written for a non-polynomial
         self.assertEqual(calc("--integral", "sin(x)", "--from", "0")[0], 2)
 
+    def test_a_float_coefficient_too_small_to_print_is_refused(self):
+        # The coefficient is 3 * 1e-200**3 * 1e200 = 3e-400: printed as "0.0*x**2" it would be a different formula.
+        for arguments in (["--derivative", "(1e-200*x)**3*1e200"], ["--integral", "(1e-200*x)**3*1e200"], ["--expand", "(1e-200*x)**3*1e200"]):
+            code, report = calc(*arguments)
+            self.assertEqual((code, report["status"]), (2, "invalid"), (arguments, report))
+        code, report = calc("--derivative", "(1e-100*x)**3*1e200")  # 3e-100: fine
+        self.assertEqual(code, 0, report)
+        self.assertTrue(report["derivative"]["expression"].startswith("3"), report)
+
     def test_expand(self):
         code, report = calc("--expand", "(x + 1)**3 - x/2")
         self.assertEqual(report["expand"]["polynomial"], "x**3 + 3*x**2 + 5/2*x + 1")

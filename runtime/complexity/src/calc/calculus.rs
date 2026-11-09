@@ -348,8 +348,8 @@ pub(super) fn derivative(expression: &str, wanted: Option<&str>, at: Option<&str
     let mut fields = vec![("of", quoted(expression)), ("variable", quoted(&name))];
     if let Some(p) = polynomial(&node, &name, names)? {
         let slope = p.derivative();
-        fields.push(("expression", quoted(&slope.text(&name))));
-        fields.push(("method", quoted("power rule, exact")));
+        fields.push(("expression", quoted(&slope.text(&name)?)));
+        fields.push(("method", quoted(if slope.inexact { "power rule, on float coefficients" } else { "power rule, exact" })));
         if let Some(at) = &at {
             fields.push(("at", shown(at)));
             fields.push(("value", shown(&reported(&slope.at(&as_exact(at)?), slope.inexact || matches!(at, Value::Float(_)))?)));
@@ -407,8 +407,8 @@ pub(super) fn integral(expression: &str, wanted: Option<&str>, from: Option<&str
     };
     if let Some(p) = polynomial(&node, &name, names)? {
         let area: Poly = p.antiderivative();
-        fields.push(("antiderivative", quoted(&area.text(&name))));
-        fields.push(("method", quoted("power rule, exact")));
+        fields.push(("antiderivative", quoted(&area.text(&name)?)));
+        fields.push(("method", quoted(if area.inexact { "power rule, on float coefficients" } else { "power rule, exact" })));
         if let Some((low, high)) = &bounds {
             range(&mut fields, low, high);
             let inexact = area.inexact || matches!(low, Value::Float(_)) || matches!(high, Value::Float(_));
@@ -474,7 +474,7 @@ pub(super) fn expand(expression: &str, wanted: Option<&str>, names: Names) -> Ou
     Ok(object(&[
         ("of", quoted(expression)),
         ("variable", quoted(&name)),
-        ("polynomial", quoted(&p.text(&name))),
+        ("polynomial", quoted(&p.text(&name)?)),
         ("degree", p.degree().to_string()),
         ("coefficients_low_to_high", list(&coefficients)),
     ]))
