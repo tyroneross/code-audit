@@ -92,7 +92,9 @@ class HotspotTests(unittest.TestCase):
         commit = subprocess.run(["git", "-C", str(self.root), "hash-object", "-t", "commit", "-w", "--stdin"], input=signed, check=True, capture_output=True, text=True).stdout.strip()
         self.git("update-ref", "HEAD", commit)
         self.git("config", "log.showSignature", "true")
-        for key in ("gpg.program", "gpg.openpgp.program", "gpg.ssh.program", "gpg.x509.program"):
+        self.write(".gitattributes", "*.py diff=planted\n")
+        self.commit("attributes")
+        for key in ("gpg.program", "gpg.openpgp.program", "gpg.ssh.program", "gpg.x509.program", "diff.external", "diff.planted.textconv", "diff.planted.command"):
             self.git("config", key, str(program))
         report = hotspots.rank(self.root)
         self.assertFalse(marker.exists(), "git log ran a signature program named in the repository configuration")
