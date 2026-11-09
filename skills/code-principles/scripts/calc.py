@@ -126,6 +126,10 @@ def power(left, right):
     elif isinstance(left, float) and isinstance(right, float):
         return operator.pow(left, right)
     base, exponent = approximate(left), approximate(right)  # a fractional power, or one float operand: not exact
+    if base < 0 and other_side(right, exponent) is not None:
+        # The sign of a negative base's power turns on whether the exponent is odd, even or not whole, and the
+        # float nearest this exponent is a different number.
+        raise ValueError("a negative base needs an exponent that a float holds exactly; this exact exponent is not one")
     result = operator.pow(base, exponent)
     if isinstance(result, float):
         for moved in ((other_side(left, base), exponent), (base, other_side(right, exponent))):

@@ -414,6 +414,12 @@ class FinanceTests(unittest.TestCase):
             self.assertIn("digits", report["error"])
         self.assertTrue(math.isclose(value("rate(1/2, 0, -100, 105)"), 1.05 ** 2 - 1, rel_tol=1e-12))
 
+    def test_a_rate_next_to_minus_one_keeps_its_digits(self):
+        # 1 + rate is 1/10**16 exactly; as a float the rate is -1 + 1.1e-16 and log1p of that is off by ten percent.
+        self.assertTrue(math.isclose(value("fv(-1 + 1/10**16, 1/2, 0, -1)"), 1e-8, rel_tol=1e-12))  # sqrt(1e-16)
+        self.assertTrue(math.isclose(value("nper(-1 + 1/10**16, 0, -1, 10**8)"), -0.5, rel_tol=1e-12))  # log(1e8) / log(1e-16)
+        self.assertTrue(math.isclose(value("fv(-1 + 1/10**16, 1/2, -3, -1, 1)"), 1e-8 + 3e-16 * (1e-8 - 1) / (-1 + 1e-16), rel_tol=1e-9))
+
     def test_bad_arguments_are_refused(self):
         for expression in ("irr(100, 110)", "irr(-100)", "fv(0.05, 10)", "pv(0.05, 10, -100, 0, 2)", "mirr(0.1, 0.1, 100, 50)", "npv(-1, 100, 100)",
                            "nper(0.05, 10, -1000)", "npv(0.05)", "rate(10, 100, 1000, 5000)"):

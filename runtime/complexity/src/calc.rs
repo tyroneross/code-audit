@@ -243,6 +243,11 @@ fn power(base: Value, exponent: Value) -> Outcome<Value> {
         }
     }
     let (b, e) = (as_float(&base)?, as_float(&exponent)?);
+    if b < 0.0 && other_side(&exponent, e).is_some() {
+        // The sign of a negative base's power turns on whether the exponent is odd, even or
+        // not whole, and the float nearest this exponent is a different number.
+        return Err("a negative base needs an exponent that a float holds exactly; this exact exponent is not one".into());
+    }
     let result = b.powf(e);
     if result.is_nan() && !b.is_nan() && !e.is_nan() {
         return Err("result is not a real number".into());

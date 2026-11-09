@@ -55,16 +55,29 @@ fn timing(value: Option<&Value>) -> Outcome<Value> {
     }
 }
 
+/// log(1 + beyond) for beyond above -1. A float goes to log1p, which keeps the digits of a
+/// small one. An exact value is added to 1 exactly first, so one next to -1 (a rate of
+/// -1 + 1/10**16) or next to 0 keeps its digits too.
+fn log_one_plus(beyond: &Value) -> Outcome<f64> {
+    match beyond {
+        Value::Float(float) if *float > -1.0 => Ok(float.ln_1p()),
+        Value::Exact(_) => super::natural_log(&add(&whole(1)?, beyond)?),
+        _ => Err("log is not defined for this value".into()),
+    }
+}
+
 /// (1 + rate)**nper, and the payment factor (1 + rate*when)*(that - 1)/rate, which is nper when rate is 0.
 fn growth(rate: &Value, nper: &Value, when: &Value) -> Outcome<(Value, Value)> {
     // In floats, (1 + rate)**nper - 1 subtracts two nearly equal numbers when the rate is small
     // (a rate of 1e-12 loses four digits of the answer). log1p and expm1 give the same
     // quantities without the subtraction. Exact inputs take the exact path below.
     let in_floats = matches!(rate, Value::Float(_)) || !matches!(nper, Value::Exact(periods) if periods.is_integer());
-    if let (true, Ok(r), Ok(n), Ok(w)) = (in_floats, as_float(rate), as_float(nper), as_float(when)) {
+    if let (true, Ok(r), Ok(n)) = (in_floats, as_float(rate), as_float(nper)) {
         if r > -1.0 && r != 0.0 {
-            let log_growth = n * r.ln_1p();
-            return Ok((float(log_growth.exp())?, float((1.0 + r * w) * log_growth.exp_m1() / r)?));
+            let log_growth = n * log_one_plus(rate)?;
+            // 1 + rate*when is taken exactly before it becomes a float: at a rate next to -1 it is next to zero.
+            let lead = as_float(&add(&whole(1)?, &mul(rate, when)?)?)?;
+            return Ok((float(log_growth.exp())?, float(lead * log_growth.exp_m1() / r)?));
         }
     }
     let grown = power(add(&whole(1)?, rate)?, nper.clone())?;
@@ -258,12 +271,11 @@ pub(super) fn call(name: &str, values: &[Value]) -> Option<Outcome<Value>> {
             // The ratio is 1 - (fv + pv)/(pv + z), so log1p takes the part after the 1 directly and
             // a small rate, where the ratio is close to 1, keeps its digits.
             let z = div(&mul(pmt, &add(&whole(1)?, &mul(rate, &when)?)?)?, rate)?;
-            let beyond_one = as_float(&negate(div(&add(&fv, pv)?, &add(pv, &z)?)?))?;
-            let r = as_float(rate)?;
-            if beyond_one <= -1.0 || r <= -1.0 {
+            let beyond_one = negate(div(&add(&fv, pv)?, &add(pv, &z)?)?);
+            if as_float(&beyond_one)? <= -1.0 || as_float(rate)? <= -1.0 {
                 return Err("nper: these payments never reach the future value; check the signs (cash paid out is negative)".into());
             }
-            float(beyond_one.ln_1p() / r.ln_1p())
+            float(log_one_plus(&beyond_one)? / log_one_plus(rate)?)
         })(),
         ("rate", [nper, pmt, pv, fv, rest @ ..]) if rest.len() <= 1 => timing(rest.first()).and_then(|when| rate(nper, pmt, pv, fv, &when)),
         ("npv", [rate, flows @ ..]) if !flows.is_empty() => present(rate, flows),
