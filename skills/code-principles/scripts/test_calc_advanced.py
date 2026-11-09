@@ -411,7 +411,7 @@ class FinanceTests(unittest.TestCase):
         if code == 0:
             self.assertTrue(math.isclose(number(report["results"][0]["value"]), 1.734723475976807e-18, rel_tol=1e-9))
         else:
-            self.assertIn("digits", report["error"])
+            self.assertEqual(report["status"], "invalid")  # refused: floats cannot fix a rate this small here
         self.assertTrue(math.isclose(value("rate(1/2, 0, -100, 105)"), 1.05 ** 2 - 1, rel_tol=1e-12))
 
     def test_a_rate_next_to_minus_one_keeps_its_digits(self):
@@ -419,6 +419,27 @@ class FinanceTests(unittest.TestCase):
         self.assertTrue(math.isclose(value("fv(-1 + 1/10**16, 1/2, 0, -1)"), 1e-8, rel_tol=1e-12))  # sqrt(1e-16)
         self.assertTrue(math.isclose(value("nper(-1 + 1/10**16, 0, -1, 10**8)"), -0.5, rel_tol=1e-12))  # log(1e8) / log(1e-16)
         self.assertTrue(math.isclose(value("fv(-1 + 1/10**16, 1/2, -3, -1, 1)"), 1e-8 + 3e-16 * (1e-8 - 1) / (-1 + 1e-16), rel_tol=1e-9))
+
+    def test_whole_terms_are_exact_inside_and_fractional_terms_refuse_what_cancels(self):
+        # With a whole number of periods the equation is evaluated in exact fractions on the floats' own values and
+        # rounded once. The oracle does the same in Python fractions, on amounts that cancel to one part in 10**16.
+        rng = random.Random(97)
+        for _ in range(60):
+            rate, periods, when = rng.choice([1e-9, 0.004, 0.05, -0.03]), rng.randint(1, 80), rng.randint(0, 1)
+            present = rng.choice([10 ** 20, -10 ** 15, 123456789012345])
+            r, grown = Fraction(rate), (1 + Fraction(rate)) ** periods
+            factor = (1 + r * when) * (grown - 1) / r
+            payment = float(-(present * grown) / factor)  # the payment that almost exactly pays it off
+            expected = -(present * grown + Fraction(payment) * factor)
+            got = value(f"fv({rate!r}, {periods}, {payment!r}, {present}, {when})")
+            self.assertEqual(got, float(expected), (rate, periods, payment, present, when))  # correctly rounded, not merely close
+        # A term of one and a half periods has no exact form.
+        self.assertTrue(math.isclose(value("pmt(1/10**16, 3/2, -10**20, 10**20)"), 10000, rel_tol=1e-12))  # principal times rate
+        for expression in ("fv(1/10**16, 1/2, 2*10**20, -10**20)", "pv(1/10**16, 1/2, 2*10**20, -10**20)"):
+            code, report = calc(expression)  # about 7500 and 2500, lost in amounts of 10**20: refused, not printed as -0.0
+            self.assertEqual(code, 2, (expression, report))
+            self.assertIn("small difference of large amounts", report["error"])
+        self.assertTrue(math.isclose(value("fv(0.05, 2.5, -100, 1000)"), -(1000 * 1.05 ** 2.5 - 100 * (1.05 ** 2.5 - 1) / 0.05), rel_tol=1e-12))
 
     def test_bad_arguments_are_refused(self):
         for expression in ("irr(100, 110)", "irr(-100)", "fv(0.05, 10)", "pv(0.05, 10, -100, 0, 2)", "mirr(0.1, 0.1, 100, 50)", "npv(-1, 100, 100)",

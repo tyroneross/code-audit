@@ -23,6 +23,11 @@ const MAX_FLOWS: usize = 240;
 /// rate(): exact polishing steps, and the longest term whose equation is evaluated exactly.
 const RATE_POLISH: usize = 12;
 const MAX_EXACT_RATE_PERIODS: i32 = 1200;
+/// fv, pv and pmt are exact while periods times the bits of the rate stays under this, which
+/// bounds the size of (1 + rate)**nper.
+const MAX_EXACT_GROWTH_BITS: u64 = 200_000;
+/// The relative rounding error a float amount may carry after a few operations.
+const FLOAT_NOISE: f64 = 8.0 * f64::EPSILON;
 /// Up to this many periods every real root is isolated exactly, so a rational rate is reported exactly.
 const MAX_EXACT_PERIODS: usize = 32;
 
@@ -32,10 +37,6 @@ fn whole(value: i64) -> Outcome<Value> {
 
 fn add(a: &Value, b: &Value) -> Outcome<Value> {
     binary("+", a.clone(), b.clone())
-}
-
-fn sub(a: &Value, b: &Value) -> Outcome<Value> {
-    binary("-", a.clone(), b.clone())
 }
 
 fn mul(a: &Value, b: &Value) -> Outcome<Value> {
@@ -66,27 +67,79 @@ fn log_one_plus(beyond: &Value) -> Outcome<f64> {
     }
 }
 
-/// (1 + rate)**nper, and the payment factor (1 + rate*when)*(that - 1)/rate, which is nper when rate is 0.
-fn growth(rate: &Value, nper: &Value, when: &Value) -> Outcome<(Value, Value)> {
-    // In floats, (1 + rate)**nper - 1 subtracts two nearly equal numbers when the rate is small
-    // (a rate of 1e-12 loses four digits of the answer). log1p and expm1 give the same
-    // quantities without the subtraction. Exact inputs take the exact path below.
-    let in_floats = matches!(rate, Value::Float(_)) || !matches!(nper, Value::Exact(periods) if periods.is_integer());
-    if let (true, Ok(r), Ok(n)) = (in_floats, as_float(rate), as_float(nper)) {
-        if r > -1.0 && r != 0.0 {
-            let log_growth = n * log_one_plus(rate)?;
-            // 1 + rate*when is taken exactly before it becomes a float: at a rate next to -1 it is next to zero.
-            let lead = as_float(&add(&whole(1)?, &mul(rate, when)?)?)?;
-            return Ok((float(log_growth.exp())?, float(lead * log_growth.exp_m1() / r)?));
+#[derive(Clone, Copy)]
+enum Wanted {
+    Future,
+    Present,
+    Payment,
+}
+
+/// fv, pv or pmt from the other values of the time-value equation.
+///
+/// A whole number of periods is the usual case, and there the equation is a ratio of
+/// polynomials in the rate: it is evaluated in exact rationals, on the inputs' own values
+/// (a float input is the exact number that float is), and rounded once at the end if any
+/// input was a float. Nothing cancels and no digit is lost on the way.
+///
+/// A fractional (or very long) term has no such form. It is computed in floats through
+/// log1p and expm1, which avoid the subtraction in (1 + rate)**nper - 1, and the last step,
+/// a sum of two amounts, is refused when it leaves a difference too small for the floats
+/// that made it.
+fn time_value(wanted: Wanted, rate: &Value, nper: &Value, pmt: &Value, pv: &Value, fv: &Value, when: &Value) -> Outcome<Value> {
+    let approximate = [rate, nper, pmt, pv, fv].into_iter().any(|value| matches!(value, Value::Float(_)));
+    let one = BigRational::one();
+    let (exact_rate, periods) = (as_exact(rate)?, as_exact(nper)?);
+    let whole_periods = periods.is_integer().then(|| periods.to_integer().to_i32()).flatten();
+    let rate_bits = exact_rate.numer().bits().max(exact_rate.denom().bits());
+    if let Some(n) = whole_periods.filter(|n| n.unsigned_abs() as u64 * rate_bits <= MAX_EXACT_GROWTH_BITS) {
+        let (w, p, x, y) = (as_exact(when)?, as_exact(pmt)?, as_exact(pv)?, as_exact(fv)?);
+        let base = &one + &exact_rate;
+        if base.is_zero() && n < 0 {
+            return Err("division by zero".into());
         }
+        let grown = base.pow(n);
+        let factor = if exact_rate.is_zero() { periods } else { (&one + &exact_rate * &w) * (&grown - &one) / &exact_rate };
+        let result = match wanted {
+            Wanted::Future => -(&x * &grown + &p * &factor),
+            Wanted::Present if grown.is_zero() => return Err("division by zero".into()),
+            Wanted::Present => -(&y + &p * &factor) / &grown,
+            Wanted::Payment if factor.is_zero() => return Err("division by zero".into()),
+            Wanted::Payment => -(&y + &x * &grown) / &factor,
+        };
+        return if approximate { float(super::nearest(&result)?) } else { super::exact(result) };
     }
-    let grown = power(add(&whole(1)?, rate)?, nper.clone())?;
-    let factor = if is_zero(rate) {
-        nper.clone()
+    if whole_periods.is_some() && !approximate {
+        return Err("the exact result would be too large to hold; write the rate as a float (0.05 for 5/100) for a float result".into());
+    }
+    let (r, n, p, x, y) = (as_float(rate)?, as_float(nper)?, as_float(pmt)?, as_float(pv)?, as_float(fv)?);
+    if r <= -1.0 {
+        return Err("a rate at or below -100% needs a whole number of periods".into());
+    }
+    // grown = (1 + rate)**nper, less_one = grown - 1 without the subtraction, and the payment
+    // factor (1 + rate*when)*less_one/rate, which is nper when the rate is 0.
+    let (grown, less_one, factor) = if r == 0.0 {
+        (1.0, 0.0, n)
     } else {
-        div(&mul(&add(&whole(1)?, &mul(rate, when)?)?, &sub(&grown, &whole(1)?)?)?, rate)?
+        let log_growth = n * log_one_plus(rate)?;
+        // 1 + rate*when is taken exactly before it becomes a float: at a rate next to -1 it is next to zero.
+        let lead = as_float(&add(&whole(1)?, &mul(rate, when)?)?)?;
+        (log_growth.exp(), log_growth.exp_m1(), lead * log_growth.exp_m1() / r)
     };
-    Ok((grown, factor))
+    // The answer is minus a sum of two amounts over a divisor. For pmt the sum is written as
+    // (fv + pv) + pv*(grown - 1), with fv + pv taken exactly, so opposite fv and pv do not cancel.
+    let (terms, divisor) = match wanted {
+        Wanted::Future => ([x * grown, p * factor], 1.0),
+        Wanted::Present => ([y, p * factor], grown),
+        Wanted::Payment => ([as_float(&add(fv, pv)?)?, x * less_one], factor),
+    };
+    let sum = terms[0] + terms[1];
+    if terms[0].abs().max(terms[1].abs()) * FLOAT_NOISE > super::SENSITIVE * sum.abs() {
+        return Err("the result is a small difference of large amounts, which floats cannot hold for a fractional number of periods; use a whole number of periods (computed exactly) or smaller amounts".into());
+    }
+    if divisor == 0.0 {
+        return Err("division by zero".into());
+    }
+    float(-sum / divisor)
 }
 
 /// The net present value of flows at times 0, 1, 2, ...
@@ -156,6 +209,11 @@ fn rate(nper: &Value, pmt: &Value, pv: &Value, fv: &Value, when: &Value) -> Outc
         let scale = y.abs().max(x.abs()).max((p * n).abs()).max(1.0);
         if rate_residual(r, inputs).abs() > 1e-7 * scale {
             return unsettled();
+        }
+        // The equation's left side is only known to float noise times the amounts in it. That
+        // noise over the slope is how far the rate could be off; it must be below one part in 10**9.
+        if FLOAT_NOISE * scale / rate_slope(r, inputs).abs() > super::SENSITIVE * r.abs() {
+            return Err("rate: the amounts are too large beside their difference for floats to fix the rate with a fractional number of periods; use a whole number of periods".into());
         }
         for (index, value) in [nper, pmt, pv, fv].into_iter().enumerate() {
             if let Some(nearby) = other_side(value, inputs[index]) {
@@ -250,18 +308,13 @@ fn mirr(finance: &Value, reinvest: &Value, flows: &[Value]) -> Outcome<Value> {
 pub(super) fn call(name: &str, values: &[Value]) -> Option<Outcome<Value>> {
     let zero = whole(0);
     let result = match (name, values) {
-        ("fv", [rate, nper, pmt, pv, rest @ ..]) if rest.len() <= 1 => (|| {
-            let (grown, factor) = growth(rate, nper, &timing(rest.first())?)?;
-            Ok(negate(add(&mul(pv, &grown)?, &mul(pmt, &factor)?)?))
-        })(),
-        ("pv", [rate, nper, pmt, rest @ ..]) if rest.len() <= 2 => (|| {
-            let (grown, factor) = growth(rate, nper, &timing(rest.get(1))?)?;
-            div(&negate(add(rest.first().unwrap_or(&zero.clone()?), &mul(pmt, &factor)?)?), &grown)
-        })(),
-        ("pmt", [rate, nper, pv, rest @ ..]) if rest.len() <= 2 => (|| {
-            let (grown, factor) = growth(rate, nper, &timing(rest.get(1))?)?;
-            div(&negate(add(rest.first().unwrap_or(&zero.clone()?), &mul(pv, &grown)?)?), &factor)
-        })(),
+        ("fv", [rate, nper, pmt, pv, rest @ ..]) if rest.len() <= 1 => (|| time_value(Wanted::Future, rate, nper, pmt, pv, &zero.clone()?, &timing(rest.first())?))(),
+        ("pv", [rate, nper, pmt, rest @ ..]) if rest.len() <= 2 => {
+            (|| time_value(Wanted::Present, rate, nper, pmt, &zero.clone()?, rest.first().unwrap_or(&zero.clone()?), &timing(rest.get(1))?))()
+        }
+        ("pmt", [rate, nper, pv, rest @ ..]) if rest.len() <= 2 => {
+            (|| time_value(Wanted::Payment, rate, nper, &zero.clone()?, pv, rest.first().unwrap_or(&zero.clone()?), &timing(rest.get(1))?))()
+        }
         ("nper", [rate, pmt, pv, rest @ ..]) if rest.len() <= 2 => (|| {
             let (fv, when) = (rest.first().cloned().unwrap_or(zero.clone()?), timing(rest.get(1))?);
             if is_zero(rate) {
