@@ -179,6 +179,11 @@ class SolveTests(unittest.TestCase):
                          "(x - 1) + (floor(x) - 1/2)/10**9 == 0"):  # a jump of one part in a billion across zero
             code, report = calc("--solve", equation, "--between", "0", "2")
             self.assertEqual((code, report["status"]), (2, "invalid"), (equation, report))
+        # A jump of 1 behind a slope of 10**14, 10**13 or 10**12: the function moves 0.02, 0.002 or 0.0002 between
+        # neighbouring floats, so the jump is 45 to 4,500 times that and is seen once the sign change is narrowed to two floats.
+        for slope in ("10**14", "10**13", "10**12", "10**6", "1"):
+            code, report = calc("--solve", f"(x - 1)*{slope} + floor(x) - 1/2 == 0", "--between", "0", "2")
+            self.assertEqual((code, report["status"]), (2, "invalid"), (slope, report))
         # The width of the bracket must not matter: this has no root (below -1/2 before 1, at least 1/2 from 1 on).
         for low, high in (("0", "2"), ("-10**14", "10**14"), ("-10**300", "10**300")):
             code, report = calc("--solve", "x - 1 + floor(x) - 1/2 == 0", "--between", low, high)

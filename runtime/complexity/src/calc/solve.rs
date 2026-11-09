@@ -34,6 +34,12 @@ const CLOSE: f64 = 1024.0;
 const CROSSING: f64 = 0.05;
 /// Eight times closer to a root, a continuous function's value is at most this fraction of what it was.
 const SHRINK: f64 = 0.5;
+/// Floats searched each way for the two neighbours the sign changes between, the floats
+/// beside them that the change is compared with, and how many times larger than the change
+/// over those the change across may be.
+const NARROWING: usize = 64;
+const BESIDE: usize = 4;
+const JUMP: f64 = 2.0;
 /// Bisection steps for a single root of a long polynomial; enough for a rate as small as 2**-300.
 const MAX_SINGLE_STEPS: u64 = 480;
 
@@ -459,6 +465,37 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
     // be exactly zero, which says nothing, so the probes widen until both are non-zero and
     // the test is made there, at the smallest distance where it can be. A probe that would
     // leave the bracket is not made; a root at an end has one neighbour.
+    // First, at the finest scale there is: the sign change is narrowed to two neighbouring
+    // floats, and the change across them is compared with the change over the four floats on
+    // each side. A continuous function moves about as much per float on both sides of its
+    // root as across it; a jump is a change across one float many times larger than any
+    // nearby. (A jump no bigger than a few floats' worth of the function's own slope is below
+    // what floats can show.)
+    let low_side = |value: f64| value != 0.0 && (value < 0.0) == (at_low < 0.0);
+    let (mut below, mut above) = (root, root.next_up().min(high));
+    for _ in 0..NARROWING {
+        if low_side(f(below)) || below <= low {
+            break;
+        }
+        above = below;
+        below = below.next_down().max(low);
+    }
+    for _ in 0..NARROWING {
+        if !low_side(f(above)) || above >= high {
+            break;
+        }
+        below = above;
+        above = above.next_up().min(high);
+    }
+    // When the upper float is exactly a root, the crossing is completed by the float after it.
+    let across = if f(above) == 0.0 { above.next_up().min(high) } else { above };
+    let moved = |from: f64, floats: usize, up: bool| (0..floats).fold(from, |x, _| if up { x.next_up().min(high) } else { x.next_down().max(low) });
+    let (before, after) = (moved(below, BESIDE, false), moved(across, BESIDE, true));
+    let (jump, nearby) = ((f(across) - f(below)).abs(), (f(below) - f(before)).abs().max((f(after) - f(across)).abs()));
+    let narrowed = low_side(f(below)) && !low_side(f(across)) && f(across) != 0.0 && (before < below || across < after);
+    if failure.borrow_mut().take().is_none() && narrowed && jump.is_finite() && nearby.is_finite() && jump > JUMP * nearby {
+        return Err(format!("left minus right jumps across zero at {name} = {across:?} without passing through it: a discontinuity, not a root"));
+    }
     let spacing = if root == 0.0 { 1e-300 } else { root.abs().next_up() - root.abs() };
     let widest = 1e-6 * root.abs().max(high - low);
     let mut reach = (CLOSE * spacing).min(widest);
