@@ -27,6 +27,26 @@ def run(root, *args, timeout=20, stdin=None, ok=(0,)):
     return result.stdout if result.returncode in ok else None
 
 
+def blobs(root, base, paths):
+    """{path: bytes at base, or None when absent there} read in one Git process, without filters or textconv."""
+    wanted = [path for path in paths if "\n" not in path]
+    request = "".join(f"{base}:./{path}\n" for path in wanted).encode("utf-8", "surrogateescape")
+    output = run(root, "cat-file", "--batch", stdin=request, timeout=300) if wanted else b""
+    found, offset = dict.fromkeys(paths), 0
+    for path in wanted:
+        if output is None:
+            break
+        end = output.index(b"\n", offset)
+        header = output[offset:end].split()
+        offset = end + 1
+        if header[-1:] == [b"missing"] or len(header) != 3:
+            continue
+        size = int(header[2])
+        found[path] = output[offset:offset + size]
+        offset += size + 1
+    return found
+
+
 def numstat(before, after):
     """(added, deleted) lines between two byte strings as Git counts them, or None when Git treats either as binary.
 

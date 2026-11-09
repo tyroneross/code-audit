@@ -77,11 +77,6 @@ def line_counts(before, after):
     return gitsafe.numstat(before, after)
 
 
-def base_bytes(root, base, path):
-    """The file's bytes at base, or None when it did not exist there."""
-    return gitsafe.run(root, "show", *gitsafe.NO_DRIVERS, f"{base}:./{path}")
-
-
 def working_bytes(root, path):
     """The working file's bytes; None unless it is a regular file, so links, FIFOs and devices are never opened."""
     full = Path(root) / path
@@ -99,9 +94,10 @@ def changed_files(root, base):
     states = gitsafe.changed_paths(root, base)
     if states is None:
         raise ValueError("git could not list the base tree or hash the working files; cannot list the change")
+    at_base = gitsafe.blobs(root, base, [path for path, state in states.items() if state not in ("added", "untracked")])
     changed, contents = {}, {}
     for path, state in states.items():
-        before = b"" if state in ("added", "untracked") else base_bytes(root, base, path)
+        before = at_base.get(path, b"")
         after = b"" if state == "deleted" else working_bytes(root, path)
         contents[path] = (before, after)
         changed[path] = None if before is None or after is None else line_counts(before, after)
