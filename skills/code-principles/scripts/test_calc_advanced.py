@@ -636,6 +636,13 @@ class OptimizeTests(unittest.TestCase):
         whole = calc(*arguments, "--integer", "x,y")[1]["optimize"]
         self.assertEqual((whole["values"], whole["objective"], whole["exact"], whole["proved_optimal"]), ({"x": 4, "y": 0}, 20, True, False))
 
+    def test_rounded_integer_candidate_must_satisfy_exact_constraints(self):
+        # The solver can return a value near 1 within its tolerance. Rounding to 1
+        # violates the exact upper bound, even though the objective barely changes.
+        code, report = calc("--maximize", "x", "--integer", "x", "--subject", "x >= 0", "--subject", "x <= 1 - 1/2**50")
+        self.assertEqual((code, report["status"]), (2, "invalid"))
+        self.assertIn("could not be confirmed against the constraints", report["error"])
+
     def test_a_whole_number_name_must_be_limited_by_the_constraints(self):
         # The solver searches whole numbers inside 32 bits; a limit the caller did not write is never applied silently.
         for arguments in (["--maximize", "x", "--subject", "x <= 3000000000", "--integer", "x"],  # no lower limit

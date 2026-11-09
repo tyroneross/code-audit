@@ -180,6 +180,10 @@ export declare function archiveOldIncidents(options?: {
  */
 export declare function compressContext(incidents: CompactIncident[], patterns: CompactPattern[], budget?: number): string;
 /**
+ * Extract keywords from an incident for indexing
+ */
+export declare function extractIndexKeywords(incident: Incident): string[];
+/**
  * Update keyword index with a new incident (incremental, no full rebuild)
  */
 export declare function updateKeywordIndex(incident: Incident, config?: MemoryConfig): Promise<void>;

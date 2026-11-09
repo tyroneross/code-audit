@@ -312,17 +312,18 @@ fn area(f: &dyn Fn(f64) -> f64, low: f64, high: f64, cuts: &[f64], failed: &dyn 
             result.settled = false;
             break;
         }
-        let middle = 0.5 * (from + to);
+        let middle = from.midpoint(to);
+        if !(from < middle && middle < to) {
+            // Without a representable midpoint there are no distinct halves to compare.
+            result.value += whole;
+            result.settled = false;
+            continue;
+        }
         let (left, right) = (piece(from, middle, &mut result.evaluations), piece(middle, to, &mut result.evaluations));
         let gap = (whole - (left + right)).abs();
         // The total of the pieces' sizes, kept current, is what "small" is measured against.
         scale += left.abs() + right.abs() - whole.abs();
-        if !(from < middle && middle < to) {
-            // No float lies between the ends, so the "halves" are the panel itself and their
-            // agreement with it says nothing.
-            result.value += whole;
-            result.settled = false;
-        } else if gap <= PANEL_AGREEMENT * scale.max(f64::MIN_POSITIVE) || gap == 0.0 {
+        if gap <= PANEL_AGREEMENT * scale.max(f64::MIN_POSITIVE) || gap == 0.0 {
             result.value += left + right;
             result.error += gap;
         } else if depth >= MAX_HALVINGS || result.evaluations > MAX_EVALUATIONS {
@@ -478,4 +479,17 @@ pub(super) fn expand(expression: &str, wanted: Option<&str>, names: Names) -> Ou
         ("degree", p.degree().to_string()),
         ("coefficients_low_to_high", list(&coefficients)),
     ]))
+}
+
+#[cfg(test)]
+mod area_tests {
+    use super::*;
+
+    #[test]
+    fn adjacent_float_bounds_cannot_be_subdivided() {
+        let low = 1.0_f64;
+        let high = low.next_up();
+        let result = area(&|_| 1.0, low, high, &[], &|| false);
+        assert!(!result.settled);
+    }
 }

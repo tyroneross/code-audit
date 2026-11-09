@@ -1078,7 +1078,7 @@ export function compressContext(
 /**
  * Extract keywords from an incident for indexing
  */
-function extractIndexKeywords(incident: Incident): string[] {
+export function extractIndexKeywords(incident: Incident): string[] {
   const stopWords = new Set([
     'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
     'of', 'with', 'is', 'are', 'was', 'were', 'be', 'been', 'being',

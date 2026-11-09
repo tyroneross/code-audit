@@ -81,6 +81,7 @@ exports.loadIndex = loadIndex;
 exports.buildMemorySummary = buildMemorySummary;
 exports.archiveOldIncidents = archiveOldIncidents;
 exports.compressContext = compressContext;
+exports.extractIndexKeywords = extractIndexKeywords;
 exports.updateKeywordIndex = updateKeywordIndex;
 exports.loadKeywordIndex = loadKeywordIndex;
 exports.findCandidatesByKeyword = findCandidatesByKeyword;

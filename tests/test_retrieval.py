@@ -26,6 +26,24 @@ const write = async (name, value) => {{await fs.mkdir(memoryPath+'/incidents',{{
             self.assertEqual(result.returncode, 0, result.stderr)
             return json.loads(result.stdout)
 
+    def test_short_reordered_query_matches_detailed_symptom_without_tags(self):
+        results = self.probe("""
+const target = incident('INC_TARGET',200);
+target.symptom = 'After deployment the scheduler retries pending jobs repeatedly while attempting to recover an expired lease. It eventually emits timeout warnings before restarting workers.';
+await storeIncident(target,{config:memoryConfig});
+for (let i=0;i<9;i++) {
+    const distractor=incident('INC_DECOY_'+i,10);
+    distractor.symptom='Scheduler reads an updated configuration';
+    await storeIncident(distractor,{config:memoryConfig});
+}
+const query='timeout from scheduler';
+const options={memoryConfig};
+process.stdout.write(JSON.stringify([await checkMemory(query,options),await checkMemoryScaled(query,options)]));
+""")
+        for result in results:
+            self.assertEqual([row['incident_id'] for row in result['incidents']], ['INC_TARGET'])
+        self.assertEqual(results[1]['coverage']['scope'], 'keyword candidates')
+
     def test_recent_cutoff_old_and_future_in_both_paths(self):
         rows = self.probe("""
 for (let i=0;i<10;i++) await storeIncident(incident('INC_PROBE_'+i,[10,90,90.0001,200,-1,200,200,200,200,200][i]),{config:memoryConfig});
@@ -37,6 +55,28 @@ process.stdout.write(JSON.stringify([standard,scaled]));
         for result in rows:
             self.assertEqual([r['incident_id'] for r in result['incidents']], ['INC_PROBE_0', 'INC_PROBE_1'])
             self.assertTrue(all(abs(r['similarity_score']-.54)<1e-9 for r in result['incidents']))
+
+    def test_containment_does_not_displace_older_exact_match(self):
+        result = self.probe("""
+const exact = incident('INC_EXACT',200);
+exact.symptom = 'scheduler timeout';
+const detailed = incident('INC_DETAIL',10);
+detailed.symptom = 'Scheduler raises a timeout while restoring the previous worker configuration';
+await storeIncident(exact,{config:memoryConfig});
+await storeIncident(detailed,{config:memoryConfig});
+process.stdout.write(JSON.stringify(await checkMemory('scheduler timeout',{memoryConfig,max_results:1})));
+""")
+        self.assertEqual([row['incident_id'] for row in result['incidents']], ['INC_EXACT'])
+
+    def test_sql_keyword_can_still_be_a_literal_query(self):
+        result = self.probe("""
+const target = incident('INC_SQL',200);
+target.symptom = 'WHERE clause dropped';
+target.tags = ['where'];
+await storeIncident(target,{config:memoryConfig});
+process.stdout.write(JSON.stringify(await checkMemory('WHERE',{memoryConfig})));
+""")
+        self.assertEqual([row['incident_id'] for row in result['incidents']], ['INC_SQL'])
 
     def test_validation_filter_matches_standard_and_scaled_even_at_zero_threshold(self):
         rows = self.probe("""

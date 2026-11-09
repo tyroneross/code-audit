@@ -18,6 +18,14 @@ class HistoricalMemory(unittest.TestCase):
         self.assertTrue(all(r['coverage']['incidents']['skipped']==2 for r in rows))
         self.assertTrue(all(r['coverage']['incidents']['checked']==14 for r in rows))
 
+    def test_paraphrases_find_the_intended_lead_and_negative_queries_stay_empty(self):
+        expected = {'Q2': 'INC_RECENCY', 'Q4': 'INC_COVERAGE', 'Q6': 'INC_SCOPE'}
+        for row in self.result['rows']:
+            if row['query_id'] in expected:
+                self.assertIn(expected[row['query_id']], [incident['id'] for incident in row['incidents']], row)
+            elif row['query_id'].startswith('N'):
+                self.assertEqual(row['incidents'], [], row)
+
     def test_provenance_and_unverified_distractor_not_relabelled(self):
         self.assertEqual(len(self.result['source_provenance']),3)
         distractors=[x for r in self.result['rows'] for x in r['incidents'] if x['id']=='INC_MISLEADING']

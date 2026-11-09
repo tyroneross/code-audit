@@ -65,6 +65,7 @@ const DEFAULT_CONFIG = {
     temporal_preference: 90, // Prefer last 90 days
     include_unvalidated: true // Include unvalidated (guardian rarely runs in this project)
 };
+const QUERY_FILLER = new Set(['from', 'when', 'where', 'what', 'which', 'how']);
 /**
  * Check memory for similar incidents
  *
@@ -147,21 +148,7 @@ async function searchIncidents(symptom, config, memoryConfig, coverage) {
     const scored = allIncidents.map(incident => {
         if (!eligibleIncident(incident, config))
             return { incident, score: -Infinity };
-        // Skip incidents without valid symptom
-        if (!incident.symptom || typeof incident.symptom !== 'string') {
-            return { incident, score: 0 };
-        }
-        // Calculate similarity
-        const symptomSimilarity = calculateKeywordSimilarity(symptomWords, extractKeywords(incident.symptom.toLowerCase()));
-        // Tag similarity with bidirectional matching
-        const incidentTagWords = (incident.tags ?? []).flatMap(tag => tag.toLowerCase().split(/\s+/));
-        const tagMatches = symptomWords.filter(word => incidentTagWords.some(tagWord => tagWord.includes(word) || word.includes(tagWord))).length;
-        const tagSimilarity = tagMatches / Math.max(symptomWords.length, 1);
-        // Temporal boost (prefer recent)
-        const temporalBoost = incident.timestamp >= temporalCutoff && incident.timestamp <= now ? 1.2 : 1.0;
-        // Weight: 60% symptom keywords, 40% tags (tags are more semantic)
-        const score = (symptomSimilarity * 0.6 + tagSimilarity * 0.4) * temporalBoost;
-        return { incident, score };
+        return { incident, score: scoreIncident(incident, symptomWords, temporalCutoff, now) };
     });
     // Filter and sort
     const results = scored
@@ -174,14 +161,35 @@ async function searchIncidents(symptom, config, memoryConfig, coverage) {
 /**
  * Calculate keyword-based similarity
  */
-function calculateKeywordSimilarity(words1, words2) {
-    if (words1.length === 0 || words2.length === 0)
+function scoreIncident(incident, queryWords, temporalCutoff, now) {
+    if (!incident.symptom || typeof incident.symptom !== 'string' || queryWords.length === 0)
         return 0;
-    const set1 = new Set(words1);
-    const set2 = new Set(words2);
-    const intersection = new Set([...set1].filter(x => set2.has(x)));
-    const union = new Set([...set1, ...set2]);
-    return intersection.size / union.size; // Jaccard similarity
+    const query = new Set(queryWords);
+    const symptom = new Set(extractKeywords(incident.symptom));
+    const overlap = [...query].filter(word => symptom.has(word)).length;
+    const union = query.size + symptom.size - overlap;
+    const symptomSimilarity = overlap / union;
+    const tagWords = (incident.tags ?? []).flatMap(tag => tag.toLowerCase().split(/\s+/));
+    const tagMatches = queryWords.filter(word => tagWords.some(tagWord => tagWord.includes(word) || word.includes(tagWord))).length;
+    const score = symptomSimilarity * 0.6 + (tagMatches / queryWords.length) * 0.4;
+    const recallTerms = [...query].filter(word => !QUERY_FILLER.has(word));
+    const recallOverlap = recallTerms.filter(word => symptom.has(word)).length;
+    // A detailed symptom can contain the entire short query in a different order.
+    // Keep a single shared term from qualifying on containment alone.
+    const containmentScore = recallOverlap >= 2 && recallOverlap === recallTerms.length
+        ? DEFAULT_CONFIG.similarity_threshold + 0.1 * symptomSimilarity
+        : 0;
+    const temporalBoost = incident.timestamp >= temporalCutoff && incident.timestamp <= now ? 1.2 : 1.0;
+    const ranked = Math.max(score * temporalBoost, containmentScore);
+    if (ranked >= DEFAULT_CONFIG.similarity_threshold || recallOverlap === 0 || recallTerms.length < 3)
+        return ranked;
+    // A paraphrase may share fewer terms with the symptom itself. Require symptom evidence
+    // plus new evidence from other fields, covering at least three terms and half the query.
+    const indexed = new Set((0, storage_1.extractIndexKeywords)(incident));
+    const supporting = recallTerms.filter(word => indexed.has(word) ||
+        (word.length > 4 && word.endsWith('s') && indexed.has(word.slice(0, -1)))).length;
+    return supporting > recallOverlap && supporting >= 3 && supporting * 2 >= recallTerms.length
+        ? DEFAULT_CONFIG.similarity_threshold : ranked;
 }
 /**
  * Extract keywords from text
@@ -656,20 +664,10 @@ async function checkMemoryScaled(symptom, config = {}) {
     // Score candidates
     const now = Date.now();
     const temporalCutoff = now - (fullConfig.temporal_preference ?? 90) * 24 * 60 * 60 * 1000;
-    const scored = candidateIncidents.map(incident => {
-        if (!eligibleIncident(incident, fullConfig))
-            return { incident, score: -Infinity };
-        if (!incident.symptom || typeof incident.symptom !== 'string') {
-            return { incident, score: 0 };
-        }
-        const symptomSimilarity = calculateKeywordSimilarity(queryWords, extractKeywords(incident.symptom.toLowerCase()));
-        const incidentTagWords = (incident.tags ?? []).flatMap(tag => tag.toLowerCase().split(/\s+/));
-        const tagMatches = queryWords.filter(word => incidentTagWords.some(tagWord => tagWord.includes(word) || word.includes(tagWord))).length;
-        const tagSimilarity = tagMatches / Math.max(queryWords.length, 1);
-        const temporalBoost = incident.timestamp >= temporalCutoff && incident.timestamp <= now ? 1.2 : 1.0;
-        const score = (symptomSimilarity * 0.6 + tagSimilarity * 0.4) * temporalBoost;
-        return { incident, score };
-    });
+    const scored = candidateIncidents.map(incident => ({
+        incident,
+        score: scoreIncident(incident, queryWords, temporalCutoff, now),
+    }));
     const incidents = scored
         .filter(item => item.score >= fullConfig.similarity_threshold)
         .sort((a, b) => b.score - a.score)

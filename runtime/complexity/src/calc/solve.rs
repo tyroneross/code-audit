@@ -532,11 +532,24 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
     if narrowed && jump.is_finite() && jump > JUMP * nearby.unwrap_or(0.0) {
         return Err(format!("left minus right jumps across zero at {name} = {across:?} without passing through it: a discontinuity, not a root"));
     }
+    confirm_crossing(root, (low, high), residual, &f, &failure, name)?;
+    let method = format!("Brent's method between {low:?} and {high:?}: one root; others may exist");
+    Ok(report(&free, &method, &[solution(&[(name, &super::float(root)?)], false, Some(residual))], None))
+}
+
+fn confirm_crossing(
+    root: f64,
+    (low, high): (f64, f64),
+    residual: f64,
+    f: &dyn Fn(f64) -> f64,
+    failure: &RefCell<Option<String>>,
+    name: &str,
+) -> Outcome<()> {
     let spacing = if root == 0.0 { 1e-300 } else { root.abs().next_up() - root.abs() };
     let widest = 1e-6 * root.abs().max(high - low);
     let mut reach = (CLOSE * spacing).min(widest);
     loop {
-        let sides: Vec<f64> = [root - reach, root + reach].into_iter().filter(|x| *x >= low && *x <= high).map(&f).collect();
+        let sides: Vec<f64> = [root - reach, root + reach].into_iter().filter(|x| *x >= low && *x <= high).map(f).collect();
         // A probe that cannot be evaluated this close (a power too small for a float, say) says
         // nothing either; the next, wider one is tried.
         let unknown = failure.borrow_mut().take().is_some() || sides.iter().any(|side| !side.is_finite());
@@ -560,7 +573,7 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
             if residual.abs() > CROSSING * smallest || same_side || !heading {
                 return Err(format!("left minus right jumps across zero near {name} = {root:?} without passing through it: a discontinuity, not a root"));
             }
-            break;
+            return Ok(());
         }
         if reach >= widest {
             // Zero, or out of the bracket, at every distance: the expression has underflowed
@@ -569,8 +582,6 @@ fn one(difference: &Rc<Node>, name: &str, between: Option<(Value, Value)>, names
         }
         reach = (reach * 8.0).min(widest);
     }
-    let method = format!("Brent's method between {low:?} and {high:?}: one root; others may exist");
-    Ok(report(&free, &method, &[solution(&[(name, &super::float(root)?)], false, Some(residual))], None))
 }
 
 /// Several linear equations in several names, by exact elimination.
@@ -629,5 +640,31 @@ pub(super) fn solve(equations: &[String], between: Option<&(String, String)>, na
         ([difference], [name]) => one(difference, name, bounds, names),
         _ if bounds.is_some() => Err("--between applies to one equation in one name".into()),
         _ => system(&differences, &free, names),
+    }
+}
+
+#[cfg(test)]
+mod crossing_tests {
+    use super::*;
+
+    fn check_crossing(f: impl Fn(f64) -> f64) -> Outcome<()> {
+        let root = 1.0;
+        confirm_crossing(root, (0.5, 1.5), f(root), &f, &RefCell::new(None), "x")
+    }
+
+    #[test]
+    fn root_residual_must_be_small() {
+        assert!(check_crossing(|x| x - 1.0).is_ok());
+        assert!(check_crossing(|x| if x == 1.0 { 1.0 } else { x - 1.0 }).is_err());
+    }
+
+    #[test]
+    fn probes_must_have_opposite_signs() {
+        assert!(check_crossing(|x| (x - 1.0).abs()).is_err());
+    }
+
+    #[test]
+    fn probes_must_shrink_toward_zero() {
+        assert!(check_crossing(|x| if x == 1.0 { 0.0 } else { (x - 1.0).signum() }).is_err());
     }
 }
