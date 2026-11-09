@@ -5,7 +5,10 @@
 
 Read-only: lists files with `git ls-files` (os.walk fallback) and reads them with Python regex.
 """
-import argparse, collections, json, os, re, stat, subprocess, sys
+import argparse, collections, json, os, re, stat, sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import gitsafe  # noqa: E402
 
 SKIP = {".git", "node_modules", "dist", "build", "vendor", "target", "__pycache__", ".venv", "fixtures"}
 LANG = {".py": "python", ".ts": "typescript", ".tsx": "typescript", ".js": "javascript", ".jsx": "javascript", ".mjs": "javascript",
@@ -20,12 +23,9 @@ PATTERNS = {
 
 
 def git(root, *args):
-    try:
-        out = subprocess.run(["git", "-C", root, *args, "-z"], capture_output=True, timeout=20)
-    except (OSError, subprocess.TimeoutExpired):
-        return None
     # -z gives raw NUL-separated paths; without it git quotes unusual names and they fail isfile().
-    return [p for p in out.stdout.decode("utf-8", "surrogateescape").split("\0") if p] if out.returncode == 0 else None
+    out = gitsafe.run(root, *args, "-z")
+    return None if out is None else [p for p in out.decode("utf-8", "surrogateescape").split("\0") if p]
 
 
 def all_files(root):
@@ -44,7 +44,7 @@ def recon(root, base=None, paths=None):
     files, walk_errors = all_files(root)
     scope = "diff" if base or paths else "repo"
     if base:
-        paths = git(root, "diff", "--name-only", "--relative", base)
+        paths = git(root, "diff", *gitsafe.NO_DRIVERS, "--name-only", "--relative", base)
         if paths is None:
             raise SystemExit(f"recon.py: cannot diff against {base!r}")
     targets, inaccessible = [], []

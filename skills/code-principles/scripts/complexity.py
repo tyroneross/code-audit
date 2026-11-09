@@ -54,6 +54,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import gitsafe  # noqa: E402
 import python_structure  # noqa: E402
 from scan import TEST_PATH  # noqa: E402  shared test-path convention
 
@@ -203,11 +204,7 @@ def coverage_document(path):
 
 
 def git(root, *args):
-    try:
-        result = subprocess.run(["git", "-c", "core.fsmonitor=false", "-C", str(root), *args], capture_output=True, timeout=10)
-        return result.stdout if result.returncode == 0 else None
-    except (OSError, subprocess.TimeoutExpired):
-        return None
+    return gitsafe.run(root, *args, timeout=10)
 
 
 def walk(path, gaps):
