@@ -23,6 +23,7 @@ Return material findings with trigger, causal explanation, location, consequence
 ## Load details when needed
 
 - Requested scores, complex functions or structural refactoring: [measurement guidance](references/measurement.md). Use compatible numerical evidence and explicit unknown coverage; compare entry points and extracted helpers, then verify behavior.
+- Authorized simplification or cleanup of working code: [simplification](references/simplification.md). Rank with `hotspots.py`, pin behavior, change in small steps and check the result with `structure_delta.py` and the project's tests.
 
 - Rust test organization, crate splitting or shared test infrastructure: [Rust test architecture](references/rust-test-architecture.md). Preserve visibility, target/feature coverage and behavioral protection.
 - GPUI Rust UI, components, themes, text input or native embedding: [GPUI review checks](references/gpui.md). Verify the pinned dependency family, state ownership and native evidence boundaries before borrowing upstream behavior.

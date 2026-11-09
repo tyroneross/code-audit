@@ -10,6 +10,8 @@ Ask your agent to use **Code Audit**:
 - Fix this recurring failure; check the shared cause and affected callers.
 - Audit the repo against the thirty contextual principles.
 - Check this implementation plan before building.
+- Simplify this working module without changing what it does.
+- Show what limits speed, reliability or scale in this repo and where to start.
 
 The [entry skill](skills/code-audit/SKILL.md) starts with pseudocode, selects the workflow and loads details relevant to the challenge. A review-only request remains read-only.
 
@@ -18,7 +20,7 @@ The [entry skill](skills/code-audit/SKILL.md) starts with pseudocode, selects th
 | Component | Purpose |
 |---|---|
 | `skills/code-audit` | One entry for review, debugging, planning and improvement. |
-| `skills/code-principles` | Focused checklist, source scanner and contextual engineering definitions. |
+| `skills/code-principles` | Focused checklist, source scanner, structure scorer, simplification workflow and contextual engineering definitions. |
 | `skills/audit`, `plan`, `improve` | Thirty-rule evidence reports, pre-build checks and improvement campaigns. |
 | `skills/debug`, `debug-loop`, `debugging-memory`, `logging-tracer` | Causal investigation, verification and incident retrieval. |
 | `agents/` | Claude Code subagents: parallel domain assessment, root-cause investigation and fix critique. |
@@ -29,7 +31,7 @@ Shared guidance covers simplicity, systems engineering, usability, human factors
 
 Reviews track finding identity and disposition, inspect changed code and affected contracts, and separate severity from introduced/pre-existing origin. Incident lessons retain applicability, failed approaches and evidence limits. Start with the [review workflow](skills/code-principles/references/review-feedback.md), [incident learning](skills/code-principles/references/incident-learning.md) and [evaluation evidence](evals/review/README.md) when those challenges apply.
 
-Requested scoring uses [complexity and test-strength measurements](skills/code-principles/references/measurement.md): per-function CC, CRAP when compatible coverage exists, duplication candidates and bounded mutation evidence. The bundled scorer measures Python with the stdlib AST and Rust, TypeScript, Java, Go and Swift with a tree-sitter analyzer built from `runtime/complexity`; neither executes the target. Coverage and mutation converters cover cargo-llvm-cov, c8/Jest/Vitest, JaCoCo, Go coverprofiles, Swift llvm-cov, cargo-mutants and Stryker/PIT reports, and `companions.py doctor` shows which tools are installed. Missing coverage remains unknown. [UB source notes](research/ub-mode.md) explain the adopted practices and limits.
+Requested scoring uses [complexity and test-strength measurements](skills/code-principles/references/measurement.md): per-function CC, CRAP when compatible coverage exists, duplication candidates and bounded mutation evidence. The bundled scorer measures Python with the stdlib AST and Rust, TypeScript, JavaScript, Java, Go and Swift with a tree-sitter analyzer built from `runtime/complexity`; neither executes the target. Each function also carries structural signals (nesting depth, nested chunks, combined conditions, parameters, length), and the report lists parser-backed pattern leads such as duplicate branches. `hotspots.py` ranks files by change frequency times flagged structure, and `structure_delta.py` compares a change with its base, including edited tests and protected regions. Signals, leads and flags are places to read; none blocks work. The [simplification workflow](skills/code-principles/references/simplification.md) uses them, and [code health sources](research/code-health-sources.md) records which outside practices were adopted and why. Coverage and mutation converters cover cargo-llvm-cov, c8/Jest/Vitest, JaCoCo, Go coverprofiles, Swift llvm-cov, cargo-mutants and Stryker/PIT reports, and `companions.py doctor` shows which tools are installed. Missing coverage remains unknown. [UB source notes](research/ub-mode.md) explain the adopted practices and limits.
 
 ## Load locally
 

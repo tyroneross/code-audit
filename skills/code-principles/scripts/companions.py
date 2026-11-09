@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Show which measurement companions are available, per language, and how to use them.
+"""Show which measurement and lint companions are available, per language, and how to use them.
 
 `doctor` checks only whether each tool is on PATH (or, for cargo subcommands,
 whether the cargo-<name> binary exists). A tool that must be a project
@@ -28,6 +28,11 @@ COMPANIONS = {
         "mutation": {"tool": "cargo-mutants", "check": ["cargo-mutants"], "install": "cargo install --locked cargo-mutants",
                      "run": "git diff <base> > <scratch>/change.diff && cargo mutants --in-diff <scratch>/change.diff --output <scratch>",
                      "convert": "mutation_report.py <scratch>/mutants.out/outcomes.json --format cargo-mutants"},
+        "lint": {"tool": "Clippy", "check": ["cargo-clippy"], "install": "see https://doc.rust-lang.org/stable/clippy/installation.html",
+                 "run": "cargo clippy -- -W clippy::correctness -W clippy::suspicious -W clippy::complexity -W clippy::perf", "convert": None,
+                 "gap": "Clippy diagnostics are read as printed; no converter normalizes them into the scorer report",
+                 "note": "compiles the project (build scripts and proc macros run): needs the same authorization as its tests. "
+                         "Do not enable the whole restriction group. `cargo clippy --fix` implies --all-targets; use it only in an authorized repair."},
     },
     "typescript": {
         "coverage": {"tool": "c8 or the project's Jest/Vitest coverage", "check": ["npx"],
@@ -44,6 +49,9 @@ COMPANIONS = {
         "mutation": {"tool": "PIT with pitest-mutation-testing-elements-plugin", "check": ["java"],
                      "install": "pitest-maven plus the mutation-testing-elements plugin in the project build",
                      "run": "mvn org.pitest:pitest-maven:mutationCoverage -DoutputFormats=HTML2,JSON", "convert": "mutation_report.py <report>.json --format stryker"},
+        "lint": {"tool": "Error Prone", "check": [], "install": None, "run": None, "convert": None,
+                 "gap": "Error Prone runs inside the project's Bazel, Maven, Ant or Gradle build and has no standalone command; "
+                        "use the project's configured build, see https://errorprone.info/docs/installation"},
     },
     "go": {
         "coverage": {"tool": "go test -coverprofile", "check": ["go"], "install": "Go toolchain (brew install go)",
@@ -114,7 +122,7 @@ def doctor(project=None):
     report = {"schema": "code-audit.companions.v1",
               "complexity_analyzer": {"available": binary is not None, "path": str(binary) if binary else None,
                                       "build": complexity.native_build_hint(),
-                                      "languages": ["python", "rust", "typescript", "java", "go", "swift"]},
+                                      "languages": ["python", "rust", "typescript", "javascript", "java", "go", "swift"]},
               "languages": {}}
     for language, kinds in COMPANIONS.items():
         report["languages"][language] = {kind: {**spec, **availability(spec, project)} for kind, spec in kinds.items()}

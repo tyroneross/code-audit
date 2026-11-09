@@ -1,6 +1,6 @@
 ---
 name: code-audit
-description: Review, audit, debug or improve code using shared engineering principles and incident memory. Use for code reviews, recurring bugs, inefficiencies, root-cause repairs and pre-build checks.
+description: Review, audit, debug, simplify or improve code using shared engineering principles and incident memory. Use for code reviews, recurring bugs, inefficiencies, root-cause repairs, behaviour-preserving simplification and pre-build checks.
 ---
 
 # Code Audit
@@ -14,9 +14,11 @@ if symptoms: load ../debug/SKILL.md; treat retrieved incidents as hypotheses
 else if explicit full principles audit: load ../audit/SKILL.md
 else if planning: load ../plan/SKILL.md
 else if authorized improvement campaign: load ../improve/SKILL.md
+else if authorized simplification or cleanup of working code: load ../code-principles/SKILL.md, then ../code-principles/references/simplification.md
 else: load ../code-principles/SKILL.md for focused review
 load relevant challenge details
 if scoring requested or complexity/refactoring is material: load ../code-principles/references/measurement.md; measure compatible scope and report unknown coverage explicitly
+if asked what limits speed, reliability, security or scale across a repository: rank with hotspots.py, read pattern leads and structural signals from complexity.py, then confirm each against source
 if affected Cargo manifests or source identify GPUI: read ../code-principles/references/gpui.md; use only checks applicable to the changed flow
 if agent dependencies or handoffs: read ../code-principles/references/challenge-guidance.md#agent-communication-and-dependency-handoffs
 if unused code, stale experiments or constant flags: read ../code-principles/references/removal-evidence.md

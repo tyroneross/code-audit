@@ -13,7 +13,7 @@ Record revision, source digests, analyzer/version, exact command, selection, exc
 
 ## Bundled scorers
 
-Resolve `<cp>` to the installed `skills/code-principles` directory. One entry point measures Python with the stdlib AST and Rust, TypeScript/TSX, Java, Go and Swift with the bundled tree-sitter analyzer in `runtime/complexity`. Neither imports, builds nor runs the target. Consult `--help` and `runtime/complexity/src/main.rs` for the per-language counting rules:
+Resolve `<cp>` to the installed `skills/code-principles` directory. One entry point measures Python with the stdlib AST and Rust, TypeScript/TSX, JavaScript/JSX, Java, Go and Swift with the bundled tree-sitter analyzer in `runtime/complexity` (JavaScript is read with the TSX grammar). Neither imports, builds nor runs the target. Consult `--help` and `runtime/complexity/src/main.rs` for the per-language counting rules:
 
 ```sh
 cargo build --release --offline --manifest-path <plugin>/runtime/complexity/Cargo.toml   # once; or cargo install --offline --path <plugin>/runtime/complexity
@@ -28,9 +28,43 @@ Cyclomatic complexity undercounts branching hidden in combinators. Rust `Option`
 
 `--duplicates` adds structural candidates for the tree-sitter languages: Jaccard similarity of node-kind shingles, inclusive at 0.8 by default, reported with each side's `kind`. Python is not compared, which the duplicates section states as a gap. MinHash banding is derived from the threshold so a pair exactly at the threshold is found with probability at least 0.98 (`estimated_recall_at_threshold`); below about 0.03 every pair is compared. `candidate_pairs_found` is therefore a near-complete count, not an exact one. Identical boilerplate (`as_str` matches, test setup) scores 1.0 legitimately; confirm shared policy before merging anything.
 
+## Structural signals and pattern leads
+
+Every function row also carries the signals below, and `signals` names those at or above their threshold. `hotspot` remains the CC rule. Signals choose reading order; none is a defect and none changes the exit status. Override with `--structure max_nesting=4 lines=80`.
+
+| Signal | Counts | Default | Where the default comes from |
+|---|---|---|---|
+| `max_nesting` | Deepest nested control flow. An `else if` stays on its chain's level; a conditional expression inside another opens one, so a chained ternary reads as nested. Early exits (`guard`, `let ... else`) open none | 3 | "Deep nesting (3+ levels)" in the adapted simplification skill |
+| `lines` | Name line to closing line, inclusive, comments and blanks included | 50 | "Long functions (50+ lines)" in the same skill |
+| `params` | Declared parameters without the receiver (`self`, `cls`, Rust `self`) | 6 | Error Prone TooManyParameters: five or fewer |
+| `bumps` | Top-level control-flow blocks that themselves contain nested control flow: separate chunks of nested logic | 2 | Reading-order choice; the source names the smell and no value |
+| `condition_operators` | Most `and`/`or` (`&&`/`||`) operators combined in one expression | 3 | Reading-order choice; the source names the smell and no value |
+
+`patterns` lists parser-backed leads, each compared as source text and reported only when no operand calls a function, awaits, allocates or mutates:
+
+- `identical_operands`: a comparison, `&&`, `||`, `-`, `/` or `%` whose two sides are the same expression. Skipped as the usual NaN test when the line names a float, NaN or infinity. Not run for Swift.
+- `self_assignment`: `x = x`. In Python only inside a function, because `NAME = NAME` at module level rebinds on purpose.
+- `duplicate_branches`: both arms of an `if`/`else` or conditional expression are the same code. Skipped when the condition binds a name (`if let`, `if case`, an `instanceof` pattern).
+- `repeated_condition`: a condition repeats an earlier one in the same `else if` chain.
+
+Each lead has `kind` (production or test) and `tier`. A rule is `measured` with at least 8 labelled hits at precision 0.7 or higher, otherwise `experimental`; the record with every labelled hit, the six corrected false-positive causes and its limits is [pattern precision](pattern-precision.json). On six repositories (8,776 files, 110,791 functions) `duplicate_branches` was 21 true of 21; the other three rules had one hit between them. A file with a line over 2000 bytes is treated as minified: its leads are withheld and counted in `patterns_withheld`. Confirm a lead against its callers before reporting it. An analyzer built before these fields existed yields null values and one gap; rebuild it.
+
+## Change frequency and before/after
+
+```sh
+python3 <cp>/scripts/hotspots.py /absolute/project [--since "12 months ago"] [--top 20] > /scratch/hotspots.json
+python3 <cp>/scripts/structure_delta.py /absolute/project [--base <rev>] > /scratch/delta.json
+```
+
+`hotspots.py` scores each file as non-merge commits in the window times its flagged production functions (CC hotspot or structural signal). Code that changes often and carries flagged structure is where simplification pays back first; flagged code that never changes and clean code that changes often score 0. Git never rejects `--since` text, so read `since_resolved_utc`, the start it used. A shallow clone is a gap.
+
+`structure_delta.py` compares the working tree, uncommitted and untracked files included, with a base revision. The default base is the merge base of HEAD with the first existing of the `origin/HEAD` target, `origin/main`, `origin/master`, `main`, `master`. It measures changed source files on both sides, pairs functions by path and name, and flags `tests_changed`, `protected_region_changed`, `protected_region_unbalanced`, `large_change`, `function_got_worse`, `new_hotspot` and `pattern_introduced`. Flags are places to look and exit 1 only with `--fail-on-flags`. No flag does not show that behaviour is preserved; the project's tests do that. The workflow that uses both tools is [simplification](simplification.md).
+
+All scripts read Git through one guarded helper that disables `core.fsmonitor`, and pass `--no-ext-diff --no-textconv` to diff, log and show, so a reviewed repository's configuration cannot name a program for them to run.
+
 ## Coverage and mutation companions
 
-`companions.py doctor` lists, per language, the coverage and mutation tools on PATH, their install line, the command to run and the converter. StrykerJS counts as available only when `@stryker-mutator/core` resolves from `--project <dir>`; otherwise it reports `requires_project_dependency`, because `npx` would fetch it from the network. It never runs project code. Coverage and mutation runs execute the project's tests: run them only with authorization, from a passing baseline, writing to scratch outside the repository.
+`companions.py doctor` lists, per language, the coverage and mutation tools on PATH, their install line, the command to run and the converter, plus a lint companion for Rust (Clippy) and Java (Error Prone, which runs only inside the project's build). A lint run compiles the project, so it needs the same authorization as its tests; keep to the correctness, suspicious, complexity and perf groups and apply `cargo clippy --fix` only in an authorized repair. StrykerJS counts as available only when `@stryker-mutator/core` resolves from `--project <dir>`; otherwise it reports `requires_project_dependency`, because `npx` would fetch it from the network. It never runs project code. Coverage and mutation runs execute the project's tests: run them only with authorization, from a passing baseline, writing to scratch outside the repository.
 
 | Language | Coverage, then `coverage_convert.py --format` | Mutation, then `mutation_report.py --format` |
 |---|---|---|
