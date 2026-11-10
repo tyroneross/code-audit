@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 import random
 import re
 import shutil
@@ -11,7 +12,9 @@ import tempfile
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
-RUNTIMES={'code-audit':ROOT/'runtime/debugger/dist/src','coding-debugger':Path('/Users/tyroneross/dev/git-folder/claude-code-debugger/dist/src')}
+# CODE_AUDIT_REPOS_ROOT names the folder holding the compared checkouts (default: the folder above this repository).
+REPOS_ROOT=Path(os.environ.get('CODE_AUDIT_REPOS_ROOT',str(ROOT.parent)))
+RUNTIMES={'code-audit':ROOT/'runtime/debugger/dist/src','coding-debugger':REPOS_ROOT/'claude-code-debugger/dist/src'}
 SEED=20261028
 STOP=set('a an the of to in on for and or is are was were be been with without from by at as it its this that when after before not no into than then but if via vs'.split())
 NEGATIVES=['SwiftUI widget timeline reload budget exhausted on lock screen','Bluetooth peripheral pairing drops after watchOS sleep','Kubernetes pod evicted for ephemeral storage pressure','Unity shader compile stalls on Vulkan pipeline cache','Rust borrow checker lifetime error in async trait impl','Gradle daemon heap exhausted during Android lint','Terraform state lock stuck in DynamoDB table','Bluetooth LE advertisement interval ignored on Raspberry Pi','Excel macro security prompt blocks VBA add-in load','FPGA bitstream timing closure fails on clock domain crossing']
@@ -100,7 +103,7 @@ def metrics(rows,queries):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--corpus',type=Path,default=Path('/Users/tyroneross/dev/git-folder/private-web-app/.claude/memory'))
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--corpus',type=Path,default=REPOS_ROOT/'private-web-app/.claude/memory')
     p.add_argument('--private',type=Path,required=True,help='directory outside the repository for query text and raw rows');p.add_argument('--out',type=Path,required=True)
     a=p.parse_args()
     if a.out.exists():raise FileExistsError('refusing to replace recorded results')

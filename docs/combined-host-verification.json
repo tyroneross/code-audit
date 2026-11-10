@@ -8,7 +8,7 @@
         "-p",
         "--no-session-persistence",
         "--plugin-dir",
-        "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/package",
+        ".build-loop/worktrees/run-866006/.build-loop/hosts/package",
         "--setting-sources",
         "",
         "--settings",
@@ -44,21 +44,21 @@
       {
         "tool": "Read",
         "arguments": {
-          "file_path": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/package/skills/debugging-memory/SKILL.md"
+          "file_path": ".build-loop/worktrees/run-866006/.build-loop/hosts/package/skills/debugging-memory/SKILL.md"
         },
         "id": "toolu_01VUA36yGru3mWsaqJRuxdPQ"
       },
       {
         "tool": "mcp__plugin_code-audit_code-audit-debugger__status",
         "arguments": {
-          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project"
+          "project_root": ".build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project"
         },
         "id": "toolu_01Nf8jfajfuz3TvKEHXTQ6Bs"
       },
       {
         "tool": "mcp__plugin_code-audit_code-audit-debugger__store",
         "arguments": {
-          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project",
+          "project_root": ".build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project",
           "symptom": "Synthetic host smoke duplicate checkout receipt",
           "root_cause": "Synthetic retry regenerated operation identity",
           "fix": "Synthetic fixture only: preserve operation identity",
@@ -69,14 +69,14 @@
       {
         "tool": "mcp__plugin_code-audit_code-audit-debugger__list",
         "arguments": {
-          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project"
+          "project_root": ".build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project"
         },
         "id": "toolu_018RqgTcPZkz8cBBMx9bFnCf"
       },
       {
         "tool": "mcp__plugin_code-audit_code-audit-debugger__search",
         "arguments": {
-          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project",
+          "project_root": ".build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project",
           "symptom": "Synthetic host smoke duplicate checkout receipt"
         },
         "id": "toolu_01RyCoFHRfMADS7oHXYy9UJW"
@@ -84,7 +84,7 @@
       {
         "tool": "mcp__plugin_code-audit_code-audit-debugger__detail",
         "arguments": {
-          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project",
+          "project_root": ".build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project",
           "id": "INC_TEST_20261021_065123_bb5b37001"
         },
         "id": "toolu_01UaxV3JrJA9jBGCx1AykykM"
@@ -133,7 +133,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Server working directory: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project\nMemory path: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project/.claude/memory\nNo memory index available; existing incident files may still be searchable."
+            "text": "Server working directory: .build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project\nMemory path: .build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project/.claude/memory\nNo memory index available; existing incident files may still be searchable."
           }
         ]
       },
@@ -143,7 +143,7 @@
         "content": [
           {
             "type": "text",
-            "text": "Incident stored: INC_TEST_20261021_065123_bb5b37001\nFile: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project/.claude/memory/incidents/INC_TEST_20261021_065123_bb5b37001.json"
+            "text": "Incident stored: INC_TEST_20261021_065123_bb5b37001\nFile: .build-loop/worktrees/run-866006/.build-loop/hosts/claude-closure-project/.claude/memory/incidents/INC_TEST_20261021_065123_bb5b37001.json"
           }
         ]
       },
@@ -192,7 +192,7 @@
         "-c",
         "model_reasoning_effort=\"medium\"",
         "-C",
-        "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
+        ".build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
         "-"
       ],
       "exit_code": 0,
@@ -206,13 +206,13 @@
         "server": "code-audit-debugger",
         "tool": "status",
         "arguments": {
-          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project"
+          "project_root": ".build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project"
         },
         "result": {
           "content": [
             {
               "type": "text",
-              "text": "Server working directory: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-home/plugins/cache/code-audit-local/code-audit/0.3.0\nMemory path: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project/.claude/memory\nNo memory index available; existing incident files may still be searchable."
+              "text": "Server working directory: .build-loop/worktrees/run-866006/.build-loop/hosts/codex-home/plugins/cache/code-audit-local/code-audit/0.3.0\nMemory path: .build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project/.claude/memory\nNo memory index available; existing incident files may still be searchable."
             }
           ],
           "structured_content": null
@@ -226,7 +226,7 @@
         "server": "code-audit-debugger",
         "tool": "store",
         "arguments": {
-          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
+          "project_root": ".build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
           "symptom": "Synthetic host smoke duplicate checkout receipt",
           "root_cause": "Synthetic retry regenerated operation identity",
           "fix": "Synthetic fixture only: preserve operation identity",
@@ -236,7 +236,7 @@
           "content": [
             {
               "type": "text",
-              "text": "Incident stored: INC_TEST_20261021_065129_727263001\nFile: /Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project/.claude/memory/incidents/INC_TEST_20261021_065129_727263001.json"
+              "text": "Incident stored: INC_TEST_20261021_065129_727263001\nFile: .build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project/.claude/memory/incidents/INC_TEST_20261021_065129_727263001.json"
             }
           ],
           "structured_content": null
@@ -250,7 +250,7 @@
         "server": "code-audit-debugger",
         "tool": "list",
         "arguments": {
-          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project"
+          "project_root": ".build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project"
         },
         "result": {
           "content": [
@@ -270,7 +270,7 @@
         "server": "code-audit-debugger",
         "tool": "search",
         "arguments": {
-          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
+          "project_root": ".build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
           "symptom": "Synthetic host smoke duplicate checkout receipt"
         },
         "result": {
@@ -291,7 +291,7 @@
         "server": "code-audit-debugger",
         "tool": "detail",
         "arguments": {
-          "project_root": "/Users/tyroneross/dev/git-folder/code-audit/.build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
+          "project_root": ".build-loop/worktrees/run-866006/.build-loop/hosts/codex-closure-project",
           "id": "INC_TEST_20261021_065129_727263001"
         },
         "result": {

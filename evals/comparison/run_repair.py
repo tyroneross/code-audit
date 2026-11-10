@@ -12,9 +12,11 @@ from common import ARMS,MODEL,EFFORT,EVALS,guidance,guidance_sha256,load,guarded
 
 repair=load('comparison_repair',EVALS/'matched/repair.py')
 isolation=load('comparison_isolation',EVALS/'matched/isolation.py')
-SOURCE_REPO=Path(os.environ.get('CODE_PRINCIPLES_AUDIT_REPO','/Users/tyroneross/dev/git-folder/code-principles-audit'))
+# CODE_AUDIT_REPOS_ROOT names the folder holding local checkouts (default: the folder above this repository).
+REPOS_ROOT=Path(os.environ.get('CODE_AUDIT_REPOS_ROOT',str(EVALS.parent.parent)))
+SOURCE_REPO=Path(os.environ.get('CODE_PRINCIPLES_AUDIT_REPO',str(REPOS_ROOT/'code-principles-audit')))
 # Deny model reads of every local checkout, so no arm can read the historical fix or another arm's output.
-PROTECTED_ROOT=Path(os.environ.get('CODE_AUDIT_PROTECTED_ROOT','/Users/tyroneross/dev/git-folder'))
+PROTECTED_ROOT=Path(os.environ.get('CODE_AUDIT_PROTECTED_ROOT',str(REPOS_ROOT)))
 FIX='4361bd38045e21e4651ec265261d0aad7a9092ff'
 DIR='skills/code-principles/scripts'
 EDITABLE={'scan.py','test_code_principles.py'}
