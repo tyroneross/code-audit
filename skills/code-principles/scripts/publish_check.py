@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Find text that must not leave this machine before a repository is published or pushed.
 
-Two kinds of finding, in every tracked text file (code, data, docs, tests) and in commit messages:
-  private-name  a name from the local private-names list (private repositories, clients, internal hosts)
-  home-path     a machine-specific path such as /Users/<name>/, /home/<name>/ or C:\\Users\\<name>\\
+Three kinds of finding, in every tracked text file (code, data, docs, tests) and in commit messages:
+  secret        blocks  a credential in a recognisable format (cloud, Git host and model-provider keys, private key blocks)
+  home-path     blocks  a machine-specific path such as /Users/<name>/, /home/<name>/ or C:\\Users\\<name>\\
+  private-name  warns   a name from the local private-names list (private repositories, clients, internal hosts)
+
+A private name is a secrecy concern, not a security one: it is listed and counted, and the push proceeds. The secret
+patterns are a fixed-format floor, not a full scanner; run a dedicated one (trufflehog, gitleaks) on whole history
+before a first publish. Secret values are never printed: only their first characters.
 
 The private-names list never lives in the repository it guards. Sources, merged:
   --names FILE, or $CODE_AUDIT_PRIVATE_NAMES (a file path), or ~/.code-audit/private-names.txt (one name per line, # comments)
@@ -14,9 +19,10 @@ The reviewed repository's own name is never reported.
 
 Scope: tracked files at --rev (default HEAD), or with --range A..B only lines added in that range plus its commit
 messages. Home paths under fictional users (example, alice, user, ...) are ignored. A `.publish-allow` file at the
-repository root lists path globs whose home paths are intentional (test fixtures); private names cannot be allowed.
+repository root lists path globs whose home paths are intentional (test fixtures); secrets and private names cannot be
+allowed.
 
-Exit 0 clean, 1 findings, 2 usage or Git error. Output: text, or --json with schema code-audit.publish.v1.
+Exit 0 nothing blocks (warnings may be listed), 1 a blocking finding, 2 usage or Git error. Output: text, or --json with schema code-audit.publish.v1.
 """
 import argparse
 import fnmatch
@@ -33,6 +39,18 @@ import gitsafe  # noqa: E402
 HOME_PATH = re.compile(r"(?:/Users/|/home/)([A-Za-z0-9._-]+)(?=/|\b)|[A-Za-z]:\\{1,2}Users\\{1,2}([A-Za-z0-9._-]+)")
 FICTIONAL_USERS = {"example", "you", "user", "username", "me", "name", "alice", "bob", "jdoe", "john", "jane", "dev",
                    "devuser", "runner", "shared", "public", "default", "guest", "someone", "your-name", "yourname", "x"}
+SECRETS = re.compile("|".join((
+    r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b",                      # AWS access key id
+    r"\bgh[pousr]_[A-Za-z0-9]{36,}",                        # GitHub token
+    r"\bgithub_pat_[A-Za-z0-9_]{22,}",                      # GitHub fine-grained token
+    r"\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,}",              # Anthropic / OpenAI key
+    r"\bxox[abprs]-[A-Za-z0-9-]{10,}",                      # Slack token
+    r"\bAIza[0-9A-Za-z_-]{35}\b",                           # Google API key
+    r"\b[sr]k_live_[0-9A-Za-z]{24,}",                       # Stripe live key
+    r"-----BEGIN [A-Z ]*PRIVATE KEY-----",                  # PEM private key block
+)))
+# The one place that decides what stops a push. A kind missing here cannot be reported (KeyError in finding()).
+SEVERITY = {"secret": "block", "home-path": "block", "private-name": "warn"}
 DEFAULT_NAMES = Path.home() / ".code-audit" / "private-names.txt"
 MAX_BLOB = 5_000_000
 
@@ -64,17 +82,24 @@ def name_pattern(names):
     return re.compile(r"(?<![A-Za-z0-9_])(" + "|".join(re.escape(n) for n in names) + r")(?![A-Za-z0-9_])", re.IGNORECASE)
 
 
+def finding(kind, where, number, token, text):
+    return {"kind": kind, "severity": SEVERITY[kind], "where": where, "line": number, "token": token, "text": text}
+
+
 def scan_text(text, where, names_re, allow_home):
     found = []
     for number, line in enumerate(text.splitlines(), 1):
+        shown = SECRETS.sub(lambda m: m.group(0)[:6] + "[redacted]", line).strip()[:200]
+        for m in SECRETS.finditer(line):
+            found.append(finding("secret", where, number, m.group(0)[:6] + "[redacted]", shown))
         if names_re:
             for m in names_re.finditer(line):
-                found.append({"kind": "private-name", "where": where, "line": number, "token": m.group(1), "text": line.strip()[:200]})
+                found.append(finding("private-name", where, number, m.group(1), shown))
         if not allow_home:
             for m in HOME_PATH.finditer(line):
                 user = (m.group(1) or m.group(2) or "").lower()
                 if user and user not in FICTIONAL_USERS and not user.startswith(("example", "<", "$")):
-                    found.append({"kind": "home-path", "where": where, "line": number, "token": m.group(0), "text": line.strip()[:200]})
+                    found.append(finding("home-path", where, number, m.group(0), shown))
     return found
 
 
@@ -148,17 +173,19 @@ def main(argv=None):
     except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
         print(f"publish_check: {error}", file=sys.stderr)
         return 2
+    blocking = sum(f["severity"] == "block" for f in findings)
     summary = {"schema": "code-audit.publish.v1", "repo": root.name, "scope": a.range or a.rev,
-               "private_names_checked": len(names), "findings": findings}
+               "private_names_checked": len(names), "blocking": blocking, "warnings": len(findings) - blocking,
+               "findings": findings}
     if a.json:
         print(json.dumps(summary, indent=1))
     else:
         if not names:
-            print("note: no private names configured; only home paths were checked (see --help)")
-        for f in findings:
-            print(f"{f['kind']:12} {f['where']}:{f['line']}  {f['token']}")
-        print(f"{len(findings)} finding(s); {len(names)} private name(s) checked")
-    return 1 if findings else 0
+            print("note: no private names configured; only secrets and home paths were checked (see --help)")
+        for f in sorted(findings, key=lambda f: f["severity"] != "block"):
+            print(f"{f['severity']:5} {f['kind']:12} {f['where']}:{f['line']}  {f['token']}")
+        print(f"{blocking} blocking, {len(findings) - blocking} warning(s); {len(names)} private name(s) checked")
+    return 1 if blocking else 0
 
 
 if __name__ == "__main__":

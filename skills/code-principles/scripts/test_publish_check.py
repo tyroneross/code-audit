@@ -1,4 +1,4 @@
-"""publish_check finds private names and machine paths before a push, and stays quiet on fictional ones."""
+"""publish_check blocks on secrets and machine paths, warns on private names, and stays quiet on fictional ones."""
 import contextlib
 import io
 import json
@@ -10,6 +10,9 @@ from pathlib import Path
 import publish_check
 
 PRIVATE = "secret-desk-app"  # a made-up private repository name for the tests
+# Made-up credentials, assembled at run time so no scanner (this one included) sees a key in this file.
+FAKE_KEYS = {"aws": "AKIA" + "Q" * 16, "github": "ghp_" + "a1" * 18, "model": "sk-ant-" + "b2" * 20,
+             "pem": "-----BEGIN RSA " + "PRIVATE KEY-----"}
 
 
 def git(root, *args):
@@ -81,6 +84,31 @@ class PublishCheck(unittest.TestCase):
         self.names.write_text(f"{PRIVATE}\ngit-folder\n!Git-Folder\n")
         self.commit({"a.md": "cd git-folder\n"})
         self.assertEqual(self.run_check()[1]["findings"], [])
+
+    def test_private_name_alone_warns_and_exits_zero(self):
+        self.commit({"notes.md": f"ported from {PRIVATE}\n"})
+        code, out = self.run_check()
+        self.assertEqual((code, out["blocking"], out["warnings"]), (0, 0, 1))
+        self.assertEqual([(f["kind"], f["severity"]) for f in out["findings"]], [("private-name", "warn")])
+
+    def test_each_secret_format_blocks_and_is_never_printed(self):
+        for label, key in FAKE_KEYS.items():
+            with self.subTest(label):
+                self.commit({"config.env": f"TOKEN={key}\n"}, message=label)
+                code, out = self.run_check()
+                self.assertEqual((code, [(f["kind"], f["severity"]) for f in out["findings"]]), (1, [("secret", "block")]))
+                self.assertNotIn(key, json.dumps(out))
+
+    def test_allow_file_never_exempts_a_secret(self):
+        self.commit({".publish-allow": "tests/*\n", "tests/test_x.py": f'KEY = "{FAKE_KEYS["github"]}"\n'})
+        self.assertEqual(self.run_check()[0], 1)
+
+    def test_secret_in_commit_message_blocks_in_range_mode(self):
+        self.commit({"a.md": "one\n"})
+        base = subprocess.run(["git", "-C", str(self.repo), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+        self.commit({"b.md": "two\n"}, message=f"use {FAKE_KEYS['aws']} for the bucket")
+        code, out = self.run_check("--range", f"{base}..HEAD")
+        self.assertEqual((code, [f["kind"] for f in out["findings"]]), (1, ["secret"]))
 
     def test_clean_repository_exits_zero(self):
         self.commit({"README.md": "nothing private here\n"})
