@@ -66,6 +66,11 @@ class PublishCheck(unittest.TestCase):
         code, out = self.run_check()
         self.assertEqual((code, out["findings"]), (0, []))
 
+    def test_home_folder_inside_a_longer_path_is_not_a_machine_path(self):
+        self.commit({"a.py": 'P = ".store/decisions/home/decisions.json"\nQ = "file:///Users/realowner/x"\n'})
+        _, out = self.run_check()
+        self.assertEqual([(f["kind"], f["line"]) for f in out["findings"]], [("home-path", 2)])
+
     def test_allow_file_exempts_home_paths_but_never_private_names(self):
         self.commit({".publish-allow": "tests/*\n",
                      "tests/test_x.py": f'P = "/Users/realowner/x"  # fixture\nNAME = "{PRIVATE}"\n'})

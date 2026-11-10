@@ -36,9 +36,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gitsafe  # noqa: E402
 
-HOME_PATH = re.compile(r"(?:/Users/|/home/)([A-Za-z0-9._-]+)(?=/|\b)|[A-Za-z]:\\{1,2}Users\\{1,2}([A-Za-z0-9._-]+)")
+# The lookbehind keeps a folder named home or Users inside a longer path (records/home/x.json) from matching.
+HOME_PATH = re.compile(r"(?<![A-Za-z0-9_.-])(?:/Users/|/home/)([A-Za-z0-9._-]+)(?=/|\b)|[A-Za-z]:\\{1,2}Users\\{1,2}([A-Za-z0-9._-]+)")
 FICTIONAL_USERS = {"example", "you", "user", "username", "me", "name", "alice", "bob", "jdoe", "john", "jane", "dev",
-                   "devuser", "runner", "shared", "public", "default", "guest", "someone", "your-name", "yourname", "x"}
+                   "devuser", "runner", "shared", "public", "default", "guest", "someone", "private", "your-name", "yourname", "x"}
 SECRETS = re.compile("|".join((
     r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b",                      # AWS access key id
     r"\bgh[pousr]_[A-Za-z0-9]{36,}",                        # GitHub token
