@@ -38,7 +38,7 @@ import gitsafe  # noqa: E402
 
 # The lookbehind keeps a folder named home or Users inside a longer path (records/home/x.json) from matching.
 # A letter that is the end of an escape (\\n, \\t, \\r in JSON or a string literal) still counts as a path start.
-HOME_PATH = re.compile(r"(?:(?<![A-Za-z0-9_.-])|(?<=\\[nrt]))(?:/Users/|/home/)([A-Za-z0-9._-]+)(?=/|\b)|[A-Za-z]:\\{1,2}Users\\{1,2}([A-Za-z0-9._-]+)")
+HOME_PATH = re.compile(r"(?:(?<![A-Za-z0-9_.])|(?<=\\[nrt]))(?:/Users/|/home/)([A-Za-z0-9._-]+)(?=/|\b)|[A-Za-z]:\\{1,2}Users\\{1,2}([A-Za-z0-9._-]+)")
 FICTIONAL_USERS = {"example", "you", "user", "username", "me", "name", "alice", "bob", "jdoe", "john", "jane", "dev",
                    "devuser", "runner", "shared", "public", "default", "guest", "someone", "private", "your-name", "yourname", "x"}
 SECRETS = re.compile("|".join((

@@ -72,9 +72,10 @@ class PublishCheck(unittest.TestCase):
         self.assertEqual([(f["kind"], f["line"]) for f in out["findings"]], [("home-path", 2)])
 
     def test_machine_path_after_an_escaped_newline_is_found(self):
-        self.commit({"log.jsonl": '{"out": "done\\n/Users/realowner/x\\t/home/realowner/y"}\n'})
+        self.commit({"log.jsonl": '{"out": "done\\n/Users/realowner/x\\t/home/realowner/y"}\n',
+                     "run.sh": 'export TOOL="${TOOL:-/Users/realowner/bin/tool}"\n'})
         _, out = self.run_check()
-        self.assertEqual([f["kind"] for f in out["findings"]], ["home-path", "home-path"])
+        self.assertEqual([f["kind"] for f in out["findings"]], ["home-path", "home-path", "home-path"])
 
     def test_allow_file_exempts_home_paths_but_never_private_names(self):
         self.commit({".publish-allow": "tests/*\n",
