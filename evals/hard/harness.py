@@ -29,7 +29,9 @@ from run import extract  # noqa: E402
 # HARD_CASES selects another pre-registered case set (evals/hard/w3); paths in it resolve relative to evals/hard.
 CASES_FILE = Path(os.environ.get('HARD_CASES', HERE / 'cases.json')).resolve()
 CASES = json.loads(CASES_FILE.read_text())
-ROOT = Path(CASES['repos_root'])
+# repos_root may name $CODE_AUDIT_REPOS_ROOT, which defaults to the folder above this repository.
+REPOS_ROOT = os.environ.get('CODE_AUDIT_REPOS_ROOT', str(EVALS.parent.parent))
+ROOT = Path(CASES['repos_root'].replace('$CODE_AUDIT_REPOS_ROOT', REPOS_ROOT))
 REVIEW_TIMEOUT, REPAIR_TIMEOUT, VERIFY_TIMEOUT = 300, 480, 180
 
 REVIEW_SCHEMA = {

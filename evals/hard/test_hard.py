@@ -12,7 +12,8 @@ sys.path.insert(0, str(HERE))
 import harness  # noqa: E402
 import grade as score  # noqa: E402
 
-REPOS = harness.ROOT.is_dir()
+# The default repos root is the folder above this repository, so require the case repositories themselves.
+REPOS = all((harness.ROOT / c['repo']).is_dir() for c in harness.CASES['review'] + harness.CASES['repair'])
 
 
 class Manifest(unittest.TestCase):

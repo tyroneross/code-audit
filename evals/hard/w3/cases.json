@@ -1,6 +1,6 @@
 {
  "version": 1,
- "repos_root": "/Users/tyroneross/dev/git-folder",
+ "repos_root": "$CODE_AUDIT_REPOS_ROOT",
  "oracles": "w3/private/oracles.json",
  "arms": [
   "code-audit-w3",
