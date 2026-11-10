@@ -79,7 +79,7 @@ def main():
         files = [{'path': f['path'], **({'ranges': [[r[0], min(r[1], lines_at(case['repo'], fix, f['path']) or r[1])] for r in f['ranges']]} if f.get('ranges') else {})}
                  for f in case['files'] if lines_at(case['repo'], fix, f['path'])]
         review.append({'id': f'FC{m:02d}', 'key': case['key'], 'repo': case['repo'], 'revision': fix, 'role': 'control', 'control_of': case['id'], 'files': files})
-    cases = {'version': 1, 'repos_root': str(ROOT), 'oracles': '../fresh/private/oracles.json', 'review': review, 'repair': [],
+    cases = {'version': 1, 'repos_root': '$CODE_AUDIT_REPOS_ROOT', 'oracles': '../fresh/private/oracles.json', 'review': review, 'repair': [],
              'arms': ['none', 'hint', 'none-2pass', 'none+tools', 'bundle+tools', 'adaptive', 'fixed-plan', 'principles+tools'],
              'subject': 'adaptive', 'comparators': ['none+tools', 'bundle+tools', 'fixed-plan', 'principles+tools']}
     print(json.dumps({'mined': len(mined), 'valid': len(good), 'rejected': bad, 'controls': [r['id'] + '<-' + r['control_of'] for r in review if r['role'] == 'control']}, indent=1))
