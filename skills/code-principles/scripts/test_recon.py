@@ -137,9 +137,9 @@ class OutcomeRecipeTest(unittest.TestCase):
     def test_recipe_and_section_fg_ids_are_accepted_and_record_the_repo(self):
         with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as out:
             log = os.path.join(out, "o.jsonl")
-            for item in ("R1", "R5a", "R5b", "R6:two-write-append", "F3", "G2"):
+            for item in ("R1", "R5a", "R5b", "R6:two-write-append", "F3", "G2", "H1"):
                 self.assertEqual(self.add(repo, item, "accepted", log), 0, item)
-            for item in ("R7", "R5c", "R1:slug", "R6:Bad Slug", "H1"):
+            for item in ("R7", "R5c", "R1:slug", "R6:Bad Slug", "J1"):
                 self.assertEqual(self.add(repo, item, "accepted", log), 2, item)
             rows = [json.loads(l) for l in Path(log).read_text().splitlines()]
             self.assertEqual({r["repo"] for r in rows}, {os.path.realpath(repo)})

@@ -77,6 +77,15 @@ A value is a lead when it has a live source of truth or varies by context but is
 - **G2 Every layer names its capability:** isolation, independent scale or deploy (P29), a real alternative (P09), a real boundary seam, a stable contract, or a simpler whole operation (P13). Pass-through wrappers, single-implementation factories, speculative plugin systems, duplicate state owners and service splits without isolation or scale need are leads.
 - **G3 Judge brittleness by failure points and coupling:** dropped fields at a serialization hop, two tie-break rules for one record set, partial updates between owners, version skew, retries at two layers. Taste is not a finding.
 
+## H. Identity, repeated facts and conflicts
+
+Each item is a lead. Confirm it by naming two real inputs that collide, repeat or disagree and showing what the code does with them. When the contract rules that input out and something enforces the rule, there is no finding.
+
+- **H1 An id is not built from a display label.** Leads: a key, member id, file name or lookup id derived from a name, title, role or other text a person can edit or repeat (`slug(name)`, `id = label.lower()`, a map keyed by title). Ask whether two records can share the label, and whether the label can change while references to the old id remain. Confirm with two records that share a label and show which one a lookup returns, or with a rename that orphans stored references. A slug is correct as a display or URL form beside a separate unique id, or when uniqueness is enforced where the label is created and edited. Repair by issuing a unique id at creation and keeping the label as data. Handling the collision downstream (H2 to H4) makes it harmless for one reader and leaves the records indistinguishable for every other.
+- **H2 Generated output states each fact once, in a fixed order.** Applies to bytes that are hashed, signed, diffed, cached or compared with an earlier copy: a manifest, lock file, digest input or snapshot. Leads: lines appended in a loop over records that can repeat; order taken from an unordered map, a set or a directory listing; a timestamp, random id or machine path inside the bytes. Confirm by generating twice from equal input, and once from input that holds a repeated record, then comparing the bytes. Repeats are correct when count or position is part of the contract (a log, an ordered list).
+- **H3 A reader judges repeated entries by value, not by count.** Leads: `len(matches) == 1`, `.single()`, "exactly one", or a count check after a filter. Ask what the reader returns when the same entry appears twice with the same value. A reader that rejects agreeing repeats reports data as missing while it is present. Confirm with an input that holds two identical entries. Rejecting repeats is correct when a repeat itself signals corruption or a double write; the rejection is then reported as such, not returned as empty (C6).
+- **H4 Conflicting values for one key stop the lookup, visibly.** Leads: one key with two different values reaching a dictionary built from a list (last wins), a first-match scan (first wins), a sort or `max` without a total order, or a merge of two sources. Ask whether the contract names a winner, such as a precedence order or newest by a trusted clock. Without one, the lookup returns a conflict result the caller can tell apart from "not found", and no later step replaces it with a default or presents it as the expected value. Confirm with one key and two values, and trace the result to what the user or the next component receives. A documented override order (environment over file over default) is a named winner, not a conflict.
+
 ## Quick pick: checklist item → cards
 
 Read the referenced principle in the [canonical rule cards](../../audit/references/cards/).
@@ -96,5 +105,6 @@ Read the referenced principle in the [canonical rule cards](../../audit/referenc
 | E1–E10 | P08, P13, P22, P23, P24, P25, P26, P30 |
 | F1–F7 | P06 meaning and validation, P27 compatibility, P07 |
 | G1–G3 | P09 extension points, P13 splitting, P29 separate services, P18 |
+| H1–H4 | P06 meaning and validation, P07 hidden guarantees, P15 error representation, P17 isolation |
 
 For a full 30-principle audit of a codebase, a pre-build plan, or a multi-batch repository campaign, use the workflows at `../../audit/SKILL.md`, `../../plan/SKILL.md` or `../../improve/SKILL.md` (relative to this skill's real folder).

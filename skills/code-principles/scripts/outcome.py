@@ -5,7 +5,7 @@
   outcome.py score [--repo PATH ...] [--log-file PATH ...] [--json]
   outcome.py candidates [--min-repos 2] [--repo PATH ...] [--log-file PATH ...] [--json]
 
---item is a checklist id (A1..G9) or an audit recipe id (R1..R6, R5a, R5b, R6:<slug>).
+--item is an id defined in references/focused-checklist.md (A1, H4) or an audit recipe id (R1..R6, R5a, R5b, R6:<slug>).
 Each record stores the absolute repo path it came from; `candidates` lists recipe ids
 confirmed (fixed, accepted or kept) on at least --min-repos distinct repos.
 
@@ -23,7 +23,8 @@ from collections import Counter, defaultdict
 
 DECISIONS = ("fixed", "accepted", "rejected", "kept")
 REAL = ("fixed", "accepted", "kept")
-CHECKLIST = re.compile(r"^[A-G][0-9]{1,2}$")
+CHECKLIST_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "references", "focused-checklist.md")
+CHECKLIST_ITEM = re.compile(r"^- \*\*([A-Z][0-9]{1,2}) ", re.M)
 RECIPE = re.compile(r"^(R[1-6][ab]?|R6:[a-z0-9][a-z0-9-]{0,40})$")
 
 
@@ -33,9 +34,15 @@ def log_path(repo, log_file=None):
     return os.path.join(os.path.abspath(repo), ".code-principles", "outcomes.jsonl")
 
 
+def checklist_ids():
+    """Item ids defined in the focused checklist, so a new section needs no change here."""
+    with open(CHECKLIST_FILE, encoding="utf-8") as fh:
+        return set(CHECKLIST_ITEM.findall(fh.read()))
+
+
 def add(args):
-    if not (CHECKLIST.match(args.item) or RECIPE.match(args.item)):
-        print(f"outcome.py: item must be a checklist id like A3 or a recipe id like R5b or R6:two-write-append, got {args.item!r}", file=sys.stderr)
+    if not (RECIPE.match(args.item) or args.item in checklist_ids()):
+        print(f"outcome.py: item must be an id from the focused checklist like A3 or a recipe id like R5b or R6:two-write-append, got {args.item!r}", file=sys.stderr)
         return 2
     if not os.path.isdir(args.repo):
         print(f"outcome.py: no such repo directory: {args.repo}", file=sys.stderr)

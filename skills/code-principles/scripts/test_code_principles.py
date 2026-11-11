@@ -4,7 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -342,6 +342,15 @@ class OutcomeTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as repo, redirect_stdout(io.StringIO()):
             self.assertEqual(outcome.main(["add", "--repo", repo, "--item", "Z9", "--where", "a", "--decision", "fixed"]), 2)
             self.assertEqual(outcome.main(["add", "--repo", repo + "/missing", "--item", "A1", "--where", "a", "--decision", "fixed"]), 2)
+
+    def test_item_ids_come_from_the_checklist(self):
+        ids = outcome.checklist_ids()
+        self.assertTrue({"A1", "E10", "G3", "H1", "H4"} <= ids, sorted(ids))
+        with tempfile.TemporaryDirectory() as repo, redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+            for item in sorted(ids):
+                self.assertEqual(outcome.main(["add", "--repo", repo, "--item", item, "--where", "a", "--decision", "fixed"]), 0, item)
+            for item in ("G9", "H5", "h1"):  # well-formed but not defined in the checklist
+                self.assertEqual(outcome.main(["add", "--repo", repo, "--item", item, "--where", "a", "--decision", "fixed"]), 2, item)
 
 
 if __name__ == "__main__":

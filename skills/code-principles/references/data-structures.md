@@ -4,7 +4,7 @@ Use this reference when lookup, membership, grouping, ordering, queueing or repe
 
 ## Define the problem before choosing a structure
 
-- **Data shape:** what each record means, how identity is defined, and whether duplicates are meaningful.
+- **Data shape:** what each record means, how identity is defined, and whether duplicates are meaningful. State where each key comes from: an id issued when the record is created, or text derived from a name, title or role that people can repeat or edit.
 - **Operations:** which reads, writes, membership checks, insertions, removals and traversals occur, and how often.
 - **Workload:** typical and difficult input sizes, distribution of keys, ordering, and mutation frequency.
 - **Constraints:** output order, numerical precision, memory budget, concurrency and supported input types.
@@ -16,7 +16,7 @@ A scan visits entries to find a match. An index stores a relationship that makes
 | Operation | Candidate | Contract questions |
 |---|---|---|
 | Sequential traversal, preserve order and duplicates | List or array | Are position and duplicate entries observable? What are the runtime's insertion and allocation costs? |
-| Repeated lookup by identity | Map or dictionary | Are keys stable and supported? Which duplicate wins? What happens when the key is missing? |
+| Repeated lookup by identity | Map or dictionary | Are keys stable and supported? Is the key issued or derived from a label two records can share? When a key repeats, do the values agree, and which wins when they do not? What happens when the key is missing? |
 | Membership or uniqueness | Set | May duplicates and sequence be discarded? How does equality work? |
 | Process first-in-first-out or both ends | Queue or deque | Is capacity bounded? What happens on overload? Does processing order matter? |
 | Repeatedly select the next priority item | Heap or priority queue | How are ties, changed priorities and cancelled entries handled? A heap is not a fully sorted sequence. |
@@ -33,6 +33,12 @@ For repeated searches through a catalog of n records across m items, a full scan
 ## Preserve meaning during optimization
 
 Replacing a first-match scan with a dictionary comprehension can silently change duplicate handling to last-match-wins. Preserve the first match deliberately when that is the contract. Likewise, converting a sequence to a set can lose duplicates and order; replacing Decimal values with floats can change numerical behavior.
+
+## Separate agreeing repeats from conflicts
+
+A repeated key has two different cases. Entries that agree carry one fact: collapse them by value, and do not treat the count as an error. Entries that disagree carry a conflict: apply the winner the contract names, or return a conflict result that the caller can tell apart from a missing key. Picking the first or last entry without a named rule gives a confident wrong answer; returning empty hides data that is present. When the output is hashed, diffed or compared, write each fact once and in a fixed order so equal input produces equal bytes.
+
+Repeats often come from a key derived from a label. Tolerating them in one reader does not make the records distinguishable; a unique id issued at creation does. Review items: section H of the [focused checklist](focused-checklist.md).
 
 Check missing versus null versus zero, stable output order, repeated records, empty input and supported custom types. Eager indexing can also inspect records that the original lazy scan never touched, changing error timing or side effects. Bound the supported contract before making that change.
 

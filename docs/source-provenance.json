@@ -1797,7 +1797,7 @@
       "path": "skills/code-principles/SKILL.md",
       "source": "code-principles-audit",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "da1e98b430cfe4e7447e55b0b6c665bef65c8c4ff933e44dd79b11a779c3ed0b",
+      "current_sha256": "8353f9610fe6e4e1eb3bcbc20f4cc56637ef6c1f2974d76d1d699c20df53a4c6",
       "modified_from_import": true
     },
     {
@@ -1818,8 +1818,8 @@
       "path": "skills/code-principles/references/data-structures.md",
       "source": "code-principles-audit",
       "source_sha256": "95eda3fcd73041f61c1c2a707c3fa8dfd52047ebba43c872d4fba2a073a25ec2",
-      "current_sha256": "95eda3fcd73041f61c1c2a707c3fa8dfd52047ebba43c872d4fba2a073a25ec2",
-      "modified_from_import": false
+      "current_sha256": "7ae84695575ccb7c55dfbab2425034b0c35aa14594f7c5669be8ac0bfde615fe",
+      "modified_from_import": true
     },
     {
       "path": "skills/code-principles/references/engineering-foundations.md",
@@ -1846,7 +1846,7 @@
       "path": "skills/code-principles/scripts/outcome.py",
       "source": "code-principles-audit",
       "source_sha256": "5b276ef7b788fefc680484bb735e755d0ae39f2533bb578c5199ca69627d9bed",
-      "current_sha256": "a8ee7b6717df417e81b2fa24f70695c2d85c1adba5069234b239e3464dd37262",
+      "current_sha256": "bb6ebf017dc96251f46b7d6f14c1be0f85d8f23369442cdfd7297d2ef19751ad",
       "modified_from_import": true
     },
     {
@@ -1860,7 +1860,7 @@
       "path": "skills/code-principles/scripts/test_code_principles.py",
       "source": "code-principles-audit",
       "source_sha256": "9c80362958d93924a150b65478c7140fd7c087c761fd53d96032c82eeb9932ae",
-      "current_sha256": "e2929b833eac1d25d2b1e81eef229f367d4f05c89a58f91b20bb74bb60745855",
+      "current_sha256": "eef7aeb5f84e0db5702a4510135076d93ef3e77a503be7cab1df09c90df9aba1",
       "modified_from_import": true
     },
     {
@@ -1938,7 +1938,7 @@
       "source": "code-principles-audit",
       "source_path": "skills/code-principles/SKILL.md",
       "source_sha256": "359d66f63a126013e54852e69aac5750cc6655155f04be79f69a4be3d59d6a24",
-      "current_sha256": "0bb7e181f9104cc409a50d1ba9275b760e0df700168aaa8b71685003299dfde5",
+      "current_sha256": "71fd03a039fc77a5a4454674184ca0d0dfcbf845026131cfd11382616e88d288",
       "modified_from_import": true,
       "adaptation": "Checklist extracted from the imported focused skill; contextual failure-handler wording and relative links updated."
     },
@@ -2018,7 +2018,8 @@
     "2026-10-28 (W3): code-principles gains checklist sections F (frozen values that should be dynamic) and G (path length and brittle structure), a procedure reference (frozen-values-and-path-length.md), a P06 card section on values with a source of truth, P09/P13/P29 links to the path-length procedure, and scan.py section F signals in scripts/frozen.py (home paths, environment hosts, copied manifest version, fixed toggles, shared identifiers defined in several files). Model-id, generic account-id, date-constructor, pass-through and single-implementation detectors were measured on real repositories and cut for low precision. scan.py also treats capitalized Tests/ directories, *Tests.swift and Rust #[cfg(test)] modules as tests.",
     "2026-11-01: Added audit methods (recon, route, recipes R1-R6, adaptation, coverage matrix, self-update) and folded tool-use.md into it; outcome.py accepts recipe ids, records the repo and lists experimental-rule candidates; fix-critique gains read-only Bash; review-feedback, focused-checklist E9 and reviewer-role lane briefs added.",
     "2026-11-08: Added a behaviour-preserving simplification reference, structural signals and four parser-backed pattern leads in the scorer (Python AST and the tree-sitter analyzer, now including JavaScript), hotspots.py, structure_delta.py and one guarded Git helper. Practices adapted from three simplification skills, CodeScene's public Code Health material and Error Prone's documentation under one adoption test recorded in research/code-health-sources.md; no source code was copied. Re-recorded current hashes for the imported files this touched: skills/code-principles/SKILL.md.",
-    "2026-11-09: The analyzer binary's calc gained names, equation solving, derivatives, integrals, polynomial expansion, time-value-of-money functions and small linear programs. Finance formulas follow numpy-financial; the standard-deviation square root follows CPython's statistics module; polynomial roots use Sturm's theorem on exact integers after the roots crate's polynomial solvers failed a comparison with NumPy. Build dependencies added: roots 0.0.8 (BSD-2-Clause), quadrature 0.1.2 (BSD-2-Clause), microlp 0.7.0 (Apache-2.0). Evidence and rejected alternatives are in research/code-health-sources.md. Re-recorded current hashes for the imported files this touched."
+    "2026-11-09: The analyzer binary's calc gained names, equation solving, derivatives, integrals, polynomial expansion, time-value-of-money functions and small linear programs. Finance formulas follow numpy-financial; the standard-deviation square root follows CPython's statistics module; polynomial roots use Sturm's theorem on exact integers after the roots crate's polynomial solvers failed a comparison with NumPy. Build dependencies added: roots 0.0.8 (BSD-2-Clause), quadrature 0.1.2 (BSD-2-Clause), microlp 0.7.0 (Apache-2.0). Evidence and rejected alternatives are in research/code-health-sources.md. Re-recorded current hashes for the imported files this touched.",
+    "2026-11-10: code-principles gains checklist section H (identity, repeated facts and conflicts: an id built from a display label, generated output that states each fact once in a fixed order, readers that judge repeats by value, conflicting values that stop the lookup visibly), a matching data-structures section on agreeing repeats versus conflicts, and a SKILL.md routing line. outcome.py reads valid item ids from focused-checklist.md instead of a fixed A-G letter range. Source: a role lookup in a private-desktop-app that returned null because a derived id collided and repeated lines were counted as ambiguous. Re-recorded current hashes for the imported files this touched."
   ],
   "removed_imports": [
     {
